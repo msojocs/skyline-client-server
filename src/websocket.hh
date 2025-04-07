@@ -13,7 +13,7 @@ namespace WebSocket {
     /**
      * 发送消息到服务器
      */
-    void sendMessageSync(const std::string& clazz, const std::string& action, nlohmann::json& data);
+    std::string sendMessageSync(const std::string& clazz, const std::string& action, nlohmann::json& data);
     
 }
 

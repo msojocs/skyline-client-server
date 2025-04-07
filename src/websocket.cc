@@ -81,8 +81,8 @@ namespace WebSocket {
             }
         }
     }
-    void sendMessageSync(const std::string& clazz, const std::string& action, nlohmann::json& data) {
-        std::string id = generate_hex(32);
+    std::string sendMessageSync(const std::string& clazz, const std::string& action, nlohmann::json& data) {
+        std::string id = generate_hex(16);
         nlohmann::json json {
             {"id", id},
             {"clazz", clazz},
@@ -92,7 +92,7 @@ namespace WebSocket {
         spdlog::info("send to server");
         if (webSocket.getReadyState() != ix::ReadyState::Open)
         {
-            return;
+            return "";
         }
         webSocket.send(json.dump());
         auto promiseObj = std::make_shared<std::promise<std::string>>();
@@ -101,5 +101,6 @@ namespace WebSocket {
         
         std::string result = futureObj.get();
         spdlog::info("result: {}", result.c_str());
+        return result;
     }
 }

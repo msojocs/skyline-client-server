@@ -92,6 +92,8 @@ set(SRC_DIR_LIST
     src/main.cc
     src/websocket.cc
     src/websocket.hh
+    src/skyline_debug_info.hh
+    src/skyline_debug_info.cc
 )
 
 add_library(${MODULE_NAME}

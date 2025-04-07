@@ -11,7 +11,7 @@ namespace WebSocket {
     void initWebSocket();
 
     /**
-     * 发送消息到服务器
+     * 发送消息到服务器，并等待回复
      */
     std::string sendMessageSync(const std::string& clazz, const std::string& action, nlohmann::json& data);
     

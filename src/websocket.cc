@@ -82,6 +82,7 @@ namespace WebSocket {
         }
     }
     std::string sendMessageSync(const std::string& clazz, const std::string& action, nlohmann::json& data) {
+        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
         std::string id = generate_hex(16);
         nlohmann::json json {
             {"id", id},

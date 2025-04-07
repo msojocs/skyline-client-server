@@ -97,5 +97,6 @@
         "*.inc": "cpp"
     },
     // 使用Ninja，可以生成compile_commands.json
-    "cmake.generator": "Ninja"
+    "cmake.generator": "Ninja",
+    "editor.tabSize": 2
 }

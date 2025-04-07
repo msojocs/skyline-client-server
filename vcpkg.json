@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "cjson",
+    "ixwebsocket",
+    "nlohmann-json",
+    "spdlog",
+    "boost-uuid"
+  ]
+}

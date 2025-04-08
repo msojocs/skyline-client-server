@@ -24,6 +24,16 @@ private:
   void setSafeAreaEdgeInsets(const Napi::CallbackInfo &info);
   void createWindow(const Napi::CallbackInfo &info);
   void destroyWindow(const Napi::CallbackInfo &info);
+  void notifyAppLaunch(const Napi::CallbackInfo &info);
+  /**
+   * @brief 通知平台亮度变化
+   */
+  void onPlatformBrightnessChanged(const Napi::CallbackInfo &info);
+  void dispatchTouchStartEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchEndEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchMoveEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchCancelEvent(const Napi::CallbackInfo &info);
+  void dispatchKeyboardEvent(const Napi::CallbackInfo &info);
 };
 } // namespace SkylineShell
 #endif

@@ -3,6 +3,7 @@
 #include "websocket.hh"
 #include <spdlog/spdlog.h>
 #include <utility>
+#include <windows.h>
 namespace SkylineShell {
 
 static std::map<std::string, Napi::ThreadSafeFunction> callback;
@@ -30,7 +31,21 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
        InstanceMethod("createWindow", &SkylineShell::createWindow),
        InstanceMethod("destroyWindow", &SkylineShell::destroyWindow),
        InstanceMethod("setSafeAreaEdgeInsets",
-                      &SkylineShell::setSafeAreaEdgeInsets)});
+                      &SkylineShell::setSafeAreaEdgeInsets),
+        InstanceMethod("notifyAppLaunch", &SkylineShell::notifyAppLaunch),
+        InstanceMethod("onPlatformBrightnessChanged",
+                      &SkylineShell::onPlatformBrightnessChanged),
+        InstanceMethod("dispatchTouchStartEvent",
+                      &SkylineShell::dispatchTouchStartEvent),
+        InstanceMethod("dispatchTouchEndEvent",
+                      &SkylineShell::dispatchTouchEndEvent),
+        InstanceMethod("dispatchTouchMoveEvent",
+                      &SkylineShell::dispatchTouchMoveEvent),
+        InstanceMethod("dispatchTouchCancelEvent",
+                      &SkylineShell::dispatchTouchCancelEvent),
+        InstanceMethod("dispatchKeyboardEvent",
+                      &SkylineShell::dispatchKeyboardEvent),
+                    });
   
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -44,8 +59,21 @@ void SkylineShell::DispatchCallback(std::string &action, nlohmann::json &data) {
     // 在正确的线程上调用回调
     it->second.BlockingCall([data](Napi::Env env, Napi::Function jsCallback) {
       Napi::HandleScope scope(env);
-      Napi::Value jsData = Napi::String::New(env, data.dump());
-      jsCallback.Call({jsData});
+      std::vector<napi_value> args;
+      
+      for (auto item : data.items()) {
+        if (item.value().is_number()) {
+          args.push_back(Napi::Number::New(env, item.value().get<int>()));
+        } else if (item.value().is_string()) {
+          args.push_back(Napi::String::New(env, item.value().get<std::string>()));
+        } else if (item.value().is_boolean()) {
+          args.push_back(Napi::Boolean::New(env, item.value().get<bool>()));
+        } else if (item.value().is_object()) {
+          args.push_back(Napi::String::New(env, item.value().dump()));
+        }
+      }
+      
+      jsCallback.Call(args);
     });
   } else {
     spdlog::info("SkylineShell: {} not found", action);
@@ -349,5 +377,160 @@ void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   data["windowId"] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
   WebSocket::sendMessageSync("SkylineShell", "destroyWindow", data);
+}
+void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 3) {
+    throw Napi::Error::New(env, "参数长度必须为3");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
+  }
+  if (!info[1].IsNumber()) {
+    throw Napi::Error::New(env, "参数1 pageId必须为Number类型");
+  }
+  if (!info[2].IsObject()) {
+    throw Napi::Error::New(env, "参数2 pageConfig必须为Object类型");
+  }
+  Sleep(500);
+  nlohmann::json data;
+  data["windowId"] = info[0].As<Napi::Number>().Int32Value();
+  data["pageId"] = info[1].As<Napi::Number>().Int32Value();
+  data["pageConfig"] = {};
+  auto pageConfig = info[2].As<Napi::Object>();
+  for (auto config: pageConfig) {
+    Napi::Value v = config.second;
+    auto key = config.first.As<Napi::String>().Utf8Value();
+    if (v.IsString()) {
+      data["pageConfig"][key] = v.As<Napi::String>().Utf8Value();
+    } else if (v.IsNumber()) {
+      data["pageConfig"][key] = v.As<Napi::Number>().Int32Value();
+    } else if (v.IsBoolean()) {
+      data["pageConfig"][key] = v.As<Napi::Boolean>().Value();
+    } else if (v.IsObject()) {
+      data["pageConfig"][key] = nlohmann::json::parse(v.As<Napi::String>().Utf8Value());
+    }
+  }
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "notifyAppLaunch", data);
+}
+void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 1) {
+    throw Napi::Error::New(env, "参数长度必须为1");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 brightness必须为Number类型(1:Light;2:Dark)");
+  }
+  nlohmann::json data;
+  data["brightness"] = info[0].As<Napi::Number>().Int32Value();
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "onPlatformBrightnessChanged", data);
+}
+void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 3) {
+    throw Napi::Error::New(env, "参数长度必须为3");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 windowId必须为Object类型");
+  }
+  if (!info[1].IsNumber()) {
+    throw Napi::Error::New(env, "参数1 x必须为Number类型");
+  }
+  if (!info[2].IsNumber()) {
+    throw Napi::Error::New(env, "参数2 y必须为Number类型");
+  }
+  nlohmann::json data;
+  data["windowId"] = info[0].As<Napi::Number>().Int32Value();
+  data["x"] = info[1].As<Napi::Number>().DoubleValue();
+  data["y"] = info[2].As<Napi::Number>().DoubleValue();
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchStartEvent", data);
+}
+void SkylineShell::dispatchTouchEndEvent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 3) {
+    throw Napi::Error::New(env, "参数长度必须为3");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 windowId必须为Object类型");
+  }
+  if (!info[1].IsNumber()) {
+    throw Napi::Error::New(env, "参数1 x必须为Number类型");
+  }
+  if (!info[2].IsNumber()) {
+    throw Napi::Error::New(env, "参数2 y必须为Number类型");
+  }
+  nlohmann::json data;
+  data["windowId"] = info[0].As<Napi::Number>().Int32Value();
+  data["x"] = info[1].As<Napi::Number>().DoubleValue();
+  data["y"] = info[2].As<Napi::Number>().DoubleValue();
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchEndEvent", data);
+}
+void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 3) {
+    throw Napi::Error::New(env, "参数长度必须为3");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
+  }
+  if (!info[1].IsNumber()) {
+    throw Napi::Error::New(env, "参数1 x必须为Number类型");
+  }
+  if (!info[2].IsNumber()) {
+    throw Napi::Error::New(env, "参数2 y必须为Number类型");
+  }
+  nlohmann::json data;
+  data["windowId"] = info[0].As<Napi::Number>().Int32Value();
+  data["x"] = info[1].As<Napi::Number>().DoubleValue();
+  data["y"] = info[2].As<Napi::Number>().DoubleValue();
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchMoveEvent", data);
+}
+void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 1) {
+    throw Napi::Error::New(env, "参数长度必须为1");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
+  }
+  nlohmann::json data;
+  data["windowId"] = info[0].As<Napi::Number>().Int32Value();
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchCancelEvent", data);
+}
+void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  if (info.Length() != 5) {
+    throw Napi::Error::New(env, "参数长度必须为5");
+  }
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
+  }
+  if (!info[1].IsNumber()) {
+    throw Napi::Error::New(env, "参数1 key必须为Number类型");
+  }
+  if (!info[2].IsNumber()) {
+    throw Napi::Error::New(env, "参数2 scancode必须为Number类型");
+  }
+  if (!info[3].IsNumber()) {
+    throw Napi::Error::New(env, "参数3 action必须为Number类型");
+  }
+  if (!info[4].IsNumber()) {
+    throw Napi::Error::New(env, "参数4 mods必须为Number类型");
+  }
+  nlohmann::json data;
+  data["windowId"] = info[0].As<Napi::Number>().Int32Value();
+  data["key"] = info[1].As<Napi::Number>().Int32Value();
+  data["scancode"] = info[2].As<Napi::Number>().Int32Value();
+  data["action"] = info[3].As<Napi::Number>().Int32Value();
+  data["mods"] = info[4].As<Napi::Number>().Int32Value();
+
+  // 发送消息到 WebSocket
+  WebSocket::sendMessageSync("SkylineShell", "dispatchKeyboardEvent", data);
 }
 } // namespace SkylineShell

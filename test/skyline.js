@@ -21,6 +21,7 @@ shell.setHttpRequestCallback((...args) => {
 });
 
 shell.setNotifyWindowReadyCallback((...args) => {
+  // args: windowId
   console.info("setNotifyWindowReadyCallback", ...args);
 });
 shell.setNotifyRouteDoneCallback((...args) => {
@@ -37,9 +38,9 @@ shell.setSendLogCallback((...args) => {
 });
 const sharedMemory = require('D:/github/shared-memory/build/sharedMemory.node')
 const key = "test"
-sharedMemory.setMemory(key, 21066248)
+const buffer = sharedMemory.setMemory(key, 21066248)
 const win = shell.createWindow(
-  7,
+  1,
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/bundle",
   390,
   844,
@@ -48,6 +49,10 @@ const win = shell.createWindow(
   key,
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/build/skyline.node"
 );
+
+  shell.notifyAppLaunch(1, 7, {
+    backgroundColorContent: '#FFFFFFFF',
+  })
 setTimeout(() => {
-    console.info('test...')
-}, 5000)
+      
+}, 500)

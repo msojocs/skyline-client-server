@@ -1,11 +1,13 @@
 #ifndef __SKYLINE_SHELL_HH__
 #define __SKYLINE_SHELL_HH__
+#include <nlohmann/json.hpp>
 #include "napi.h"
 namespace SkylineShell {
 
 class SkylineShell : public Napi::ObjectWrap<SkylineShell> {
 public:
   static void Init(Napi::Env env, Napi::Object exports);
+  static void DispatchCallback(std::string &action, nlohmann::json &data);
 
   SkylineShell(const Napi::CallbackInfo &info);
 

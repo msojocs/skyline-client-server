@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <synchapi.h>
+#include "skyline_shell.hh"
 
 namespace WebSocket {
     static ix::WebSocket webSocket;
@@ -55,6 +56,15 @@ namespace WebSocket {
                         if (wsRequest.find(id) != wsRequest.end())
                         {
                             wsRequest[id]->set_value(msg->str);
+                        }
+                    }
+                    else 
+                    {
+                        // id为空，说明是通知消息
+                        std::string clazz = json["clazz"].get<std::string>();
+                        std::string action = json["action"].get<std::string>();
+                        if (clazz == "SkylineShell") {
+                            SkylineShell::SkylineShell::DispatchCallback(action, json["data"]);
                         }
                     }
                 }

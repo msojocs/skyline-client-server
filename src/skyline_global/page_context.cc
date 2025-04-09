@@ -109,7 +109,8 @@ void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
   }
   Napi::Array sheets = info[0].As<Napi::Array>();
-  auto args = Convert::convertValue2Json(sheets);
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(sheets);
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 
@@ -157,27 +158,7 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
    */
   nlohmann::json args;
   Napi::Array sheets = info[0].As<Napi::Array>();
-  for (uint32_t i = 0; i < sheets.Length(); i++) {
-    Napi::Object sheet = sheets.Get(i).As<Napi::Object>();
-    if (!sheet.Has("content")) {
-      throw Napi::TypeError::New(info.Env(), "content is required");
-    }
-    if (!sheet.Has("scopeId")) {
-      throw Napi::TypeError::New(info.Env(), "scopeId is required");
-    }
-    if (!sheet.Get("content").IsString()) {
-      throw Napi::TypeError::New(info.Env(), "content must be a string");
-    }
-    if (!sheet.Get("scopeId").IsNumber()) {
-      throw Napi::TypeError::New(info.Env(), "scopeId must be a number");
-    }
-    auto content = sheet.Get("content").As<Napi::String>().Utf8Value();
-    auto scopeId = sheet.Get("scopeId").As<Napi::Number>().Int32Value();
-    args[i] = {
-      {"content", content},
-      {"scopeId", scopeId},
-    };
-  }
+  args[0] = Convert::convertValue2Json(sheets);
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
   // 无返回值
 }
@@ -251,7 +232,7 @@ void PageContext::loadFontFace(const Napi::CallbackInfo &info) {
  * @param {Array} sheets
  * @return {Array} AsyncStyleSheets(object)
  */
-void PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
+Napi::Value PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
     throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
   }
@@ -277,7 +258,14 @@ void PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
    * - {styleScope} number
    * - {styleScopeSetter} null ???
    */
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  auto data = Convert::convertValue2Json(sheets);
+  nlohmann::json args = {
+    data,
+  };
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+
+  return Napi::Array::New(info.Env(), 0);
 }
 
 void PageContext::recalcStyle(const Napi::CallbackInfo &info) {
@@ -309,7 +297,7 @@ void PageContext::startRender(const Napi::CallbackInfo &info) {
   auto func = info[0].As<Napi::Function>(); 
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
+  WebSocket::registerDynamicCallbackSync(m_instanceId, __func__, func);
 }
 
 void PageContext::updateRouteConfig(const Napi::CallbackInfo &info) {

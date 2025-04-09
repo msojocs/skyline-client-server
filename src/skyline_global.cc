@@ -1,5 +1,6 @@
 #include "skyline_global.hh"
 #include "include/page_context.hh"
+#include "include/runtime.hh"
 #include "napi.h"
 
 namespace SkylineGlobal {
@@ -16,6 +17,9 @@ namespace SkylineGlobal {
     }
     {
       Skyline::PageContext::Init(env, skylineGlobal);
+    }
+    {
+      Skyline::Runtime::Init(env, skylineGlobal);
     }
     env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
   }

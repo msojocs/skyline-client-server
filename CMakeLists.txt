@@ -103,6 +103,7 @@ set(SRC_DIR_LIST
     src/include/page_context.hh
     src/skyline_global/page_context.cc
     src/skyline_global/convert.cc
+    src/skyline_global/runtime.cc
 )
 
 add_library(${MODULE_NAME}

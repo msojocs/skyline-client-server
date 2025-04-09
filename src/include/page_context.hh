@@ -38,7 +38,7 @@ namespace Skyline {
   void getWindowId(const Napi::CallbackInfo &info);
   void isTab(const Napi::CallbackInfo &info);
   void loadFontFace(const Napi::CallbackInfo &info);
-  void preCompileStyleSheets(const Napi::CallbackInfo &info);
+  Napi::Value preCompileStyleSheets(const Napi::CallbackInfo &info);
   void recalcStyle(const Napi::CallbackInfo &info);
   void release(const Napi::CallbackInfo &info);
   void setAsTab(const Napi::CallbackInfo &info);

@@ -10,6 +10,7 @@
 #include <synchapi.h>
 #include <napi.h>
 #include "snowflake.hh"
+#include "include/convert.hh"
 
 namespace WebSocket {
     static ix::WebSocket webSocket;
@@ -60,18 +61,10 @@ namespace WebSocket {
                                 // 在正确的线程上调用回调
                                 it->second.BlockingCall([args](Napi::Env env, Napi::Function jsCallback) {
                                     Napi::HandleScope scope(env);
-                                    std::vector<napi_value> argsVec;
+                                    std::vector<Napi::Value> argsVec;
                                     
-                                    for (auto item : args.items()) {
-                                        if (item.value().is_number()) {
-                                            argsVec.push_back(Napi::Number::New(env, item.value().get<int>()));
-                                        } else if (item.value().is_string()) {
-                                            argsVec.push_back(Napi::String::New(env, item.value().get<std::string>()));
-                                        } else if (item.value().is_boolean()) {
-                                            argsVec.push_back(Napi::Boolean::New(env, item.value().get<bool>()));
-                                        } else if (item.value().is_object()) {
-                                            argsVec.push_back(Napi::String::New(env, item.value().dump()));
-                                        }
+                                    for (auto& arg : args) {
+                                        argsVec.push_back(Convert::convertJson2Value(env, arg));
                                     }
                                     
                                     jsCallback.Call(argsVec);
@@ -147,13 +140,33 @@ namespace WebSocket {
         
         return sendMessageSync(json);
     }
-    nlohmann::json registerCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
+    nlohmann::json registerDynamicCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
         std::string callbackId = std::to_string(callbackUuid.nextid());
         nlohmann::json json {
             {"type", "registerCallback"},
             {"action", action},
             {"data", {
                 {"instanceId", instanceId},
+                {"callbackId", callbackId}
+            }}
+        };
+        // 把callbackId保存到map中，收到消息时调用Callback函数
+        auto result = sendMessageSync(json);
+        callback.emplace(callbackId, Napi::ThreadSafeFunction::New(
+            func.Env(),
+            func,
+            "WebSocket Callback",
+            0,
+            1));
+        return result;
+    }
+    nlohmann::json registerStaticCallbackSync(const std::string& clazz, const std::string& action, Napi::Function& func) {
+        std::string callbackId = std::to_string(callbackUuid.nextid());
+        nlohmann::json json {
+            {"type", "registerCallback"},
+            {"action", action},
+            {"data", {
+                {"clazz", clazz},
                 {"callbackId", callbackId}
             }}
         };

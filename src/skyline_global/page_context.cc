@@ -60,9 +60,8 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
     throw Napi::TypeError::New(info.Env(), "Third argument must be an object");
   }
   spdlog::info("PageContext constructor");
-  nlohmann::json data;
-  data["pageId"] = info[0].As<Napi::Number>().Int32Value();
-  data["windowId"] = info[1].As<Napi::Number>().Int32Value();
+  auto pageId = info[0].As<Napi::Number>().Int32Value();
+  auto windowId = info[1].As<Napi::Number>().Int32Value();
   auto options = info[2].As<Napi::Object>();
   // 解析 options 对象
   /**
@@ -72,23 +71,29 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
       enableScrollViewAutoSize: false
       tagNameStyleIsolation: 0}
    */
+  nlohmann::json optionsJson;
   if (options.Has("defaultBlockLayout")) {
-    data["defaultBlockLayout"] = options.Get("defaultBlockLayout").As<Napi::Boolean>().Value();
+    optionsJson["defaultBlockLayout"] = options.Get("defaultBlockLayout").As<Napi::Boolean>().Value();
   }
   if (options.Has("defaultContentBox")) {
-    data["defaultContentBox"] = options.Get("defaultContentBox").As<Napi::Boolean>().Value();
+    optionsJson["defaultContentBox"] = options.Get("defaultContentBox").As<Napi::Boolean>().Value();
   }
   if (options.Has("enableImagePreload")) {
-    data["enableImagePreload"] = options.Get("enableImagePreload").As<Napi::Boolean>().Value();
+    optionsJson["enableImagePreload"] = options.Get("enableImagePreload").As<Napi::Boolean>().Value();
   }
   if (options.Has("enableScrollViewAutoSize")) {
-    data["enableScrollViewAutoSize"] = options.Get("enableScrollViewAutoSize").As<Napi::Boolean>().Value();
+    optionsJson["enableScrollViewAutoSize"] = options.Get("enableScrollViewAutoSize").As<Napi::Boolean>().Value();
   }
   if (options.Has("tagNameStyleIsolation")) {
-    data["tagNameStyleIsolation"] = options.Get("tagNameStyleIsolation").As<Napi::Number>().Int32Value();
+    optionsJson["tagNameStyleIsolation"] = options.Get("tagNameStyleIsolation").As<Napi::Number>().Int32Value();
   }
+  nlohmann::json data {
+    pageId,
+    windowId,
+    optionsJson,
+  };
   auto result = WebSocket::callConstructorSync("PageContext", data);
-  m_instanceId = result["data"]["instanceId"].get<std::string>();
+  m_instanceId = result["result"]["instanceId"].get<std::string>();
 }
 
 void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
@@ -100,7 +105,22 @@ void PageContext::appendStyleSheet(const Napi::CallbackInfo &info) {
 }
 
 void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  if (info.Length() < 2) {
+    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+  }
+  if (!info[0].IsString()) {
+    throw Napi::TypeError::New(info.Env(), "First argument must be a string");
+  }
+  if (!info[1].IsNumber()) {
+    throw Napi::TypeError::New(info.Env(), "Second argument must be a number");
+  }
+  auto path = info[0].As<Napi::String>().Utf8Value();
+  auto id = info[1].As<Napi::Number>().Int32Value();
+  nlohmann::json data = {
+    path,
+    id,
+  };
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 
 void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
@@ -128,8 +148,10 @@ void PageContext::createFragment(const Napi::CallbackInfo &info) {
 }
 
 Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
-  return Napi::Number::New(info.Env(), 0);
+  nlohmann::json data;
+  auto result = WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  auto returnValue = result["result"]["returnValue"];
+  return Napi::Number::New(info.Env(), returnValue.get<int>());
 }
 
 void PageContext::createTextNode(const Napi::CallbackInfo &info) {

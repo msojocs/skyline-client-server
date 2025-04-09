@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 #include <utility>
 #include <windows.h>
+#include "skyline_global.hh"
 namespace SkylineShell {
 
 
@@ -69,10 +70,24 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  auto func = info[0].As<Napi::Function>();
+  // 使用指针来存储 callback
+  auto callbackPtr = new Napi::FunctionReference();
+  *callbackPtr = Napi::Persistent(info[0].As<Napi::Function>());
+
+  auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
+    auto env = info.Env();
+    try {
+      nlohmann::json _t;
+      WebSocket::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
+      SkylineGlobal::Init(env);
+      callbackPtr->Value().Call({});
+    } catch (const Napi::Error& e) {
+      Napi::Error::Fatal("SkylineShell::setNotifyBootstrapDoneCallback", e.Message().c_str());
+    }
+  });
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func1);
 }
 void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -82,7 +97,6 @@ void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) 
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  
   auto func = info[0].As<Napi::Function>();
   // 发送消息到 WebSocket
   nlohmann::json data;

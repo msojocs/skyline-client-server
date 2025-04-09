@@ -111,7 +111,7 @@ add_library(${MODULE_NAME}
     ${CMAKE_JS_SRC}
     )
 
-set(IS_RUNNING_NODE true)
+set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
         message("生成 node_api.lib")

@@ -23,6 +23,16 @@ shell.setHttpRequestCallback((...args) => {
 shell.setNotifyWindowReadyCallback((...args) => {
   // args: windowId
   console.info("setNotifyWindowReadyCallback", ...args);
+
+  const page = new global.SkylineGlobal.PageContext(1, 1, {
+    defaultBlockLayout: true,
+    defaultContentBox: false,
+    enableImagePreload: false,
+    enableScrollViewAutoSize: false,
+    tagNameStyleIsolation: 0
+  })
+  const group = page.createStyleSheetIndexGroup()
+  page.appendStyleSheetIndex("wxlibfile://WAStyleIndex.fpiib", 0)
 });
 shell.setNotifyRouteDoneCallback((...args) => {
   console.info("setNotifyRouteDoneCallback", ...args);
@@ -50,9 +60,11 @@ const win = shell.createWindow(
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/build/skyline.node"
 );
 
-  shell.notifyAppLaunch(1, 1, {
-    backgroundColorContent: '#FFFFFFFF',
-  })
+shell.notifyAppLaunch(1, 1, {
+  backgroundColorContent: '#FFFFFFFF',
+})
+
+
 setTimeout(() => {
       
 }, 500)

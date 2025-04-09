@@ -4,11 +4,12 @@
 #include <nlohmann/json.hpp>
 namespace Skyline {
 
-  class BaseClient {
-  protected:
-    std::string m_instanceId;
-  private:
-  };
-}
+class BaseClient {
+protected:
+  std::string m_instanceId;
+
+private:
+};
+} // namespace Skyline
 
 #endif

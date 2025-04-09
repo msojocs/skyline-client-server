@@ -3,7 +3,7 @@
 #include "napi.h"
 
 namespace SkylineGlobal {
-  void Init(Napi::Env env, Napi::Object exports) {
+  void Init(Napi::Env env) {
     auto skylineGlobal = Napi::Object::New(env);
     {
       skylineGlobal.Set(Napi::String::New(env, "userAgent"), Napi::String::New(env, "skyline/1.4.0 (;8f190450e6301587ce41e08afcaa983db4dc712e;)"));
@@ -17,6 +17,6 @@ namespace SkylineGlobal {
     {
       Skyline::PageContext::Init(env, skylineGlobal);
     }
-    // env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
+    env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
   }
 }

@@ -13,7 +13,6 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   spdlog::info("initWebSocket end");
   SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
   SkylineShell::SkylineShell::Init(env, exports);
-  SkylineGlobal::Init(env, exports);
   spdlog::info("return result");
   return exports;
 }

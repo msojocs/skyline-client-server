@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 
 namespace Convert {
-  nlohmann::json convertValue2Json(const Napi::Value &value);
+nlohmann::json convertValue2Json(const Napi::Value &value);
 nlohmann::json convertObject2Json(const Napi::Value &value);
 
 } // namespace Convert

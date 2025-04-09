@@ -98,6 +98,10 @@ set(SRC_DIR_LIST
     src/skyline_shell.cc
     src/skyline_global.hh
     src/skyline_global.cc
+    src/base_client.cc
+    src/include/base_client.hh
+    src/include/page_context.hh
+    src/skyline_global/page_context.cc
 )
 
 add_library(${MODULE_NAME}

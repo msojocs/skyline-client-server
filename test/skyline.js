@@ -50,7 +50,7 @@ const win = shell.createWindow(
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/build/skyline.node"
 );
 
-  shell.notifyAppLaunch(1, 7, {
+  shell.notifyAppLaunch(1, 1, {
     backgroundColorContent: '#FFFFFFFF',
   })
 setTimeout(() => {

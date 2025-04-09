@@ -6,8 +6,7 @@ namespace Skyline {
 
   class BaseClient {
   protected:
-    std::string m_clientTag;
-    std::string sendToServer(const std::string &action, nlohmann::json &data);
+    std::string m_instanceId;
   private:
   };
 }

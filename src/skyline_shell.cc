@@ -6,7 +6,6 @@
 #include <windows.h>
 namespace SkylineShell {
 
-static std::map<std::string, Napi::ThreadSafeFunction> callback;
 
 void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function func = DefineClass(
@@ -53,39 +52,13 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
 
   env.Global().Set(Napi::String::New(env, "SkylineShell"), func);
 }
-void SkylineShell::DispatchCallback(std::string &action, nlohmann::json &data) {
-  auto it = callback.find(action);
-  if (it != callback.end()) {
-    // 在正确的线程上调用回调
-    it->second.BlockingCall([data](Napi::Env env, Napi::Function jsCallback) {
-      Napi::HandleScope scope(env);
-      std::vector<napi_value> args;
-      
-      for (auto item : data.items()) {
-        if (item.value().is_number()) {
-          args.push_back(Napi::Number::New(env, item.value().get<int>()));
-        } else if (item.value().is_string()) {
-          args.push_back(Napi::String::New(env, item.value().get<std::string>()));
-        } else if (item.value().is_boolean()) {
-          args.push_back(Napi::Boolean::New(env, item.value().get<bool>()));
-        } else if (item.value().is_object()) {
-          args.push_back(Napi::String::New(env, item.value().dump()));
-        }
-      }
-      
-      jsCallback.Call(args);
-    });
-  } else {
-    spdlog::info("SkylineShell: {} not found", action);
-  }
-}
 
 SkylineShell::SkylineShell(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<SkylineShell>(info) {
       spdlog::info("SkylineShell constructor");
-  callback.clear();
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "constructor", data);
+  auto result = WebSocket::callConstructorSync("SkylineShell", data);
+  this->m_instanceId = result["data"]["instanceId"].get<std::string>();
 }
 void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -96,19 +69,10 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setNotifyBootstrapDoneCallback"] = tsfn;
-  
+  auto func = info[0].As<Napi::Function>();
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setNotifyBootstrapDoneCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -119,19 +83,10 @@ void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) 
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setNotifyWindowReadyCallback"] = tsfn;
-  
+  auto func = info[0].As<Napi::Function>();
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setNotifyWindowReadyCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setNotifyRouteDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -141,20 +96,12 @@ void SkylineShell::setNotifyRouteDoneCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setNotifyRouteDoneCallback"] = tsfn;
+
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setNotifyRouteDoneCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setNavigateBackCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -165,19 +112,11 @@ void SkylineShell::setNavigateBackCallback(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setNavigateBackCallback"] = tsfn;
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setNavigateBackCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -188,19 +127,11 @@ void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setNavigateBackDoneCallback"] = tsfn;
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setNavigateBackDoneCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -211,19 +142,11 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setLoadResourceCallback"] = tsfn;
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setLoadResourceCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -234,19 +157,11 @@ void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) 
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setLoadResourceAsyncCallback"] = tsfn;
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setLoadResourceAsyncCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -257,19 +172,11 @@ void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setHttpRequestCallback"] = tsfn;
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setHttpRequestCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setSendLogCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -280,19 +187,11 @@ void SkylineShell::setSendLogCallback(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   
-  // 使用ThreadSafeFunction保存回调函数
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[0].As<Napi::Function>(),
-      "SkylineShell Callback",
-      0,
-      1);
-  
-  callback["setSendLogCallback"] = tsfn;
+  auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::sendMessageSync("SkylineShell", "setSendLogCallback", data);
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -309,7 +208,7 @@ void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
   data[2] = info[2].As<Napi::Number>().Int32Value();
   data[3] = info[3].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "setSafeAreaEdgeInsets", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 /**
  * createWindow(
@@ -363,7 +262,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
   data["sharedMemoryKey"] = info[6].As<Napi::String>().Utf8Value();
   data["skylineAddonPath"] = info[7].As<Napi::String>().Utf8Value();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "createWindow", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -376,7 +275,7 @@ void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data["windowId"] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "destroyWindow", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -412,7 +311,7 @@ void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
     }
   }
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "notifyAppLaunch", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -425,7 +324,7 @@ void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data["brightness"] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "onPlatformBrightnessChanged", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -446,7 +345,7 @@ void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
   data["x"] = info[1].As<Napi::Number>().DoubleValue();
   data["y"] = info[2].As<Napi::Number>().DoubleValue();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchStartEvent", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::dispatchTouchEndEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -467,7 +366,7 @@ void SkylineShell::dispatchTouchEndEvent(const Napi::CallbackInfo &info) {
   data["x"] = info[1].As<Napi::Number>().DoubleValue();
   data["y"] = info[2].As<Napi::Number>().DoubleValue();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchEndEvent", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -488,7 +387,7 @@ void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
   data["x"] = info[1].As<Napi::Number>().DoubleValue();
   data["y"] = info[2].As<Napi::Number>().DoubleValue();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchMoveEvent", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -501,7 +400,7 @@ void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data["windowId"] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "dispatchTouchCancelEvent", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -531,6 +430,6 @@ void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
   data["mods"] = info[4].As<Napi::Number>().Int32Value();
 
   // 发送消息到 WebSocket
-  WebSocket::sendMessageSync("SkylineShell", "dispatchKeyboardEvent", data);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
 } // namespace SkylineShell

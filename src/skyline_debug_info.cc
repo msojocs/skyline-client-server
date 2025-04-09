@@ -11,10 +11,10 @@ namespace SkylineDebugInfo{
     Napi::Function func = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
         time_t now = time(nullptr);
         spdlog::info("Call GetVersion sub...");
-        nlohmann::json resp;
-        auto result = WebSocket::sendMessageSync("SkylineDebugInfo", "", resp);
-        auto d = resp.parse(result);
-        auto data = d["data"];
+        nlohmann::json reqData;
+        auto result = WebSocket::callStaticSync("global", "SkylineDebugInfo", reqData);
+        
+        auto data = result["data"];
         auto obj = Napi::Object::New(info.Env());
         obj.Set("skyline_git_rev", Napi::String::New(info.Env(), data["skyline_git_rev"].get<std::string>()));
         obj.Set("flutter_engine_git_rev", Napi::String::New(info.Env(), data["flutter_engine_git_rev"].get<std::string>()));

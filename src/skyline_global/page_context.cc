@@ -1,6 +1,7 @@
 #include "../include/page_context.hh"
 #include "napi.h"
 #include <spdlog/spdlog.h>
+#include "../websocket.hh"
 
 namespace Skyline {
 void PageContext::Init(Napi::Env env, Napi::Object exports) {
@@ -46,7 +47,6 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
 }
 PageContext::PageContext(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<PageContext>(info) {
-  m_clientTag = "PageContext";
   if (info.Length() < 3) {
     throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
   }
@@ -87,7 +87,8 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
   if (options.Has("tagNameStyleIsolation")) {
     data["tagNameStyleIsolation"] = options.Get("tagNameStyleIsolation").As<Napi::Number>().Int32Value();
   }
-  this->sendToServer("contructor", data);
+  auto result = WebSocket::callConstructorSync("PageContext", data);
+  m_instanceId = result["data"]["instanceId"].get<std::string>();
 }
 
 void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {

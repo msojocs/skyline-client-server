@@ -6,41 +6,28 @@
 #include <nlohmann/json.hpp>
 #include <future>
 #include <memory>
-#include <random>
-#include <sstream>
 #include <string>
 #include <synchapi.h>
 #include <napi.h>
+#include "snowflake.hh"
 
 namespace WebSocket {
     static ix::WebSocket webSocket;
     static std::map<std::string, std::shared_ptr<std::promise<std::string>>> wsRequest;
     static std::map<std::string, Napi::ThreadSafeFunction> callback;
 
-    unsigned int random_char() {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, 255);
-        return dis(gen);
-    }
-
-    std::string generate_hex(const unsigned int len) {
-        std::stringstream ss;
-        for (auto i = 0; i < len; i++) {
-            const auto rc = random_char();
-            std::stringstream hexstream;
-            hexstream << std::hex << rc;
-            auto hex = hexstream.str();
-            ss << (hex.length() < 2 ? '0' + hex : hex);
-        }
-        return ss.str();
-    }
+    using snowflake_t = snowflake<1534832906275L>;
+    snowflake_t serverCommunicationUuid;
+    snowflake_t callbackUuid;
+    std::string serverUrl = "ws://127.0.0.1:3001"; // Added server URL variable 
 
     void initWebSocket() {
         ix::initNetSystem();
+        serverCommunicationUuid.init(1, 1);
+        callbackUuid.init(2, 1);
         // Connect to a server with encryption
         // See https://machinezone.github.io/IXWebSocket/usage/#tls-support-and-configuration
-        std::string url("ws://127.0.0.1:3001");
+        std::string url(serverUrl);
         webSocket.setUrl(url);
          // Setup a callback to be fired (in a background thread, watch out for race conditions !)
         // when a message or an event (open, close, error) is received
@@ -117,8 +104,8 @@ namespace WebSocket {
         }
     }
     nlohmann::json sendMessageSync(nlohmann::json& data) {
-        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
-        std::string id = generate_hex(16);
+        std::string id = std::to_string(serverCommunicationUuid.nextid());
+        data["id"] = id;
         spdlog::info("send to server");
         if (webSocket.getReadyState() != ix::ReadyState::Open)
         {
@@ -131,13 +118,14 @@ namespace WebSocket {
         // TODO: 3秒超时
         std::string result = futureObj.get();
         spdlog::info("result: {}", result.c_str());
-        return nlohmann::json::parse(result);
+        auto resp = nlohmann::json::parse(result);
+        if (resp.contains("error")) {
+            throw std::runtime_error(resp["error"].get<std::string>());
+        }
+        return resp["result"];
     }
     nlohmann::json callConstructorSync(const std::string& clazz, nlohmann::json& args) {
-        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
-        std::string id = generate_hex(16);
         nlohmann::json json {
-            {"id", id},
             {"type", "constructor"},
             {"clazz", clazz},
             {"data", {
@@ -147,26 +135,8 @@ namespace WebSocket {
         
         return sendMessageSync(json);
     }
-    nlohmann::json callStaticSync(const std::string& clazz, const std::string& action, nlohmann::json& args) {
-        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
-        std::string id = generate_hex(16);
-        nlohmann::json json {
-            {"id", id},
-            {"type", "static"},
-            {"clazz", clazz},
-            {"action", action},
-            {"data", {
-                {"params", args}
-            }}
-        };
-        
-        return sendMessageSync(json);
-    }
     nlohmann::json callDynamicSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
-        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
-        std::string id = generate_hex(16);
         nlohmann::json json {
-            {"id", id},
             {"type", "dynamic"},
             {"action", action},
             {"data", {
@@ -178,20 +148,18 @@ namespace WebSocket {
         return sendMessageSync(json);
     }
     nlohmann::json registerCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
-        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
-        std::string id = generate_hex(16);
+        std::string callbackId = std::to_string(callbackUuid.nextid());
         nlohmann::json json {
-            {"id", id},
             {"type", "registerCallback"},
             {"action", action},
             {"data", {
                 {"instanceId", instanceId},
-                {"callbackId", id}
+                {"callbackId", callbackId}
             }}
         };
         // 把callbackId保存到map中，收到消息时调用Callback函数
         auto result = sendMessageSync(json);
-        callback.emplace(id, Napi::ThreadSafeFunction::New(
+        callback.emplace(callbackId, Napi::ThreadSafeFunction::New(
             func.Env(),
             func,
             "WebSocket Callback",
@@ -199,12 +167,10 @@ namespace WebSocket {
             1));
         return result;
     }
-    nlohmann::json callCustomHandleSync(const std::string& action, nlohmann::json& args) {
-        // 生成一个随机的16位十六进制字符串作为id，把收到同id的消息返回
-        std::string id = generate_hex(16);
+    nlohmann::json callStaticSync(const std::string& clazz, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {
-            {"id", id},
-            {"type", "customHandle"},
+            {"type", "static"},
+            {"clazz", clazz},
             {"action", action},
             {"data", {
                 {"params", args}
@@ -212,5 +178,9 @@ namespace WebSocket {
         };
         
         return sendMessageSync(json);
+    }
+    nlohmann::json callCustomHandleSync(const std::string& action, nlohmann::json& args) {
+        
+        return callStaticSync("customHandle", action, args);
     }
 }

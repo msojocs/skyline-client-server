@@ -1,7 +1,9 @@
 #include "../include/page_context.hh"
 #include "napi.h"
+#include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include "../websocket.hh"
+#include "../include/convert.hh"
 
 namespace Skyline {
 void PageContext::Init(Napi::Env env, Napi::Object exports) {
@@ -93,11 +95,22 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
     optionsJson,
   };
   auto result = WebSocket::callConstructorSync("PageContext", data);
-  m_instanceId = result["result"]["instanceId"].get<std::string>();
+  m_instanceId = result["instanceId"].get<std::string>();
 }
 
+/**
+ * 1个Array参数
+ */
 void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  if (info.Length() < 1) {
+    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+  }
+  if (!info[0].IsArray()) {
+    throw Napi::TypeError::New(info.Env(), "First argument must be an array");
+  }
+  Napi::Array sheets = info[0].As<Napi::Array>();
+  auto args = Convert::convertValue2Json(sheets);
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, args);
 }
 
 void PageContext::appendStyleSheet(const Napi::CallbackInfo &info) {
@@ -122,11 +135,56 @@ void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
   };
   WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
 }
-
+/**
+ * 参数数量：1个
+ * 参数1：Array
+ */
 void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  if (info.Length() < 1) {
+    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+  }
+  if (!info[0].IsArray()) {
+    throw Napi::TypeError::New(info.Env(), "First argument must be an array");
+  }
+  
+  /**
+   * [
+   *  {
+   *   content: '',
+   *   scopeId: 0,
+   *  }
+   * ]
+   */
+  nlohmann::json args;
+  Napi::Array sheets = info[0].As<Napi::Array>();
+  for (uint32_t i = 0; i < sheets.Length(); i++) {
+    Napi::Object sheet = sheets.Get(i).As<Napi::Object>();
+    if (!sheet.Has("content")) {
+      throw Napi::TypeError::New(info.Env(), "content is required");
+    }
+    if (!sheet.Has("scopeId")) {
+      throw Napi::TypeError::New(info.Env(), "scopeId is required");
+    }
+    if (!sheet.Get("content").IsString()) {
+      throw Napi::TypeError::New(info.Env(), "content must be a string");
+    }
+    if (!sheet.Get("scopeId").IsNumber()) {
+      throw Napi::TypeError::New(info.Env(), "scopeId must be a number");
+    }
+    auto content = sheet.Get("content").As<Napi::String>().Utf8Value();
+    auto scopeId = sheet.Get("scopeId").As<Napi::Number>().Int32Value();
+    args[i] = {
+      {"content", content},
+      {"scopeId", scopeId},
+    };
+  }
+  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, args);
+  // 无返回值
 }
 
+/**
+ * 2个参数
+ */
 void PageContext::attach(const Napi::CallbackInfo &info) {
   throw Napi::Error::New(info.Env(), "Not implemented");
 }
@@ -150,7 +208,7 @@ void PageContext::createFragment(const Napi::CallbackInfo &info) {
 Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   auto result = WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
-  auto returnValue = result["result"]["returnValue"];
+  auto returnValue = result["returnValue"];
   return Napi::Number::New(info.Env(), returnValue.get<int>());
 }
 
@@ -238,8 +296,20 @@ void PageContext::setNavigateBackInterception(const Napi::CallbackInfo &info) {
   throw Napi::Error::New(info.Env(), "Not implemented");
 }
 
+/**
+ * 1个Callback参数
+ */
 void PageContext::startRender(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  if (info.Length() < 1) {
+    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+  }
+  if (!info[0].IsFunction()) {
+    throw Napi::TypeError::New(info.Env(), "First argument must be a function");
+  }
+  auto func = info[0].As<Napi::Function>(); 
+  // 发送消息到 WebSocket
+  nlohmann::json data;
+  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
 }
 
 void PageContext::updateRouteConfig(const Napi::CallbackInfo &info) {

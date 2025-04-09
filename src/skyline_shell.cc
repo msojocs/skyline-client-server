@@ -58,7 +58,7 @@ SkylineShell::SkylineShell(const Napi::CallbackInfo &info)
       spdlog::info("SkylineShell constructor");
   nlohmann::json data;
   auto result = WebSocket::callConstructorSync("SkylineShell", data);
-  this->m_instanceId = result["result"]["instanceId"].get<std::string>();
+  this->m_instanceId = result["instanceId"].get<std::string>();
 }
 void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -259,17 +259,22 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
   auto devicePixelRatio = info[4].As<Napi::Number>().Int32Value();
   auto hideWindow = info[5].As<Napi::Boolean>().Value();
   auto sharedMemoryKey = info[6].As<Napi::String>().Utf8Value();
-  auto skylineAddonPath = info[7].As<Napi::String>().Utf8Value();
-  // TODO: 两个path要替换为server端路径
+
+  // 获取Server端的skyline路径
+  nlohmann::json data1;
+  auto resp = WebSocket::callCustomHandleSync("getSkylineAddonPath", data1);
+  auto skylineAddonPath = resp["returnValue"].get<std::string>();
+  
+  // 两个path要替换为server端路径
   nlohmann::json data{
-    windowId,
+    skylineAddonPath + "\\bundle",
     bundlePath,
     width,
     height,
     devicePixelRatio,
     hideWindow,
     sharedMemoryKey,
-    skylineAddonPath,
+    skylineAddonPath + "\\build\\skyline.node",
   };
   // 发送消息到 WebSocket
   WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);

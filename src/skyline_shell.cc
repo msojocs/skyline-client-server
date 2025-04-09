@@ -72,7 +72,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
   auto func = info[0].As<Napi::Function>();
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -86,7 +86,7 @@ void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) 
   auto func = info[0].As<Napi::Function>();
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setNotifyRouteDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -101,7 +101,7 @@ void SkylineShell::setNotifyRouteDoneCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setNavigateBackCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -116,7 +116,7 @@ void SkylineShell::setNavigateBackCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -131,7 +131,7 @@ void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -146,7 +146,7 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -161,7 +161,7 @@ void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) 
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -176,7 +176,7 @@ void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setSendLogCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -191,7 +191,7 @@ void SkylineShell::setSendLogCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -208,7 +208,7 @@ void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
   data[2] = info[2].As<Napi::Number>().Int32Value();
   data[3] = info[3].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 /**
  * createWindow(
@@ -263,12 +263,12 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
   // 获取Server端的skyline路径
   nlohmann::json data1;
   auto resp = WebSocket::callCustomHandleSync("getSkylineAddonPath", data1);
-  auto skylineAddonPath = resp["returnValue"].get<std::string>();
-  
+  auto skylineAddonPath = resp.get<std::string>();
+
   // 两个path要替换为server端路径
   nlohmann::json data{
+    windowId,
     skylineAddonPath + "\\bundle",
-    bundlePath,
     width,
     height,
     devicePixelRatio,
@@ -277,7 +277,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
     skylineAddonPath + "\\build\\skyline.node",
   };
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -290,7 +290,7 @@ void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data[0] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -326,7 +326,7 @@ void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
     }
   }
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -339,7 +339,7 @@ void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data[0] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -360,7 +360,7 @@ void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
   data[1] = info[1].As<Napi::Number>().DoubleValue();
   data[2] = info[2].As<Napi::Number>().DoubleValue();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::dispatchTouchEndEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -381,7 +381,7 @@ void SkylineShell::dispatchTouchEndEvent(const Napi::CallbackInfo &info) {
   data[1] = info[1].As<Napi::Number>().DoubleValue();
   data[2] = info[2].As<Napi::Number>().DoubleValue();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -402,7 +402,7 @@ void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
   data[1] = info[1].As<Napi::Number>().DoubleValue();
   data[2] = info[2].As<Napi::Number>().DoubleValue();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -415,7 +415,7 @@ void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data[0] = info[0].As<Napi::Number>().Int32Value();
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -445,6 +445,6 @@ void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
   data[4] = info[4].As<Napi::Number>().Int32Value();
 
   // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 } // namespace SkylineShell

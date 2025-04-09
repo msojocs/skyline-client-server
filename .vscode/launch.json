@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Debug",
       "program": "node",
-      "args": ["${workspaceFolder}/test/get.js"],
+      "args": ["${workspaceFolder}/test/skyline.js"],
       "cwd": "${workspaceFolder}"
     }
   ]

@@ -49,11 +49,11 @@ namespace WebSocket {
                     else 
                     {
                         // id为空，说明是通知消息
-                        std::string type = json["tpye"].get<std::string>();
+                        std::string type = json["type"].get<std::string>();
                         if (type == "emitCallback") {
                             // 回调触发
                             std::string callbackId = json["callbackId"].get<std::string>();
-                            auto args = json["tpye"]["args"];
+                            auto args = json["data"]["args"];
                             // TODO: 触发回调函数
                             auto it = callback.find(callbackId);
                             if (it != callback.end()) {
@@ -106,7 +106,7 @@ namespace WebSocket {
     nlohmann::json sendMessageSync(nlohmann::json& data) {
         std::string id = std::to_string(serverCommunicationUuid.nextid());
         data["id"] = id;
-        spdlog::info("send to server");
+        spdlog::info("send to server {}", data.dump());
         if (webSocket.getReadyState() != ix::ReadyState::Open)
         {
             throw std::runtime_error("WebSocket is not open");

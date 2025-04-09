@@ -110,7 +110,7 @@ void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
   }
   Napi::Array sheets = info[0].As<Napi::Array>();
   auto args = Convert::convertValue2Json(sheets);
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, args);
+  WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 
 void PageContext::appendStyleSheet(const Napi::CallbackInfo &info) {
@@ -133,7 +133,7 @@ void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
     path,
     id,
   };
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 /**
  * 参数数量：1个
@@ -178,7 +178,7 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
       {"scopeId", scopeId},
     };
   }
-  WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, args);
+  WebSocket::callDynamicSync(m_instanceId, __func__, args);
   // 无返回值
 }
 
@@ -207,7 +207,7 @@ void PageContext::createFragment(const Napi::CallbackInfo &info) {
 
 Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &info) {
   nlohmann::json data;
-  auto result = WebSocket::callDynamicSync(m_instanceId, __FUNCTION__, data);
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, data);
   auto returnValue = result["returnValue"];
   return Napi::Number::New(info.Env(), returnValue.get<int>());
 }
@@ -309,7 +309,7 @@ void PageContext::startRender(const Napi::CallbackInfo &info) {
   auto func = info[0].As<Napi::Function>(); 
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerCallbackSync(m_instanceId, __FUNCTION__, func);
+  WebSocket::registerCallbackSync(m_instanceId, __func__, func);
 }
 
 void PageContext::updateRouteConfig(const Napi::CallbackInfo &info) {

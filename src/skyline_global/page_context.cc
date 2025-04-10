@@ -130,11 +130,10 @@ void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
   }
   auto path = info[0].As<Napi::String>().Utf8Value();
   auto id = info[1].As<Napi::Number>().Int32Value();
-  nlohmann::json data = {
-    path,
-    id,
-  };
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  nlohmann::json args;
+  args[0] = path;
+  args[1] = id;
+  WebSocket::callDynamicAsync(m_instanceId, __func__, args);
 }
 /**
  * 参数数量：1个

@@ -160,7 +160,7 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json data;
-  WebSocket::registerDynamicCallbackSync(m_instanceId, __func__, func);
+  WebSocket::registerDynamicBlockCallbackSync(m_instanceId, __func__, func);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();

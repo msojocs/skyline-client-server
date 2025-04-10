@@ -17,6 +17,7 @@ set(CLIENT_DIR_LIST
     ../common/convert.cc
     ../common/console.cc
     skyline_global/runtime.cc
+    skyline_global/async_style_sheets.cc
 )
 
 add_library(${CLIENT_NAME}

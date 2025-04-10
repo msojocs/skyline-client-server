@@ -50,7 +50,7 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
 PageContext::PageContext(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<PageContext>(info) {
   if (info.Length() < 3) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "PageContext: Wrong number of arguments");
   }
   if (!info[0].IsNumber()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a number");
@@ -103,7 +103,7 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
  */
 void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "appendCompiledStyleSheets: Wrong number of arguments");
   }
   if (!info[0].IsArray()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
@@ -120,7 +120,7 @@ void PageContext::appendStyleSheet(const Napi::CallbackInfo &info) {
 
 void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
   if (info.Length() < 2) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "appendStyleSheetIndex: Wrong number of arguments");
   }
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a string");
@@ -141,7 +141,7 @@ void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
  */
 void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "appendStyleSheets: Wrong number of arguments");
   }
   if (!info[0].IsArray()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
@@ -233,11 +233,12 @@ void PageContext::loadFontFace(const Napi::CallbackInfo &info) {
  */
 Napi::Value PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "preCompileStyleSheets: Wrong number of arguments");
   }
   if (!info[0].IsArray()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
   }
+  auto env = info.Env();
   Napi::Array sheets = info[0].As<Napi::Array>();
   /**
    * item 结构：
@@ -262,7 +263,7 @@ Napi::Value PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
 
-  return Napi::Array::New(info.Env(), 0);
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 void PageContext::recalcStyle(const Napi::CallbackInfo &info) {
@@ -286,7 +287,7 @@ void PageContext::setNavigateBackInterception(const Napi::CallbackInfo &info) {
  */
 void PageContext::startRender(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "startRender: Wrong number of arguments");
   }
   if (!info[0].IsFunction()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a function");

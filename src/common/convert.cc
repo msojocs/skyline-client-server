@@ -1,8 +1,16 @@
 #include "../include/convert.hh"
+#include "../client/include/async_style_sheets.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
 
 namespace Convert {
+static std::map<std::string, Napi::FunctionReference *> funcMap;
+
+void RegisteInstanceType(Napi::Env &env) {
+  // 注册实例类型和对应的构造函数
+  funcMap["AsyncStyleSheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
+}
+
 nlohmann::json convertValue2Json(const Napi::Value &value) {
   if (value.IsString()) {
     return value.As<Napi::String>().Utf8Value();
@@ -18,7 +26,7 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
       jsonArr[i] = buffer.Data()[i];
     }
     return jsonArr;
-  }else if (value.IsArrayBuffer()) {
+  } else if (value.IsArrayBuffer()) {
     Napi::ArrayBuffer arrayBuffer = value.As<Napi::ArrayBuffer>();
     size_t byteLength = arrayBuffer.ByteLength();
     nlohmann::json jsonArr;
@@ -49,6 +57,7 @@ nlohmann::json convertObject2Json(const Napi::Value &value) {
   }
   return jsonObj;
 }
+
 Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
   if (data.is_string()) {
     return Napi::String::New(env, data.get<std::string>());
@@ -63,6 +72,22 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
     }
     return arr;
   } else if (data.is_object()) {
+    if (data.contains("instanceId") && data.contains("instanceType")) {
+      auto it = funcMap.find(data["instanceType"].get<std::string>());
+      if (it != funcMap.end()) {
+        try {
+          Napi::FunctionReference *func = it->second;
+          auto result = func->New({Napi::String::New(env, data["instanceId"].get<std::string>())});
+          return result;
+        } catch (const std::exception &e) {
+          Napi::Error::New(env,
+                           std::string("Error creating instance: ") + e.what())
+              .ThrowAsJavaScriptException();
+          return env.Undefined();
+        }
+      }
+      return env.Undefined();
+    }
     Napi::Object obj = Napi::Object::New(env);
     for (auto it = data.begin(); it != data.end(); ++it) {
       obj.Set(it.key(), convertJson2Value(env, it.value()));

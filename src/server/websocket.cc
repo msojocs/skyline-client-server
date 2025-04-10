@@ -18,7 +18,7 @@ using snowflake_t = snowflake<1534832906275L>;
 snowflake_t communicationUuid;
 void sendMsg(Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "sendMsg: Wrong number of arguments");
   }
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a string");
@@ -98,7 +98,7 @@ int startInner(std::string &host, int port) {
 
 Napi::Number start(Napi::CallbackInfo &info) {
   if (info.Length() < 2) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "start: Wrong number of arguments");
   }
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a string");
@@ -125,7 +125,7 @@ void stop(Napi::CallbackInfo &info) {
 
 void setMessageCallback(Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "setMessageCallback: Wrong number of arguments");
   }
   if (!info[0].IsFunction()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a function");
@@ -144,7 +144,7 @@ void setMessageCallback(Napi::CallbackInfo &info) {
 }
 Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
-    throw Napi::TypeError::New(info.Env(), "Wrong number of arguments");
+    throw Napi::TypeError::New(info.Env(), "sendMessageSync: Wrong number of arguments");
   }
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a string");

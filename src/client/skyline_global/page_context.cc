@@ -3,7 +3,7 @@
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include "../websocket.hh"
-#include "../include/convert.hh"
+#include "../../include/convert.hh"
 
 namespace Skyline {
 void PageContext::Init(Napi::Env env, Napi::Object exports) {

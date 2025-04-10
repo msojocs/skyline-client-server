@@ -9,8 +9,8 @@
 #include <string>
 #include <synchapi.h>
 #include <napi.h>
-#include "snowflake.hh"
-#include "include/convert.hh"
+#include "../include/snowflake.hh"
+#include "../include/convert.hh"
 
 namespace WebSocket {
     static ix::WebSocket webSocket;

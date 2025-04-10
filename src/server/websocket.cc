@@ -5,7 +5,7 @@
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <future>
-#include "../snowflake.hh"
+#include "../include/snowflake.hh"
 #include "../include/convert.hh"
 
 namespace WebSocketServer {

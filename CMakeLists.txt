@@ -87,58 +87,8 @@ message("CMAKE_JS_LIB: " ${CMAKE_JS_LIB})
 include_directories(${CMAKE_JS_SRC})
 include_directories(${NODE_ADDON_API_DIR})
 
-set(CLIENT_NAME skylineClient)
-set(CLIENT_DIR_LIST
-    src/main.cc
-    src/websocket.cc
-    src/websocket.hh
-    src/skyline_debug_info.hh
-    src/skyline_debug_info.cc
-    src/skyline_shell.hh
-    src/skyline_shell.cc
-    src/skyline_global.hh
-    src/skyline_global.cc
-    src/base_client.cc
-    src/include/base_client.hh
-    src/include/page_context.hh
-    src/skyline_global/page_context.cc
-    src/skyline_global/convert.cc
-    src/skyline_global/runtime.cc
-)
-
-add_library(${CLIENT_NAME}
-    SHARED
-    ${CLIENT_DIR_LIST}
-    ${CMAKE_JS_SRC}
-    )
-
 set(IS_RUNNING_NODE true)
-if (WIN32)
-    if(IS_RUNNING_NODE)
-        message("生成 node_api.lib")
-        execute_process(COMMAND
-            ${CMAKE_AR} /def:node_api.def /out:node_api.lib /machine:x86 ${CMAKE_STATIC_LINKER_FLAGS}
-            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
-            COMMAND_ERROR_IS_FATAL ANY
-        )
-        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
-    else()
-        message("整合 node64.lib")
-        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
-    endif()
-    target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
 
-else()
-    # Linux specific libraries
-    target_link_libraries(${CLIENT_NAME} PRIVATE rt pthread)
-endif()
-
-target_link_libraries(${CLIENT_NAME} PRIVATE spdlog::spdlog)
-target_link_libraries(${CLIENT_NAME} PRIVATE ixwebsocket::ixwebsocket)
-target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
-
-set_target_properties(${CLIENT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-
+add_subdirectory(src/client)
 add_subdirectory(src/server)
 ################test##################

@@ -4,7 +4,7 @@ set(SERVER_DIR_LIST
     server.cc
     websocket.cc
     websocket.hh
-    ../skyline_global/convert.cc
+    ../common/convert.cc
 )
 
 add_library(${SERVER_NAME}

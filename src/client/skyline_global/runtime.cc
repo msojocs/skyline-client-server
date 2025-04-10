@@ -1,5 +1,5 @@
 #include "../include/runtime.hh"
-#include "../include/convert.hh"
+#include "../../include/convert.hh"
 #include "../websocket.hh"
 #include "napi.h"
 #include <nlohmann/json.hpp>

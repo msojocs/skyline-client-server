@@ -87,8 +87,8 @@ message("CMAKE_JS_LIB: " ${CMAKE_JS_LIB})
 include_directories(${CMAKE_JS_SRC})
 include_directories(${NODE_ADDON_API_DIR})
 
-set(MODULE_NAME skylineClient)
-set(SRC_DIR_LIST
+set(CLIENT_NAME skylineClient)
+set(CLIENT_DIR_LIST
     src/main.cc
     src/websocket.cc
     src/websocket.hh
@@ -106,13 +106,13 @@ set(SRC_DIR_LIST
     src/skyline_global/runtime.cc
 )
 
-add_library(${MODULE_NAME}
+add_library(${CLIENT_NAME}
     SHARED
-    ${SRC_DIR_LIST}
+    ${CLIENT_DIR_LIST}
     ${CMAKE_JS_SRC}
     )
 
-set(IS_RUNNING_NODE false)
+set(IS_RUNNING_NODE true)
 if (WIN32)
     if(IS_RUNNING_NODE)
         message("生成 node_api.lib")
@@ -121,23 +121,24 @@ if (WIN32)
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
             COMMAND_ERROR_IS_FATAL ANY
         )
-        target_link_libraries(${MODULE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
     else()
         message("整合 node64.lib")
-        target_link_libraries(${MODULE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
+        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
     endif()
-    target_link_libraries(${MODULE_NAME} PRIVATE bcrypt)
+    target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
 
 else()
     # Linux specific libraries
-    target_link_libraries(${MODULE_NAME} PRIVATE rt pthread)
+    target_link_libraries(${CLIENT_NAME} PRIVATE rt pthread)
 endif()
 
-target_link_libraries(${MODULE_NAME} PRIVATE spdlog::spdlog)
-target_link_libraries(${MODULE_NAME} PRIVATE ixwebsocket::ixwebsocket)
-target_link_libraries(${MODULE_NAME} PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(${MODULE_NAME} PRIVATE ${CMAKE_JS_LIB})
+target_link_libraries(${CLIENT_NAME} PRIVATE spdlog::spdlog)
+target_link_libraries(${CLIENT_NAME} PRIVATE ixwebsocket::ixwebsocket)
+target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 
-set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+set_target_properties(${CLIENT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 
+add_subdirectory(src/server)
 ################test##################

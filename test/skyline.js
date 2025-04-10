@@ -12,6 +12,7 @@ shell.setNotifyBootstrapDoneCallback((...args) => {
 shell.setSafeAreaEdgeInsets(0, 47, 0, 34);
 shell.setLoadResourceCallback((...args) => {
   console.info("setLoadResourceCallback", ...args);
+  return 111;
 });
 shell.setLoadResourceAsyncCallback((...args) => {
   console.info("setLoadResourceAsyncCallback", ...args);

@@ -46,6 +46,7 @@ namespace WebSocket {
                         if (wsRequest.find(id) != wsRequest.end())
                         {
                             wsRequest[id]->set_value(msg->str);
+                            wsRequest.erase(id);
                         }
                     }
                     else if(!json["type"].empty())
@@ -70,17 +71,16 @@ namespace WebSocket {
                                         argsVec.push_back(Convert::convertJson2Value(env, arg));
                                     }
                                     spdlog::info("call callback function...");
-                                    jsCallback.Call(argsVec);
+                                    auto resultValue = jsCallback.Call(argsVec);
                                     spdlog::info("call callback function end...");
-
+                                    // 发送回调结果
+                                    auto resultJson = Convert::convertValue2Json(resultValue);
                                     if (json.contains("id")) {
                                         spdlog::info("reply callback...");
                                         nlohmann::json callbakcResult = {
                                             {"id", json["id"].get<std::string>()},
                                             {"type", "callbackReply"},
-                                            {"data", {
-                                                {"params", "111"}
-                                            }}
+                                            {"result", resultJson},
                                         };
                                         webSocket.send(callbakcResult.dump());
                                     }

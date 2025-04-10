@@ -13,6 +13,7 @@ add_library(${SERVER_NAME}
     ${CMAKE_JS_SRC}
     )
 
+set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
         target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)

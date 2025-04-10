@@ -25,6 +25,7 @@ void registerTouchCallback(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
   auto func = info[0].As<Napi::Function>();
+  
   // 发送消息到 WebSocket
   WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
 }

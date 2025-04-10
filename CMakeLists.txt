@@ -87,7 +87,6 @@ message("CMAKE_JS_LIB: " ${CMAKE_JS_LIB})
 include_directories(${CMAKE_JS_SRC})
 include_directories(${NODE_ADDON_API_DIR})
 
-set(IS_RUNNING_NODE true)
 
 add_subdirectory(src/client)
 add_subdirectory(src/server)

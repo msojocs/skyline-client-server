@@ -159,7 +159,13 @@ Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
     throw Napi::Error::New(info.Env(), "No clients connected");
   }
   spdlog::info("send to client: {}", json.dump());
-  clients.begin()->get()->send(json.dump());
+  auto log = info.Env().Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+  log.Call( {Napi::String::New(info.Env(), "Sending message: " + json.dump())});
+  std::thread t1([clients, json]() {
+    clients.begin()->get()->send(json.dump());
+  });
+  t1.detach();
+  log.Call( {Napi::String::New(info.Env(), "Message sent")});
   auto promiseObj = std::make_shared<std::promise<std::string>>();
   std::future<std::string> futureObj = promiseObj->get_future();
   wsRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]

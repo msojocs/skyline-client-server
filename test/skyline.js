@@ -12,7 +12,7 @@ shell.setNotifyBootstrapDoneCallback((...args) => {
 shell.setSafeAreaEdgeInsets(0, 47, 0, 34);
 shell.setLoadResourceCallback((...args) => {
   console.info("setLoadResourceCallback", ...args);
-  return 111;
+  return new Uint8Array(10);
 });
 shell.setLoadResourceAsyncCallback((...args) => {
   console.info("setLoadResourceAsyncCallback", ...args);
@@ -20,20 +20,11 @@ shell.setLoadResourceAsyncCallback((...args) => {
 shell.setHttpRequestCallback((...args) => {
   console.info("setHttpRequestCallback", ...args);
 });
-
+let ready = false;
 shell.setNotifyWindowReadyCallback((...args) => {
   // args: windowId
   console.info("setNotifyWindowReadyCallback", ...args);
-
-  const page = new global.SkylineGlobal.PageContext(1, 1, {
-    defaultBlockLayout: true,
-    defaultContentBox: false,
-    enableImagePreload: false,
-    enableScrollViewAutoSize: false,
-    tagNameStyleIsolation: 0
-  })
-  const group = page.createStyleSheetIndexGroup()
-  page.appendStyleSheetIndex("wxlibfile://WAStyleIndex.fpiib", 0)
+  ready = true;
 });
 shell.setNotifyRouteDoneCallback((...args) => {
   console.info("setNotifyRouteDoneCallback", ...args);
@@ -47,9 +38,9 @@ shell.setNavigateBackDoneCallback((...args) => {
 shell.setSendLogCallback((...args) => {
   console.info("sendLogCallback", ...args);
 });
-const sharedMemory = require('D:/github/shared-memory/build/sharedMemory.node')
-const key = "test"
-const buffer = sharedMemory.setMemory(key, 21066248)
+const sharedMemory = require("D:/github/shared-memory/build/sharedMemory.node");
+const key = "test";
+const buffer = sharedMemory.setMemory(key, 21066248);
 const win = shell.createWindow(
   1,
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/bundle",
@@ -62,10 +53,58 @@ const win = shell.createWindow(
 );
 
 shell.notifyAppLaunch(1, 1, {
-  backgroundColorContent: '#FFFFFFFF',
-})
+  backgroundColorContent: "#FFFFFFFF",
+});
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-setTimeout(() => {
-      
-}, 500)
+(async () => {
+  while (!ready) {
+    await sleep(100);
+  }
+  console.info("window ready");
+
+  const page = new global.SkylineGlobal.PageContext(1, 1, {
+    defaultBlockLayout: true,
+    defaultContentBox: false,
+    enableImagePreload: false,
+    enableScrollViewAutoSize: false,
+    tagNameStyleIsolation: 0,
+  });
+  const group = page.createStyleSheetIndexGroup();
+  page.appendStyleSheetIndex("wxlibfile://WAStyleIndex.fpiib", group);
+  page.appendCompiledStyleSheets([
+    {
+      groupId: 0,
+      path: "wxlibfile://WASkylineStyle",
+      prefix: "",
+      scopeId: 0,
+      styleSheet: {
+        binary: true,
+        enabled: true,
+        index: 0,
+        injected: 2,
+        path: "wxlibfile://WASkylineStyle",
+        priority: 3,
+        styleScope: 0,
+        styleScopeSetter: null,
+      },
+    },
+    {
+      groupId: 0,
+      path: "wxlibfile://WASkylineStyleV2",
+      prefix: "",
+      scopeId: 0,
+      styleSheet: {
+        binary: true,
+        enabled: true,
+        index: 1,
+        injected: 2,
+        path: "wxlibfile://WASkylineStyleV2",
+        priority: 3,
+        styleScope: 0,
+        styleScopeSetter: null,
+      },
+    },
+  ]);
+})();

@@ -10,6 +10,22 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
     return value.As<Napi::Number>().DoubleValue();
   } else if (value.IsBoolean()) {
     return value.As<Napi::Boolean>().Value();
+  } else if (value.IsBuffer()) {
+    Napi::Buffer<uint8_t> buffer = value.As<Napi::Buffer<uint8_t>>();
+    size_t byteLength = buffer.Length();
+    nlohmann::json jsonArr;
+    for (uint32_t i = 0; i < byteLength; i++) {
+      jsonArr[i] = buffer.Data()[i];
+    }
+    return jsonArr;
+  }else if (value.IsArrayBuffer()) {
+    Napi::ArrayBuffer arrayBuffer = value.As<Napi::ArrayBuffer>();
+    size_t byteLength = arrayBuffer.ByteLength();
+    nlohmann::json jsonArr;
+    for (uint32_t i = 0; i < byteLength; i++) {
+      jsonArr[i] = static_cast<uint8_t *>(arrayBuffer.Data())[i];
+    }
+    return jsonArr;
   } else if (value.IsArray()) {
     Napi::Array arr = value.As<Napi::Array>();
     nlohmann::json jsonArr;

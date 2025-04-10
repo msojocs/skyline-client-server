@@ -15,6 +15,7 @@ set(CLIENT_DIR_LIST
     include/page_context.hh
     skyline_global/page_context.cc
     ../common/convert.cc
+    ../common/console.cc
     skyline_global/runtime.cc
 )
 
@@ -23,7 +24,7 @@ add_library(${CLIENT_NAME}
     ${CLIENT_DIR_LIST}
     ${CMAKE_JS_SRC}
     )
-
+set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
         target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)

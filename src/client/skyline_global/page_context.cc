@@ -133,7 +133,7 @@ void PageContext::appendStyleSheetIndex(const Napi::CallbackInfo &info) {
   nlohmann::json args;
   args[0] = path;
   args[1] = id;
-  WebSocket::callDynamicAsync(m_instanceId, __func__, args);
+  WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 /**
  * 参数数量：1个
@@ -257,10 +257,8 @@ Napi::Value PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
    * - {styleScope} number
    * - {styleScopeSetter} null ???
    */
-  auto data = Convert::convertValue2Json(sheets);
-  nlohmann::json args = {
-    data,
-  };
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(sheets);
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
 

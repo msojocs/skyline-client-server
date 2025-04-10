@@ -4,7 +4,7 @@
 #include "skyline_shell.hh"
 #include "websocket.hh"
 #include "skyline_debug_info.hh"
-#include "skyline_global.hh"
+#include "../include/console.hh"
 
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {
@@ -13,6 +13,7 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   spdlog::info("initWebSocket end");
   SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
   SkylineShell::SkylineShell::Init(env, exports);
+  exports.Set("setConsole", Napi::Function::New(env, Logger::set_console));
   spdlog::info("return result");
   return exports;
 }

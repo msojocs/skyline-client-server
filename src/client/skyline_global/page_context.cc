@@ -42,9 +42,9 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
                       &PageContext::setNavigateBackInterception),
        InstanceMethod("startRender", &PageContext::startRender),
        InstanceMethod("updateRouteConfig", &PageContext::updateRouteConfig),
-      //  InstanceAccessor<&PageContext::getInstanceId>("instanceId",
-      //                   static_cast<napi_property_attributes>(napi_writable |
-      //                                                        napi_configurable)),
+       InstanceAccessor<&PageContext::getInstanceId>("instanceId",
+                        static_cast<napi_property_attributes>(napi_writable |
+                                                             napi_configurable)),
       });
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -173,15 +173,15 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
  * 2个参数
  */
 void PageContext::attach(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "attach: Not implemented");
 }
 
 void PageContext::attachCustomRoute(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "attachCustomRoute: Not implemented");
 }
 
 void PageContext::clearStylesheets(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "clearStylesheets: Not implemented");
 }
 
 Napi::Value PageContext::createElement(const Napi::CallbackInfo &info) {
@@ -194,19 +194,25 @@ Napi::Value PageContext::createElement(const Napi::CallbackInfo &info) {
   if (!info[1].IsString()) {
     throw Napi::TypeError::New(info.Env(), "Second argument must be a string");
   }
-  auto tagName = info[0].As<Napi::String>().Utf8Value();
-  auto tagValue = info[1].As<Napi::String>().Utf8Value();
   nlohmann::json args;
-  args[0] = tagName;
-  args[1] = tagValue;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
   auto env = info.Env();
   return Convert::convertJson2Value(env, returnValue);
 }
 
-void PageContext::createFragment(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+Napi::Value PageContext::createFragment(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  auto env = info.Env();
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &info) {
@@ -217,39 +223,39 @@ Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &in
 }
 
 void PageContext::createTextNode(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "createTextNode: Not implemented");
 }
 
 void PageContext::finishStyleSheetsCompilation(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "finishStyleSheetsCompilation: Not implemented");
 }
 
 void PageContext::getComputedStyle(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "getComputedStyle: Not implemented");
 }
 
 void PageContext::getHostNode(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "getHostNode: Not implemented");
 }
 
 void PageContext::getNodeFromPoint(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "getNodeFromPoint: Not implemented");
 }
 
 void PageContext::getRootNode(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "getRootNode: Not implemented");
 }
 
 void PageContext::getWindowId(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "getWindowId: Not implemented");
 }
 
 void PageContext::isTab(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "isTab: Not implemented");
 }
 
 void PageContext::loadFontFace(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "loadFontFace: Not implemented");
 }
 /**
  * @param {Array} sheets
@@ -291,19 +297,19 @@ Napi::Value PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
 }
 
 void PageContext::recalcStyle(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "recalcStyle: Not implemented");
 }
 
 void PageContext::release(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "release: Not implemented");
 }
 
 void PageContext::setAsTab(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "setAsTab: Not implemented");
 }
 
 void PageContext::setNavigateBackInterception(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "setNavigateBackInterception: Not implemented");
 }
 
 /**
@@ -323,7 +329,7 @@ void PageContext::startRender(const Napi::CallbackInfo &info) {
 }
 
 void PageContext::updateRouteConfig(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+  throw Napi::Error::New(info.Env(), "updateRouteConfig: Not implemented");
 }
 
 } // namespace Skyline

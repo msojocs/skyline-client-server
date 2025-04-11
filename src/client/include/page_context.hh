@@ -25,7 +25,7 @@ private:
   void attachCustomRoute(const Napi::CallbackInfo &info);
   void clearStylesheets(const Napi::CallbackInfo &info);
   Napi::Value createElement(const Napi::CallbackInfo &info);
-  void createFragment(const Napi::CallbackInfo &info);
+  Napi::Value createFragment(const Napi::CallbackInfo &info);
   /**
    * 0个参数
    * * @return {number} number

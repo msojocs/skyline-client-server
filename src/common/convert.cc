@@ -70,6 +70,9 @@ nlohmann::json convertObject2Json(const Napi::Value &value) {
 }
 
 Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
+  if (data.is_null()) {
+    return env.Undefined();
+  }
   if (data.is_string()) {
     return Napi::String::New(env, data.get<std::string>());
   } else if (data.is_number()) {

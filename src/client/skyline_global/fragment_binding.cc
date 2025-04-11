@@ -13,16 +13,16 @@ Napi::FunctionReference *FragmentBinding::GetClazz(Napi::Env env) {
                          static_cast<napi_property_attributes>(napi_writable |
                                                               napi_configurable)),
           InstanceMethod("appendChild", &FragmentBinding::appendChild),
-          InstanceMethod("associateComponent", &FragmentBinding::appendChild),
-          InstanceMethod("equal", &FragmentBinding::appendChild),
-          InstanceMethod("findChildPosition", &FragmentBinding::appendChild),
-          InstanceMethod("getChildNode", &FragmentBinding::appendChild),
-          InstanceMethod("getParentNode", &FragmentBinding::appendChild),
-          InstanceMethod("insertChild", &FragmentBinding::appendChild),
-          InstanceMethod("release", &FragmentBinding::appendChild),
-          InstanceMethod("removeChild", &FragmentBinding::appendChild),
-          InstanceMethod("replaceChild", &FragmentBinding::appendChild),
-          InstanceMethod("splice", &FragmentBinding::appendChild),
+          InstanceMethod("associateComponent", &FragmentBinding::associateComponent),
+          InstanceMethod("equal", &FragmentBinding::equal),
+          InstanceMethod("findChildPosition", &FragmentBinding::findChildPosition),
+          InstanceMethod("getChildNode", &FragmentBinding::getChildNode),
+          InstanceMethod("getParentNode", &FragmentBinding::getParentNode),
+          InstanceMethod("insertChild", &FragmentBinding::insertChild),
+          InstanceMethod("release", &FragmentBinding::release),
+          InstanceMethod("removeChild", &FragmentBinding::removeChild),
+          InstanceMethod("replaceChild", &FragmentBinding::replaceChild),
+          InstanceMethod("splice", &FragmentBinding::splice),
       });
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -45,6 +45,98 @@ Napi::Value FragmentBinding::getInstanceId(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), m_instanceId);
 }
 Napi::Value FragmentBinding::appendChild(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+
+Napi::Value FragmentBinding::associateComponent(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::equal(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::findChildPosition(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::getChildNode(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+
+}
+Napi::Value FragmentBinding::getParentNode(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::insertChild(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::release(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::removeChild(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::replaceChild(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env =  info.Env();
+  return Convert::convertJson2Value(env, result["returnValue"]);
+}
+Napi::Value FragmentBinding::splice(const Napi::CallbackInfo &info) {
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
     args[i] = Convert::convertValue2Json(info[i]);

@@ -12,6 +12,16 @@ namespace Skyline {
     FragmentBinding(const Napi::CallbackInfo &info);
   private:
     Napi::Value appendChild(const Napi::CallbackInfo &info);
+    Napi::Value associateComponent(const Napi::CallbackInfo &info);
+    Napi::Value equal(const Napi::CallbackInfo &info);
+    Napi::Value findChildPosition(const Napi::CallbackInfo &info);
+    Napi::Value getChildNode(const Napi::CallbackInfo &info);
+    Napi::Value getParentNode(const Napi::CallbackInfo &info);
+    Napi::Value insertChild(const Napi::CallbackInfo &info);
+    Napi::Value release(const Napi::CallbackInfo &info);
+    Napi::Value removeChild(const Napi::CallbackInfo &info);
+    Napi::Value replaceChild(const Napi::CallbackInfo &info);
+    Napi::Value splice(const Napi::CallbackInfo &info);
   };
 } // namespace Skyline
 

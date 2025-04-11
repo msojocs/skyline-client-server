@@ -15,7 +15,7 @@ set(CLIENT_DIR_LIST
     include/page_context.hh
     skyline_global/page_context.cc
     ../common/convert.cc
-    ../common/console.cc
+    ../common/logger.cc
     skyline_global/runtime.cc
     skyline_global/async_style_sheets.cc
     skyline_global/view_shadow_node.cc

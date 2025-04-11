@@ -13,7 +13,8 @@
 #include <napi.h>
 #include "../include/snowflake.hh"
 #include "../include/convert.hh"
-#include "../include/console.hh"
+#include "../include/logger.hh"
+using Logger::logger;
 
 namespace WebSocket {
     struct CallbackData {
@@ -45,14 +46,14 @@ namespace WebSocket {
             {
                 if (msg->type == ix::WebSocketMessageType::Message)
                 {
-                    spdlog::info("received message: {}", msg->str);
+                    logger->info("received message: {}", msg->str);
                     // Logger::log("received message: %s", msg->str.c_str());
                     nlohmann::json json = nlohmann::json::parse(msg->str);
                     if (json["type"].empty() && json.contains("id"))
                     {
                         // type 为空, id不空，是回复
                         auto id = json["id"];
-                        spdlog::info("received message: {}", json["id"].get<std::string>());
+                        logger->info("received message: {}", json["id"].get<std::string>());
                         if (wsRequest.find(id) != wsRequest.end())
                         {
                             wsRequest[id]->set_value(msg->str);
@@ -63,7 +64,7 @@ namespace WebSocket {
                     {
                         if (blocked) {
                             // 如果当前处于阻塞状态，直接放入队列中
-                            spdlog::info("blocked, push to queue...");
+                            logger->info("blocked, push to queue...");
                             callbackQueue.push(json);
                             return;
                         }
@@ -75,9 +76,9 @@ namespace WebSocket {
                             // 触发回调函数
                             auto it = callback.find(callbackId);
                             if (it != callback.end()) {
-                                spdlog::info("callbackId found: {}", callbackId);
+                                logger->info("callbackId found: {}", callbackId);
                                 // 在正确的线程上调用回调
-                                spdlog::info("create ThreadSafeFunction success!");
+                                logger->info("create ThreadSafeFunction success!");
                                 auto callResult = it->second.tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
                                     
                                     auto args = json["data"]["args"];
@@ -88,16 +89,16 @@ namespace WebSocket {
                                     for (auto& arg : args) {
                                         argsVec.push_back(Convert::convertJson2Value(env, arg));
                                     }
-                                    spdlog::info("call callback function...");
+                                    logger->info("call callback function...");
                                     auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
                                     consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
                                     auto resultValue = jsCallback.Call(argsVec);
                                     consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
-                                    spdlog::info("call callback function end...");
+                                    logger->info("call callback function end...");
                                     // 发送回调结果
                                     auto resultJson = Convert::convertValue2Json(resultValue);
                                     if (json.contains("id")) {
-                                        spdlog::info("reply callback...");
+                                        logger->info("reply callback...");
                                         nlohmann::json callbakcResult = {
                                             {"id", json["id"].get<std::string>()},
                                             {"type", "callbackReply"},
@@ -111,26 +112,26 @@ namespace WebSocket {
                                 }
                             }
                             else {
-                                spdlog::error("callbackId not found: {}", callbackId);
+                                logger->error("callbackId not found: {}", callbackId);
                             }
                         }
                     }
                 }
                 else if (msg->type == ix::WebSocketMessageType::Open)
                 {
-                    spdlog::info("Connection established");
+                    logger->info("Connection established");
                 }
                 else if (msg->type == ix::WebSocketMessageType::Error)
                 {
                     // Maybe SSL is not configured properly
-                    spdlog::error("Connection error: {}", msg->errorInfo.reason);
+                    logger->error("Connection error: {}", msg->errorInfo.reason);
                 }
             }
         );
-        spdlog::info("start");
+        logger->info("start");
         // Now that our callback is setup, we can start our background thread and receive messages
         webSocket.start();
-        spdlog::info("start end");
+        logger->info("start end");
         for (int i=0; i< 60; i++) {
             Sleep(1000);
             if (webSocket.getReadyState() == ix::ReadyState::Open)
@@ -142,7 +143,7 @@ namespace WebSocket {
     nlohmann::json sendMessageSync(nlohmann::json& data) {
         std::string id = std::to_string(serverCommunicationUuid.nextid());
         data["id"] = id;
-        spdlog::info("send to server {}", data.dump());
+        logger->info("send to server {}", data.dump());
         if (webSocket.getReadyState() != ix::ReadyState::Open)
         {
             throw std::runtime_error("WebSocket is not open");
@@ -153,14 +154,14 @@ namespace WebSocket {
         std::future<std::string> futureObj = promiseObj->get_future();
         wsRequest.emplace(id, promiseObj);
         while (true) {
-            // spdlog::info("callbackQueue size: {}", callbackQueue.size());
+            // logger->info("callbackQueue size: {}", callbackQueue.size());
             if (callbackQueue.size() > 0) {
                 auto json = callbackQueue.front();
                 callbackQueue.pop();
                 std::string callbackId = json["callbackId"].get<std::string>();
                 auto it = callback.find(callbackId);
                 if (it != callback.end()) {
-                    spdlog::info("callbackId found: {}", callbackId);
+                    logger->info("callbackId found: {}", callbackId);
                     // 在正确的线程上调用回调
                     auto env = it->second.funcRef->Env();
                     auto args = json["data"]["args"];
@@ -177,7 +178,7 @@ namespace WebSocket {
                     // 发送回调结果
                     auto resultJson = Convert::convertValue2Json(resultValue);
                     if (json.contains("id")) {
-                        spdlog::info("reply callback...");
+                        logger->info("reply callback...");
                         nlohmann::json callbakcResult = {
                             {"id", json["id"].get<std::string>()},
                             {"type", "callbackReply"},
@@ -187,7 +188,7 @@ namespace WebSocket {
                     }
                 }
                 else {
-                    spdlog::error("callbackId not found: {}", callbackId);
+                    logger->error("callbackId not found: {}", callbackId);
                 }
             }
             if (futureObj.wait_for(std::chrono::milliseconds(10)) == std::future_status::ready) {
@@ -196,7 +197,7 @@ namespace WebSocket {
         }
         // TODO: 3秒超时
         std::string result = futureObj.get();
-        spdlog::info("result: {}", result.c_str());
+        logger->info("result: {}", result.c_str());
         auto resp = nlohmann::json::parse(result);
         if (resp.contains("error")) {
             throw std::runtime_error(resp["error"].get<std::string>());
@@ -207,7 +208,7 @@ namespace WebSocket {
     void sendMessageAsync(nlohmann::json& data) {
         std::string id = std::to_string(serverCommunicationUuid.nextid());
         data["id"] = id;
-        spdlog::info("send to server {}", data.dump());
+        logger->info("send to server {}", data.dump());
         if (webSocket.getReadyState() != ix::ReadyState::Open)
         {
             throw std::runtime_error("WebSocket is not open");

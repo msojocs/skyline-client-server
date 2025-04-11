@@ -21,7 +21,7 @@ private:
    */
   void appendStyleSheetIndex(const Napi::CallbackInfo &info);
   void appendStyleSheets(const Napi::CallbackInfo &info);
-  void attach(const Napi::CallbackInfo &info);
+  Napi::Value attach(const Napi::CallbackInfo &info);
   void attachCustomRoute(const Napi::CallbackInfo &info);
   void clearStylesheets(const Napi::CallbackInfo &info);
   Napi::Value createElement(const Napi::CallbackInfo &info);
@@ -31,7 +31,7 @@ private:
    * * @return {number} number
    */
   Napi::Value createStyleSheetIndexGroup(const Napi::CallbackInfo &info);
-  void createTextNode(const Napi::CallbackInfo &info);
+  Napi::Value createTextNode(const Napi::CallbackInfo &info);
   void finishStyleSheetsCompilation(const Napi::CallbackInfo &info);
   void getComputedStyle(const Napi::CallbackInfo &info);
   void getHostNode(const Napi::CallbackInfo &info);

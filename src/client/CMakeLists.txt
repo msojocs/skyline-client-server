@@ -18,7 +18,9 @@ set(CLIENT_DIR_LIST
     ../common/logger.cc
     skyline_global/runtime.cc
     skyline_global/async_style_sheets.cc
-    skyline_global/view_shadow_node.cc
+    skyline_global/shadow_node/node.cc
+    skyline_global/shadow_node/view.cc
+    skyline_global/shadow_node/text.cc
     include/fragment_binding.hh
     skyline_global/fragment_binding.cc
 )

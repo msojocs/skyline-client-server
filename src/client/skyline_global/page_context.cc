@@ -172,8 +172,15 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
 /**
  * 2个参数
  */
-void PageContext::attach(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "attach: Not implemented");
+Napi::Value PageContext::attach(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  auto env = info.Env();
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 void PageContext::attachCustomRoute(const Napi::CallbackInfo &info) {
@@ -222,8 +229,15 @@ Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &in
   return Napi::Number::New(info.Env(), returnValue.get<int>());
 }
 
-void PageContext::createTextNode(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "createTextNode: Not implemented");
+Napi::Value PageContext::createTextNode(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  auto env = info.Env();
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 void PageContext::finishStyleSheetsCompilation(const Napi::CallbackInfo &info) {

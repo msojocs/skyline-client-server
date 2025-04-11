@@ -1,6 +1,7 @@
 #include "../include/convert.hh"
 #include "../client/include/async_style_sheets.hh"
-#include "../client/include/view_shadow_node.hh"
+#include "../client/skyline_global/shadow_node/text.hh"
+#include "../client/skyline_global/shadow_node/view.hh"
 #include "../client/include/fragment_binding.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
@@ -12,6 +13,7 @@ static std::map<std::string, Napi::FunctionReference *> funcMap;
 void RegisteInstanceType(Napi::Env &env) {
   // 注册实例类型和对应的构造函数
   funcMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
+  funcMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
   funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
   funcMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
 }

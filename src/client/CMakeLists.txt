@@ -19,6 +19,8 @@ set(CLIENT_DIR_LIST
     skyline_global/runtime.cc
     skyline_global/async_style_sheets.cc
     skyline_global/view_shadow_node.cc
+    include/fragment_binding.hh
+    skyline_global/fragment_binding.cc
 )
 
 add_library(${CLIENT_NAME}

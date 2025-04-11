@@ -5,5 +5,8 @@
 #include <windows.h>
 namespace Skyline {
 
+  Napi::Value BaseClient::getInstanceId(const Napi::CallbackInfo &info) {
+    return info.Env().Undefined();
+  }
 
 } // namespace SkylineShell

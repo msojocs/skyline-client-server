@@ -153,7 +153,7 @@ namespace WebSocket {
         std::future<std::string> futureObj = promiseObj->get_future();
         wsRequest.emplace(id, promiseObj);
         while (true) {
-            spdlog::info("callbackQueue size: {}", callbackQueue.size());
+            // spdlog::info("callbackQueue size: {}", callbackQueue.size());
             if (callbackQueue.size() > 0) {
                 auto json = callbackQueue.front();
                 callbackQueue.pop();

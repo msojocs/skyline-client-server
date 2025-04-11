@@ -41,7 +41,11 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
        InstanceMethod("setNavigateBackInterception",
                       &PageContext::setNavigateBackInterception),
        InstanceMethod("startRender", &PageContext::startRender),
-       InstanceMethod("updateRouteConfig", &PageContext::updateRouteConfig)});
+       InstanceMethod("updateRouteConfig", &PageContext::updateRouteConfig),
+      //  InstanceAccessor<&PageContext::getInstanceId>("instanceId",
+      //                   static_cast<napi_property_attributes>(napi_writable |
+      //                                                        napi_configurable)),
+      });
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
   env.SetInstanceData(constructor);
@@ -98,6 +102,9 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
   m_instanceId = result["instanceId"].get<std::string>();
 }
 
+Napi::Value PageContext::getInstanceId(const Napi::CallbackInfo& info) {
+  return Napi::String::New(info.Env(), m_instanceId);
+}
 /**
  * 1个Array参数
  */
@@ -177,8 +184,25 @@ void PageContext::clearStylesheets(const Napi::CallbackInfo &info) {
   throw Napi::Error::New(info.Env(), "Not implemented");
 }
 
-void PageContext::createElement(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "Not implemented");
+Napi::Value PageContext::createElement(const Napi::CallbackInfo &info) {
+  if (info.Length() < 2) {
+    throw Napi::TypeError::New(info.Env(), "createElement: Wrong number of arguments");
+  }
+  if (!info[0].IsString()) {
+    throw Napi::TypeError::New(info.Env(), "First argument must be a string");
+  }
+  if (!info[1].IsString()) {
+    throw Napi::TypeError::New(info.Env(), "Second argument must be a string");
+  }
+  auto tagName = info[0].As<Napi::String>().Utf8Value();
+  auto tagValue = info[1].As<Napi::String>().Utf8Value();
+  nlohmann::json args;
+  args[0] = tagName;
+  args[1] = tagValue;
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  auto env = info.Env();
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 void PageContext::createFragment(const Napi::CallbackInfo &info) {

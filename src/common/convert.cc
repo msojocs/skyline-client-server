@@ -1,5 +1,6 @@
 #include "../include/convert.hh"
 #include "../client/include/async_style_sheets.hh"
+#include "../client/include/view_shadow_node.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
 
@@ -9,6 +10,7 @@ static std::map<std::string, Napi::FunctionReference *> funcMap;
 void RegisteInstanceType(Napi::Env &env) {
   // 注册实例类型和对应的构造函数
   funcMap["AsyncStyleSheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
+  funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
 }
 
 nlohmann::json convertValue2Json(const Napi::Value &value) {
@@ -44,7 +46,7 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
   } else if (value.IsObject()) {
     return convertObject2Json(value);
   }
-  return nullptr;
+  return nlohmann::json();
 }
 nlohmann::json convertObject2Json(const Napi::Value &value) {
   Napi::Object obj = value.As<Napi::Object>();

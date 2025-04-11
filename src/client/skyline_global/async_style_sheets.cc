@@ -25,6 +25,10 @@ namespace Skyline {
     m_instanceId = info[0].As<Napi::String>().Utf8Value();
   }
 
+  Napi::Value AsyncStyleSheets::getInstanceId(const Napi::CallbackInfo& info) {
+    return Napi::String::New(info.Env(), m_instanceId);
+  }
+
   void AsyncStyleSheets::setScopeId(const Napi::CallbackInfo& info) {
     if (info.Length() < 1) {
       throw Napi::TypeError::New(info.Env(), "setScopeId: Wrong number of arguments");

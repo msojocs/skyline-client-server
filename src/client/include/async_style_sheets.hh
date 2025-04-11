@@ -10,6 +10,7 @@ namespace Skyline {
     static Napi::FunctionReference* GetClazz(Napi::Env env);
   private:
     void setScopeId(const Napi::CallbackInfo& info);
+    Napi::Value getInstanceId(const Napi::CallbackInfo& info);
   };
 }
 #endif // __ASYNC_STYLE_SHEETS_HH__

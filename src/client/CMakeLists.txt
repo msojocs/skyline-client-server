@@ -18,6 +18,7 @@ set(CLIENT_DIR_LIST
     ../common/console.cc
     skyline_global/runtime.cc
     skyline_global/async_style_sheets.cc
+    skyline_global/view_shadow_node.cc
 )
 
 add_library(${CLIENT_NAME}

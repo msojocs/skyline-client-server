@@ -107,4 +107,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       },
     },
   ]);
+
+  console.info('appendChild test')
+  const parent = page.createElement("view", "view")
+  const child = page.createElement("view", "view")
+  parent.appendChild(child)
 })();

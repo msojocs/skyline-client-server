@@ -4,11 +4,13 @@
 #include "base_client.hh"
 #include "napi.h"
 namespace Skyline {
-  class PageContext: public Napi::ObjectWrap<PageContext>, public BaseClient {
-  public:
-    PageContext(const Napi::CallbackInfo &info);
-    static void Init(Napi::Env env, Napi::Object exports);
-  private:
+class PageContext : public Napi::ObjectWrap<PageContext>, public BaseClient {
+public:
+  PageContext(const Napi::CallbackInfo &info);
+  static void Init(Napi::Env env, Napi::Object exports);
+  Napi::Value getInstanceId(const Napi::CallbackInfo &info);
+
+private:
   void appendCompiledStyleSheets(const Napi::CallbackInfo &info);
   void appendStyleSheet(const Napi::CallbackInfo &info);
   /**
@@ -22,7 +24,7 @@ namespace Skyline {
   void attach(const Napi::CallbackInfo &info);
   void attachCustomRoute(const Napi::CallbackInfo &info);
   void clearStylesheets(const Napi::CallbackInfo &info);
-  void createElement(const Napi::CallbackInfo &info);
+  Napi::Value createElement(const Napi::CallbackInfo &info);
   void createFragment(const Napi::CallbackInfo &info);
   /**
    * 0个参数
@@ -45,6 +47,6 @@ namespace Skyline {
   void setNavigateBackInterception(const Napi::CallbackInfo &info);
   void startRender(const Napi::CallbackInfo &info);
   void updateRouteConfig(const Napi::CallbackInfo &info);
-  };
-}
+};
+} // namespace Skyline
 #endif

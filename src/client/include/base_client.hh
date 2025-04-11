@@ -7,9 +7,10 @@ namespace Skyline {
 class BaseClient {
 protected:
   std::string m_instanceId;
-
+  virtual Napi::Value getInstanceId(const Napi::CallbackInfo &info) = 0;
 private:
 };
+
 } // namespace Skyline
 
 #endif

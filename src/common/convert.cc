@@ -7,11 +7,13 @@
 namespace Convert {
 static std::map<std::string, Napi::FunctionReference *> funcMap;
 
+#ifdef _SKYLINE_CLIENT_
 void RegisteInstanceType(Napi::Env &env) {
   // 注册实例类型和对应的构造函数
   funcMap["AsyncStyleSheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
   funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
 }
+#endif
 
 nlohmann::json convertValue2Json(const Napi::Value &value) {
   if (value.IsString()) {
@@ -50,6 +52,11 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
 }
 nlohmann::json convertObject2Json(const Napi::Value &value) {
   Napi::Object obj = value.As<Napi::Object>();
+  if (obj.Get("instanceId").IsString()) {
+    nlohmann::json jsonObj;
+    jsonObj["instanceId"] = obj.Get("instanceId").As<Napi::String>().Utf8Value();
+    return jsonObj;
+  }
   nlohmann::json jsonObj;
   Napi::Array propertyNames = obj.GetPropertyNames();
   for (uint32_t i = 0; i < propertyNames.Length(); i++) {

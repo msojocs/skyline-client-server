@@ -15,7 +15,7 @@ namespace Skyline {
             InstanceMethod("setEventDefaultPrevented", &ViewShadowNode::setEventDefaultPrevented),
             InstanceMethod("appendChild", &ViewShadowNode::appendChild),
             // getter instanceId
-            // InstanceAccessor<&ViewShadowNode::getInstanceId>("instanceId", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+            InstanceAccessor<&ViewShadowNode::getInstanceId>("instanceId", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
           }
       );
     Napi::FunctionReference *constructor = new Napi::FunctionReference();
@@ -73,20 +73,11 @@ namespace Skyline {
   Napi::Value ViewShadowNode::appendChild(const Napi::CallbackInfo& info) {
     try {
       nlohmann::json args;
-      
-      // 输出调试信息
-      auto log = info.Env().Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-      log.Call(info.Env().Global(), { Napi::String::New(info.Env(), "Appending child...") });
-
-      log.Call(info.Env().Global(), { Napi::String::New(info.Env(), "Arguments length: " + std::to_string(info.Length())) });
+      // 参数1转换为ViewShadowNode并取得InstanceId
       for (int i = 0; i < info.Length(); i++) {
-        log.Call(info.Env().Global(), { Napi::String::New(info.Env(), std::string("Convert argument: ") + std::to_string(i)) });
-        log.Call(info.Env().Global(), { info[i] });
-        // info[i].As<Napi::Object>();
-        // args[i] = Convert::convertValue2Json(info[i]);
+        args[i] = Convert::convertValue2Json(info[i]);
       }
-      log.Call(info.Env().Global(), { Napi::String::New(info.Env(), "Calling WebSocket...") });
-      // WebSocket::callDynamicSync(m_instanceId, __func__, args);
+      WebSocket::callDynamicSync(m_instanceId, __func__, args);
       return info.Env().Undefined();
     } catch (const Napi::Error &e) {
       Napi::Error::New(info.Env(),

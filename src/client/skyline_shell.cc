@@ -61,6 +61,11 @@ SkylineShell::SkylineShell(const Napi::CallbackInfo &info)
   auto result = WebSocket::callConstructorSync("SkylineShell", data);
   this->m_instanceId = result["instanceId"].get<std::string>();
 }
+
+Napi::Value SkylineShell::getInstanceId(const Napi::CallbackInfo &info) {
+  return Napi::String::New(info.Env(), m_instanceId);
+}
+
 void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   if (info.Length() != 1) {

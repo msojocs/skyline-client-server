@@ -5,7 +5,7 @@ namespace Skyline {
 Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {
 
   Napi::Function func = DefineClass(
-      env, "TexthadowNode",
+      env, "TextShadowNode",
       {
           InstanceMethod("setStyleScope", &TextShadowNode::setStyleScope),
           InstanceMethod("addClass", &TextShadowNode::addClass),

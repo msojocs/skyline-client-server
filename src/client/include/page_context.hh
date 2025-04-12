@@ -11,6 +11,8 @@ public:
   Napi::Value getInstanceId(const Napi::CallbackInfo &info);
 
 private:
+  Napi::Value getFrameworkType(const Napi::CallbackInfo &info);
+  void setFrameworkType(const Napi::CallbackInfo &info, const Napi::Value &value);
   void appendCompiledStyleSheets(const Napi::CallbackInfo &info);
   void appendStyleSheet(const Napi::CallbackInfo &info);
   /**

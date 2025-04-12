@@ -42,9 +42,12 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
                       &PageContext::setNavigateBackInterception),
        InstanceMethod("startRender", &PageContext::startRender),
        InstanceMethod("updateRouteConfig", &PageContext::updateRouteConfig),
-       InstanceAccessor<&PageContext::getInstanceId>("instanceId",
+       InstanceAccessor("instanceId", &PageContext::getInstanceId, nullptr,
                         static_cast<napi_property_attributes>(napi_writable |
                                                              napi_configurable)),
+       InstanceAccessor("frameworkType", &PageContext::getFrameworkType, &PageContext::setFrameworkType,
+              static_cast<napi_property_attributes>(napi_writable |
+                                                   napi_configurable)),
       });
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -102,6 +105,20 @@ PageContext::PageContext(const Napi::CallbackInfo &info)
   m_instanceId = result["instanceId"].get<std::string>();
 }
 
+Napi::Value PageContext::getFrameworkType(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  auto result = WebSocket::callDynamicPropertyGetSync(m_instanceId, "frameworkType", args);
+  auto returnValue = result["returnValue"];
+  return Napi::Number::New(info.Env(), returnValue.get<int>());
+}
+void PageContext::setFrameworkType(const Napi::CallbackInfo &info, const Napi::Value &value) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  // 发送消息到 WebSocket
+  WebSocket::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
+}
 Napi::Value PageContext::getInstanceId(const Napi::CallbackInfo& info) {
   return Napi::String::New(info.Env(), m_instanceId);
 }

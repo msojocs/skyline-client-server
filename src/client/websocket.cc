@@ -250,6 +250,32 @@ namespace WebSocket {
         
         return sendMessageSync(json);
     }
+    nlohmann::json callDynamicPropertySetSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
+        nlohmann::json json {
+            {"type", "dynamicProperty"},
+            {"action", action},
+            {"data", {
+                {"instanceId", instanceId},
+                {"params", args},
+                {"propertyAction", "set"},
+            }}
+        };
+        
+        return sendMessageSync(json);
+    }
+    nlohmann::json callDynamicPropertyGetSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
+        nlohmann::json json {
+            {"type", "dynamicProperty"},
+            {"action", action},
+            {"data", {
+                {"instanceId", instanceId},
+                {"params", args},
+                {"propertyAction", "get"},
+            }}
+        };
+        
+        return sendMessageSync(json);
+    }
     nlohmann::json registerDynamicCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
         std::string callbackId = std::to_string(callbackUuid.nextid());
         nlohmann::json json {

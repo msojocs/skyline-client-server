@@ -4,6 +4,7 @@
 #include "../client/skyline_global/shadow_node/view.hh"
 #include "../client/skyline_global/shadow_node/scroll_view.hh"
 #include "../client/skyline_global/shadow_node/sticky_section.hh"
+#include "../client/skyline_global/shadow_node/sticky_header.hh"
 #include "../client/include/fragment_binding.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
@@ -19,6 +20,7 @@ void RegisteInstanceType(Napi::Env &env) {
   funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
   funcMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
   funcMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);
+  funcMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
   funcMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
 }
 #endif

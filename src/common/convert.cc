@@ -23,7 +23,7 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
   if (value.IsString()) {
     return value.As<Napi::String>().Utf8Value();
   } else if (value.IsNumber()) {
-    return value.As<Napi::Number>().DoubleValue();
+    return value.As<Napi::Number>().Int32Value();
   } else if (value.IsBoolean()) {
     return value.As<Napi::Boolean>().Value();
   } else if (value.IsBuffer()) {

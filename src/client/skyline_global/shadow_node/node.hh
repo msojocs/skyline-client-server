@@ -70,6 +70,8 @@ updateStyle: ƒ updateStyle()
   Napi::Value forceDetached(const Napi::CallbackInfo &info);
   Napi::Value spliceRemove(const Napi::CallbackInfo &info);
   Napi::Value release(const Napi::CallbackInfo &info);
+  Napi::Value setAttributes(const Napi::CallbackInfo &info);
+  Napi::Value getBoundingClientRect(const Napi::CallbackInfo &info);
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

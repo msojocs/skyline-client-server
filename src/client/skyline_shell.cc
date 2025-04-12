@@ -45,6 +45,8 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
                       &SkylineShell::dispatchTouchCancelEvent),
         InstanceMethod("dispatchKeyboardEvent",
                       &SkylineShell::dispatchKeyboardEvent),
+        InstanceMethod("dispatchWheelEvent",
+                      &SkylineShell::dispatchWheelEvent),
                     });
   
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
@@ -463,6 +465,16 @@ void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
   data[3] = info[3].As<Napi::Number>().Int32Value();
   data[4] = info[4].As<Napi::Number>().Int32Value();
 
+  // 发送消息到 WebSocket
+  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+}
+void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
+  nlohmann::json data;
+  auto env = info.Env();
+  for (int i = 0; i < info.Length(); i++) {
+    data[i] = info[i].As<Napi::Number>().DoubleValue();
+  }
+  
   // 发送消息到 WebSocket
   WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }

@@ -118,5 +118,26 @@ Napi::Value ShadowNode::release(const Napi::CallbackInfo &info) {
   auto returnValue = result["returnValue"];
   return Convert::convertJson2Value(env, returnValue);
 }
+Napi::Value ShadowNode::setAttributes(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env = info.Env();
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::getBoundingClientRect(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto env = info.Env();
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
 
 } // namespace Skyline

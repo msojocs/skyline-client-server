@@ -115,9 +115,23 @@ void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
   if (!info[0].IsArray()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
   }
-  Napi::Array sheets = info[0].As<Napi::Array>();
+  // JSON.stringfy
+  auto log = info.Env()
+                  .Global()
+                  .Get("console")
+                  .As<Napi::Object>()
+                  .Get("log")
+                  .As<Napi::Function>();
+  log.Call({Napi::String::New(info.Env(), "appendCompiledStyleSheets")});
+  auto stringify = info.Env()
+                  .Global()
+                  .Get("JSON")
+                  .As<Napi::Object>()
+                  .Get("stringify")
+                  .As<Napi::Function>();
+  log.Call({stringify.Call({info[0]})});
   nlohmann::json args;
-  args[0] = Convert::convertValue2Json(sheets);
+  args[0] = Convert::convertValue2Json(info[0]);
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 

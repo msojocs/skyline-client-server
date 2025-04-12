@@ -19,6 +19,10 @@ Napi::FunctionReference *ViewShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("forceDetached", &ViewShadowNode::forceDetached),
           InstanceMethod("spliceRemove", &ViewShadowNode::spliceRemove),
           InstanceMethod("release", &ViewShadowNode::release),
+          
+          InstanceMethod("setAttributes", &ViewShadowNode::setAttributes),
+          InstanceMethod("getBoundingClientRect", &ViewShadowNode::getBoundingClientRect),
+          
           // getter instanceId
           InstanceAccessor("instanceId", &ViewShadowNode::getInstanceId, nullptr,
                          static_cast<napi_property_attributes>(

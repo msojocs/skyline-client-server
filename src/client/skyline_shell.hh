@@ -36,6 +36,7 @@ private:
   void dispatchTouchMoveEvent(const Napi::CallbackInfo &info);
   void dispatchTouchCancelEvent(const Napi::CallbackInfo &info);
   void dispatchKeyboardEvent(const Napi::CallbackInfo &info);
+  void dispatchWheelEvent(const Napi::CallbackInfo &info);
 };
 } // namespace SkylineShell
 #endif

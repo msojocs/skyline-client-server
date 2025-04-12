@@ -19,6 +19,10 @@ Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("forceDetached", &TextShadowNode::forceDetached),
           InstanceMethod("spliceRemove", &TextShadowNode::spliceRemove),
           InstanceMethod("release", &TextShadowNode::release),
+          
+          InstanceMethod("setAttributes", &TextShadowNode::setAttributes),
+          InstanceMethod("getBoundingClientRect", &TextShadowNode::getBoundingClientRect),
+          
           // getter instanceId
           InstanceAccessor("instanceId", &TextShadowNode::getInstanceId, nullptr,
                          static_cast<napi_property_attributes>(

@@ -21,6 +21,7 @@ set(CLIENT_DIR_LIST
     skyline_global/shadow_node/node.cc
     skyline_global/shadow_node/view.cc
     skyline_global/shadow_node/scroll_view.cc
+    skyline_global/shadow_node/sticky_section.cc
     skyline_global/shadow_node/text.cc
     include/fragment_binding.hh
     skyline_global/fragment_binding.cc

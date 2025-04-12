@@ -2,6 +2,7 @@
 #include "../client/include/async_style_sheets.hh"
 #include "../client/skyline_global/shadow_node/text.hh"
 #include "../client/skyline_global/shadow_node/view.hh"
+#include "../client/skyline_global/shadow_node/scroll_view.hh"
 #include "../client/include/fragment_binding.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
@@ -15,6 +16,7 @@ void RegisteInstanceType(Napi::Env &env) {
   funcMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
   funcMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
   funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
+  funcMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
   funcMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
 }
 #endif

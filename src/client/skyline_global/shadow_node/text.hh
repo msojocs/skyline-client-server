@@ -1,7 +1,6 @@
 #ifndef __TEXT_SHADOW_NODE__HH__
 #define __TEXT_SHADOW_NODE__HH__
 #include <napi.h>
-#include "../../include/base_client.hh"
 #include "node.hh"
 
 namespace Skyline {
@@ -12,6 +11,7 @@ TextShadowNode(const Napi::CallbackInfo &info);
 static Napi::FunctionReference *GetClazz(Napi::Env env);
 private:
 /**
+ * 相比view多出来的
  * setText: ƒ setText()
  */
   };

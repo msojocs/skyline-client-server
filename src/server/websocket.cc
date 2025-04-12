@@ -2,11 +2,13 @@
 #include "napi.h"
 #include <ixwebsocket/IXWebSocketServer.h>
 #include <memory>
-#include <spdlog/spdlog.h>
+#include "../include/logger.hh"
 #include <nlohmann/json.hpp>
 #include <future>
 #include "../include/snowflake.hh"
 #include "../include/convert.hh"
+
+using Logger::logger;
 
 namespace WebSocketServer {
 
@@ -28,7 +30,7 @@ void sendMsg(Napi::CallbackInfo &info) {
   if (clients.size() == 0) {
     throw Napi::Error::New(info.Env(), "No clients connected");
   }
-  spdlog::info("send to client: {}", message);
+  logger->info("send to client: {}", message);
   clients.begin()->get()->send(message);
 }
 int startInner(std::string &host, int port) {
@@ -36,20 +38,20 @@ int startInner(std::string &host, int port) {
 
   auto res = server->listen();
   if (!res.first) {
-    spdlog::error("Failed to listen on {}:{} - {}", host, port, res.second);
+    logger->error("Failed to listen on {}:{} - {}", host, port, res.second);
     return 1;
   }
 
-  spdlog::info("WebSocket server listening on {}:{}", host, port);
+  logger->info("WebSocket server listening on {}:{}", host, port);
 
   server->setOnClientMessageCallback(
     [](std::shared_ptr<ix::ConnectionState> connectionState,
        ix::WebSocket &webSocket, const ix::WebSocketMessagePtr &msg) {
       // The ConnectionState object contains information about the connection
-      spdlog::info("Remote ip: {}", connectionState->getRemoteIp());
+      logger->info("Remote ip: {}", connectionState->getRemoteIp());
 
       if (msg->type == ix::WebSocketMessageType::Message) {
-        spdlog::info("Received: {}", msg->str);
+        logger->info("Received: {}", msg->str);
 
         try {
           // Capture the message
@@ -58,7 +60,7 @@ int startInner(std::string &host, int port) {
           nlohmann::json json = nlohmann::json::parse(message);
           if (!json["id"].empty()) {
             auto id = json["id"];
-            spdlog::info("received message: {}", json["id"].get<std::string>());
+            logger->info("received message: {}", json["id"].get<std::string>());
             if (wsRequest.find(id) != wsRequest.end())
             {
               // server发出的消息的回复
@@ -67,7 +69,7 @@ int startInner(std::string &host, int port) {
               return;
             }
             else {
-              spdlog::info("id not found: {}", id.get<std::string>());
+              logger->info("id not found: {}", id.get<std::string>());
             }
           }
 
@@ -82,7 +84,7 @@ int startInner(std::string &host, int port) {
           tsfn.BlockingCall(callback);
         }
         catch (const std::exception &e) {
-          spdlog::error("Error parsing JSON: {}", e.what());
+          logger->error("Error parsing JSON: {}", e.what());
         }
 
       }
@@ -119,7 +121,7 @@ void stop(Napi::CallbackInfo &info) {
     }
 
     server->stop();
-    spdlog::info("WebSocket server stopped");
+    logger->info("WebSocket server stopped");
   }
 }
 
@@ -140,7 +142,7 @@ void setMessageCallback(Napi::CallbackInfo &info) {
       1                             // Only one thread will use this initially
   );
 
-  spdlog::info("Set message callback");
+  logger->info("Set message callback");
 }
 Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
@@ -149,7 +151,7 @@ Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a string");
   }
-  spdlog::info("sendMessageSync: {}", info[0].As<Napi::String>().Utf8Value());
+  logger->info("sendMessageSync: {}", info[0].As<Napi::String>().Utf8Value());
   // 解析json字符串
   auto message = info[0].As<Napi::String>().Utf8Value();
   nlohmann::json json = nlohmann::json::parse(message);
@@ -158,7 +160,7 @@ Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
   if (clients.size() == 0) {
     throw Napi::Error::New(info.Env(), "No clients connected");
   }
-  spdlog::info("send to client: {}", json.dump());
+  logger->info("send to client: {}", json.dump());
   auto log = info.Env().Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
   log.Call( {Napi::String::New(info.Env(), "Sending message: " + json.dump())});
   std::thread t1([clients, json]() {

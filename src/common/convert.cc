@@ -7,6 +7,8 @@
 #include "../client/skyline_global/shadow_node/sticky_section.hh"
 #include "../client/skyline_global/shadow_node/sticky_header.hh"
 #include "../client/include/fragment_binding.hh"
+#include "../client/include/mutable_value.hh"
+#include "../client/websocket.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
 
@@ -24,6 +26,7 @@ void RegisteInstanceType(Napi::Env &env) {
   funcMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);
   funcMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
   funcMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
+  funcMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
 }
 #endif
 
@@ -96,6 +99,23 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
     }
     return arr;
   } else if (data.is_object()) {
+    
+    #ifdef _SKYLINE_CLIENT_
+    if (data.contains("instanceId") && data.contains("instanceType") && data["instanceType"].get<std::string>() == "function")  {
+      return Napi::Function::New(env, [data](const Napi::CallbackInfo &info) {
+        auto env = info.Env();
+        nlohmann::json args;
+        for (int i=0; i < info.Length(); i++) {
+          args[i] = convertValue2Json(info[i]);
+        }
+        auto result = WebSocket::callStaticSync("functionData", data["instanceId"].get<std::string>(), args);
+        auto returnValue = result["returnValue"];
+
+        return Convert::convertJson2Value(env, returnValue);
+      });
+    }
+    #endif
+    
     if (data.contains("instanceId") && data.contains("instanceType")) {
       auto it = funcMap.find(data["instanceType"].get<std::string>());
       if (it != funcMap.end()) {

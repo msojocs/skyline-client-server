@@ -16,6 +16,6 @@ namespace Logger {
         logger = spdlog::daily_logger_mt("daily_logger", LOG_FILE, 0, 0);
         logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
         logger->set_level(spdlog::level::debug);
-        logger->flush_on(spdlog::level::err);
+        logger->flush_on(spdlog::level::info);
     }
 }

@@ -19,13 +19,10 @@ Napi::Value ShadowNode::getInstanceId(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), m_instanceId);
 }
 Napi::Value ShadowNode::setStyleScope(const Napi::CallbackInfo &info) {
-  if (info.Length() < 2) {
-    throw Napi::TypeError::New(info.Env(),
-                               "setStyleScope: Wrong number of arguments");
-  }
   nlohmann::json args;
-  args[0] = Convert::convertValue2Json(info[0]);
-  args[1] = Convert::convertValue2Json(info[1]);
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(info[i]);
+  }
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
   return info.Env().Undefined();
 }

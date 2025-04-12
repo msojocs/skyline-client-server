@@ -5,6 +5,7 @@ set(SERVER_DIR_LIST
     websocket.cc
     websocket.hh
     ../common/convert.cc
+    ../common/logger.cc
 )
 
 add_library(${SERVER_NAME}

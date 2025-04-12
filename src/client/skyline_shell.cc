@@ -284,7 +284,8 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
   // 获取Server端的skyline路径
   nlohmann::json data1;
   auto resp = WebSocket::callCustomHandleSync("getSkylineAddonPath", data1);
-  auto skylineAddonPath = resp.get<std::string>();
+  auto returnValue = resp["returnValue"];
+  auto skylineAddonPath = returnValue.get<std::string>();
 
   // 两个path要替换为server端路径
   nlohmann::json data{

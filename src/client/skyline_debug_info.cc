@@ -13,10 +13,11 @@ namespace SkylineDebugInfo{
         spdlog::info("Call GetVersion sub...");
         nlohmann::json reqData;
         auto result = WebSocket::callStaticSync("global", "SkylineDebugInfo", reqData);
+        auto returnValue = result["returnValue"];
         
-        auto gitRev = result["skyline_git_rev"].get<std::string>();
-        auto flutterEngineRev = result["flutter_engine_git_rev"].get<std::string>();
-        auto skylineVersion = result["skyline_version"].get<std::string>();
+        auto gitRev = returnValue["skyline_git_rev"].get<std::string>();
+        auto flutterEngineRev = returnValue["flutter_engine_git_rev"].get<std::string>();
+        auto skylineVersion = returnValue["skyline_version"].get<std::string>();
         auto obj = Napi::Object::New(info.Env());
         obj.Set("skyline_git_rev", Napi::String::New(info.Env(), gitRev));
         obj.Set("flutter_engine_git_rev", Napi::String::New(info.Env(), flutterEngineRev));

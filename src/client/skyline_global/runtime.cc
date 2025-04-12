@@ -136,8 +136,9 @@ Napi::Value getJsValueById(const Napi::CallbackInfo &info) {
   data[0] = id;
   // 发送消息到 WebSocket
   auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, data);
+  auto returnValue = result["returnValue"];
   // TODO: 处理返回值
-  return Napi::String::New(env, result.dump());
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 void registerFontFaceCallback(const Napi::CallbackInfo &info) {

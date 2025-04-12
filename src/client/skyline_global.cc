@@ -1,6 +1,7 @@
 #include "skyline_global.hh"
 #include "include/page_context.hh"
 #include "include/runtime.hh"
+#include "include/worklet_module.hh"
 #include "napi.h"
 
 namespace SkylineGlobal {
@@ -20,6 +21,11 @@ namespace SkylineGlobal {
     }
     {
       Skyline::Runtime::Init(env, skylineGlobal);
+    }
+    {
+      auto workletModule = Napi::Object::New(env);
+      Skyline::WorkletModule::Init(env, workletModule);
+      skylineGlobal.Set(Napi::String::New(env, "workletModule"), workletModule);
     }
     env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
   }

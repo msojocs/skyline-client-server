@@ -21,6 +21,7 @@ set(CLIENT_DIR_LIST
     skyline_global/shadow_node/node.cc
     skyline_global/shadow_node/view.cc
     skyline_global/shadow_node/scroll_view.cc
+    skyline_global/shadow_node/list_view.cc
     skyline_global/shadow_node/sticky_section.cc
     skyline_global/shadow_node/sticky_header.cc
     skyline_global/shadow_node/text.cc

@@ -18,7 +18,7 @@ namespace WebSocket {
     nlohmann::json callDynamicPropertyGetSync(const std::string& instanceId, const std::string& action, nlohmann::json& data);
     void callDynamicAsync(const std::string& instanceId, const std::string& action, nlohmann::json& data);
     nlohmann::json registerDynamicCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func);
-    nlohmann::json registerDynamicBlockCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func); 
+    // nlohmann::json registerDynamicBlockCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func); 
     // nlohmann::json registerStaticCallbackSync(const std::string& clazz, const std::string& action, Napi::Function& func);
     nlohmann::json callCustomHandleSync(const std::string& action, nlohmann::json& data);
 

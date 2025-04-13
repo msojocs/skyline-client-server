@@ -5,6 +5,7 @@
 #include <utility>
 #include <windows.h>
 #include "skyline_global.hh"
+#include "../include/convert.hh"
 namespace SkylineShell {
 
 
@@ -166,8 +167,9 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto func = info[0].As<Napi::Function>();
   
   // 发送消息到 WebSocket
-  nlohmann::json data;
-  WebSocket::registerDynamicBlockCallbackSync(m_instanceId, __func__, func);
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0], true);
+  WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();

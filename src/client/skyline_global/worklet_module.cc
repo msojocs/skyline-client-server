@@ -44,7 +44,7 @@ namespace WorkletModule {
     // 发送消息到 WebSocket
     nlohmann::json args;
     for (int i = 0; i < info.Length(); i++) {
-      args[i] = Convert::convertValue2Json(info[i]);
+      args[i] = Convert::convertValue2Json(env, info[i]);
     }
     auto result = WebSocket::callStaticSync("SkylineWorkletModule", __func__, args);
     auto returnValue = result["returnValue"];

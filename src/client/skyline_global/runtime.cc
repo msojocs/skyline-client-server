@@ -162,7 +162,7 @@ void setFeatureFlags(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数0 flags必须为Object类型");
   }
   nlohmann::json data;
-  data[0] = Convert::convertObject2Json(info[0]);
+  data[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
   WebSocket::callStaticSync("SkylineRuntime", __func__, data);
 }
@@ -174,7 +174,7 @@ void updateMapCustomCallout(const Napi::CallbackInfo &info) {
   if (!info[0].IsObject()) {
     throw Napi::Error::New(env, "参数0 flags必须为Object类型");
   }
-  nlohmann::json data = Convert::convertObject2Json(info[0]);
+  nlohmann::json data = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
   WebSocket::callStaticSync("SkylineRuntime", __func__, data);
 }

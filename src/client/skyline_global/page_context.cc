@@ -113,8 +113,9 @@ Napi::Value PageContext::getFrameworkType(const Napi::CallbackInfo &info) {
 }
 void PageContext::setFrameworkType(const Napi::CallbackInfo &info, const Napi::Value &value) {
   nlohmann::json args;
+  auto env = info.Env();
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   // 发送消息到 WebSocket
   WebSocket::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
@@ -132,6 +133,7 @@ void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
   if (!info[0].IsArray()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
   }
+  auto env = info.Env();
   // JSON.stringfy
   auto log = info.Env()
                   .Global()
@@ -148,7 +150,7 @@ void PageContext::appendCompiledStyleSheets(const Napi::CallbackInfo &info) {
                   .As<Napi::Function>();
   log.Call({stringify.Call({info[0]})});
   nlohmann::json args;
-  args[0] = Convert::convertValue2Json(info[0]);
+  args[0] = Convert::convertValue2Json(env, info[0]);
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 
@@ -185,6 +187,7 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
     throw Napi::TypeError::New(info.Env(), "First argument must be an array");
   }
   
+  auto env = info.Env();
   /**
    * [
    *  {
@@ -195,7 +198,7 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
    */
   nlohmann::json args;
   Napi::Array sheets = info[0].As<Napi::Array>();
-  args[0] = Convert::convertValue2Json(sheets);
+  args[0] = Convert::convertValue2Json(env, sheets);
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
   // 无返回值
 }
@@ -205,12 +208,12 @@ void PageContext::appendStyleSheets(const Napi::CallbackInfo &info) {
  */
 Napi::Value PageContext::attach(const Napi::CallbackInfo &info) {
   nlohmann::json args;
+  auto env = info.Env();
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
-  auto env = info.Env();
   return Convert::convertJson2Value(env, returnValue);
 }
 
@@ -232,24 +235,24 @@ Napi::Value PageContext::createElement(const Napi::CallbackInfo &info) {
   if (!info[1].IsString()) {
     throw Napi::TypeError::New(info.Env(), "Second argument must be a string");
   }
+  auto env = info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
-  auto env = info.Env();
   return Convert::convertJson2Value(env, returnValue);
 }
 
 Napi::Value PageContext::createFragment(const Napi::CallbackInfo &info) {
   nlohmann::json args;
+  auto env = info.Env();
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
-  auto env = info.Env();
   return Convert::convertJson2Value(env, returnValue);
 }
 
@@ -262,12 +265,12 @@ Napi::Value PageContext::createStyleSheetIndexGroup(const Napi::CallbackInfo &in
 
 Napi::Value PageContext::createTextNode(const Napi::CallbackInfo &info) {
   nlohmann::json args;
+  auto env = info.Env();
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
-  auto env = info.Env();
   return Convert::convertJson2Value(env, returnValue);
 }
 
@@ -292,7 +295,7 @@ Napi::Value PageContext::getRootNode(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
@@ -342,7 +345,7 @@ Napi::Value PageContext::preCompileStyleSheets(const Napi::CallbackInfo &info) {
    * - {styleScopeSetter} null ???
    */
   nlohmann::json args;
-  args[0] = Convert::convertValue2Json(sheets);
+  args[0] = Convert::convertValue2Json(env, sheets);
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
 

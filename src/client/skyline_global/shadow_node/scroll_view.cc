@@ -50,13 +50,13 @@ ScrollViewShadowNode::ScrollViewShadowNode(const Napi::CallbackInfo &info)
 }
 Napi::Value ScrollViewShadowNode::setRefresherHeader(const Napi::CallbackInfo &info) {
   
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
   auto returnValue = result["returnValue"];
-  auto env = info.Env();
   return Convert::convertJson2Value(env, returnValue);
 }
 }

@@ -96,7 +96,7 @@ namespace WebSocket {
                                     consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
                                     logger->info("call callback function end...");
                                     // 发送回调结果
-                                    auto resultJson = Convert::convertValue2Json(resultValue);
+                                    auto resultJson = Convert::convertValue2Json(env, resultValue);
                                     if (json.contains("id")) {
                                         logger->info("reply callback...");
                                         nlohmann::json callbakcResult = {
@@ -176,7 +176,7 @@ namespace WebSocket {
                     auto resultValue = funcRef->Value().Call(argsVec);
 
                     // 发送回调结果
-                    auto resultJson = Convert::convertValue2Json(resultValue);
+                    auto resultJson = Convert::convertValue2Json(env, resultValue);
                     if (json.contains("id")) {
                         logger->info("reply callback...");
                         nlohmann::json callbakcResult = {

@@ -112,7 +112,41 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       },
     },
   ]);
+  {
+    const coreFunctions = function (...args) {
+      console.info("coreFunctions called with args:", args);
+    }
+    coreFunctions._closure = {
+        requestFrame: (...args1) => {
+            console.info("[coreFunctions] requestFrame called with args:", args1);
+        }
+    }
+    coreFunctions.asString = "function workletValueSetter(value,synchronized){const{requestFrame}=jsThis._closure;{var _this=this;const previousAnimation=this._animation;if(previousAnimation){previousAnimation.cancelled=true;this._animation=null;}if(synchronized)return;if(typeof value==='function'||value!==null&&typeof value==='object'&&value.onFrame!==undefined){const animation=typeof value==='function'?value():value;if(this._value===animation.current&&!animation.isHigherOrder){var _animation$callback;(_animation$callback=animation.callback)===null||_animation$callback===void 0?void 0:_animation$callback.call(animation,true);return;}const step=function(timestamp){if(animation.cancelled){var _animation$callback2;(_animation$callback2=animation.callback)===null||_animation$callback2===void 0?void 0:_animation$callback2.call(animation,false);return;}const finished=animation.onFrame(animation,timestamp);animation.finished=true;animation.timestamp=timestamp;_this._value=animation.current;if(finished){requestFrame(function(){var _animation$callback3;(_animation$callback3=animation.callback)===null||_animation$callback3===void 0?void 0:_animation$callback3.call(animation,true);_this._animation=null;},_this._windowId);}else{requestFrame(step,_this._windowId);}};const initializeAnimation=function(timestamp){animation.onStart(animation,_this.value,timestamp,previousAnimation);step(timestamp);};this._animation=animation;if(_frameTimestamp){initializeAnimation(_frameTimestamp);}else{requestFrame(initializeAnimation,this._windowId);}}else{if(this._value===value){return;}this._value=value;}}}"
+    coreFunctions.__workletHash = 1469372007835
+    coreFunctions.__location = "src/worklet/core.ts (128:0)"
+    coreFunctions.__worklet = true
+    SkylineGlobal.workletModule.installCoreFunctions(coreFunctions)
+  }
+  {
+    const func = function (...args) {
+        console.info('-----> SkylineWorkletModule - makeShareable', args)
+    }
+    func._closure = {
+      capturableConsole: console,
+      printLog: true,
+      runOnJS: function(...args1) {
+        console.info('runOnJS:',...args1)
+      }
+    }
+    func.asString = "function _f(){const{printLog,runOnJS,capturableConsole}=jsThis._closure;{const methods=['debug','log','warn','error','info'];function _log(m){return function(...args){if(!printLog)return;runOnJS(capturableConsole[m])('[ui]',...args);};}const libConsole=methods.reduce(function(obj,prop){;obj[prop]=_log(prop);return obj;},{});workletUIModule.setGlobalConsole(libConsole);}}"
+    func.__workletHash = 12865805138945
+    func.__location = "src/worklet/core.ts (312:12)"
+    func.__worklet = true
+    const result = SkylineGlobal.workletModule.makeShareable(func)
+    console.info(result)
+    result()
+  }
   const mutable = global.SkylineGlobal.workletModule.makeMutable([])
-  // mutable.value = [20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000,
-  //    20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000]
+  mutable.value = [20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000,
+     20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000, 20000000000]
 })();

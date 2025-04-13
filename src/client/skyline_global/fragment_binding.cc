@@ -45,104 +45,104 @@ Napi::Value FragmentBinding::getInstanceId(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), m_instanceId);
 }
 Napi::Value FragmentBinding::appendChild(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 
 Napi::Value FragmentBinding::associateComponent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::equal(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::findChildPosition(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::getChildNode(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 
 }
 Napi::Value FragmentBinding::getParentNode(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::insertChild(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::release(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::removeChild(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::replaceChild(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 Napi::Value FragmentBinding::splice(const Napi::CallbackInfo &info) {
+  auto env =  info.Env();
   nlohmann::json args;
   for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(info[i]);
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto env =  info.Env();
   return Convert::convertJson2Value(env, result["returnValue"]);
 }
 } // namespace Skyline

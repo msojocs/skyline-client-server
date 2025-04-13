@@ -24,10 +24,10 @@ void registerTouchCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
-  
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerMouseCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -37,9 +37,10 @@ void registerMouseCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerTransitionCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -49,9 +50,10 @@ void registerTransitionCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerAnimationCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -61,9 +63,10 @@ void registerAnimationCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerTriggerEventCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -73,9 +76,10 @@ void registerTriggerEventCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerPerformanceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -85,9 +89,10 @@ void registerPerformanceCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerNavigateBackInterceptCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -97,9 +102,10 @@ void registerNavigateBackInterceptCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void registerJsValue(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -149,9 +155,10 @@ void registerFontFaceCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  auto func = info[0].As<Napi::Function>();
+  nlohmann::json args;
+  args[0] = Convert::convertValue2Json(env, info[0]);
   // 发送消息到 WebSocket
-  WebSocket::registerStaticCallbackSync("SkylineRuntime", __func__, func);
+  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
 void setFeatureFlags(const Napi::CallbackInfo &info) {
   auto env = info.Env();

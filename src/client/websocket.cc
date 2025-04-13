@@ -320,22 +320,22 @@ namespace WebSocket {
         callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
         return result;
     }
-    nlohmann::json registerStaticCallbackSync(const std::string& clazz, const std::string& action, Napi::Function& func) {
-        std::string callbackId = std::to_string(callbackUuid.nextid());
-        nlohmann::json json {
-            {"type", "registerCallback"},
-            {"action", action},
-            {"data", {
-                {"clazz", clazz},
-                {"callbackId", callbackId}
-            }}
-        };
-        // 把callbackId保存到map中，收到消息时调用Callback函数
-        auto result = sendMessageSync(json);
-        auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
-        callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
-        return result;
-    }
+    // nlohmann::json registerStaticCallbackSync(const std::string& clazz, const std::string& action, Napi::Function& func) {
+    //     std::string callbackId = std::to_string(callbackUuid.nextid());
+    //     nlohmann::json json {
+    //         {"type", "registerCallback"},
+    //         {"action", action},
+    //         {"data", {
+    //             {"clazz", clazz},
+    //             {"callbackId", callbackId}
+    //         }}
+    //     };
+    //     // 把callbackId保存到map中，收到消息时调用Callback函数
+    //     auto result = sendMessageSync(json);
+    //     auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
+    //     callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
+    //     return result;
+    // }
     nlohmann::json callStaticSync(const std::string& clazz, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {
             {"type", "static"},

@@ -70,7 +70,7 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value, bool 
   if (value.IsString()) {
     return value.As<Napi::String>().Utf8Value();
   } else if (value.IsNumber()) {
-    return value.As<Napi::Number>().Int64Value();
+    return value.As<Napi::Number>().DoubleValue();
   } else if (value.IsBoolean()) {
     return value.As<Napi::Boolean>().Value();
   } else if (value.IsFunction()) {

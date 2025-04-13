@@ -24,6 +24,13 @@ Napi::FunctionReference *ViewShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("getBoundingClientRect", &ViewShadowNode::getBoundingClientRect),
           
           InstanceMethod("setClass", &ViewShadowNode::setClass),
+          InstanceMethod("matches", &ViewShadowNode::matches),
+          // removeChild
+          InstanceMethod("removeChild", &ViewShadowNode::removeChild),
+          // setLayoutCallback
+          InstanceMethod("setLayoutCallback", &ViewShadowNode::setLayoutCallback),
+          // setTouchEventNeedsLocalCoords
+          InstanceMethod("setTouchEventNeedsLocalCoords", &ViewShadowNode::setTouchEventNeedsLocalCoords),
           // getter isConnected
           InstanceAccessor("isConnected", &ViewShadowNode::isConnected, nullptr,
                            static_cast<napi_property_attributes>(

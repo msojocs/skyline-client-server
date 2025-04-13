@@ -35,7 +35,7 @@ private:
   Napi::Value createStyleSheetIndexGroup(const Napi::CallbackInfo &info);
   Napi::Value createTextNode(const Napi::CallbackInfo &info);
   void finishStyleSheetsCompilation(const Napi::CallbackInfo &info);
-  void getComputedStyle(const Napi::CallbackInfo &info);
+  Napi::Value getComputedStyle(const Napi::CallbackInfo &info);
   void getHostNode(const Napi::CallbackInfo &info);
   void getNodeFromPoint(const Napi::CallbackInfo &info);
   Napi::Value getRootNode(const Napi::CallbackInfo &info);

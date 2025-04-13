@@ -163,4 +163,56 @@ Napi::Value ShadowNode::setClass(const Napi::CallbackInfo &info) {
   auto returnValue = result["returnValue"];
   return Convert::convertJson2Value(env, returnValue);
 }
+// setListenerOption
+Napi::Value ShadowNode::setListenerOption(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+Napi::Value ShadowNode::matches(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+Napi::Value ShadowNode::removeChild(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+Napi::Value ShadowNode::setLayoutCallback(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+Napi::Value ShadowNode::setTouchEventNeedsLocalCoords(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
 } // namespace Skyline

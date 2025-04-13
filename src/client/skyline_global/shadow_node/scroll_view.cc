@@ -24,6 +24,13 @@ Napi::FunctionReference *ScrollViewShadowNode::GetClazz(Napi::Env env) {
                       &ScrollViewShadowNode::getBoundingClientRect),
         InstanceMethod("setRefresherHeader", &ScrollViewShadowNode::setRefresherHeader),
         InstanceMethod("setClass", &ScrollViewShadowNode::setClass),
+        InstanceMethod("matches", &ScrollViewShadowNode::matches),
+        //removeChild
+        InstanceMethod("removeChild", &ScrollViewShadowNode::removeChild),
+        // setLayoutCallback
+        InstanceMethod("setLayoutCallback", &ScrollViewShadowNode::setLayoutCallback),
+        // setTouchEventNeedsLocalCoords
+        InstanceMethod("setTouchEventNeedsLocalCoords", &ScrollViewShadowNode::setTouchEventNeedsLocalCoords),
         // getter isConnected
         InstanceAccessor("isConnected", &ScrollViewShadowNode::isConnected, nullptr,
                           static_cast<napi_property_attributes>(

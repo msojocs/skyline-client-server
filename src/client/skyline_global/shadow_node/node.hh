@@ -74,6 +74,11 @@ updateStyle: ƒ updateStyle()
   Napi::Value getBoundingClientRect(const Napi::CallbackInfo &info);
   Napi::Value isConnected(const Napi::CallbackInfo &info);
   Napi::Value setClass(const Napi::CallbackInfo &info);
+  Napi::Value setListenerOption(const Napi::CallbackInfo &info);
+  Napi::Value matches(const Napi::CallbackInfo &info);
+  Napi::Value removeChild(const Napi::CallbackInfo &info);
+  Napi::Value setLayoutCallback(const Napi::CallbackInfo &info);
+  Napi::Value setTouchEventNeedsLocalCoords(const Napi::CallbackInfo &info);
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

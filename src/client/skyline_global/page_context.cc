@@ -278,8 +278,15 @@ void PageContext::finishStyleSheetsCompilation(const Napi::CallbackInfo &info) {
   throw Napi::Error::New(info.Env(), "finishStyleSheetsCompilation: Not implemented");
 }
 
-void PageContext::getComputedStyle(const Napi::CallbackInfo &info) {
-  throw Napi::Error::New(info.Env(), "getComputedStyle: Not implemented");
+Napi::Value PageContext::getComputedStyle(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
 }
 
 void PageContext::getHostNode(const Napi::CallbackInfo &info) {

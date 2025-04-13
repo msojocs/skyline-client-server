@@ -22,6 +22,16 @@ namespace Skyline {
                         &StickySectionShadowNode::getBoundingClientRect),
                         
           InstanceMethod("setClass", &StickySectionShadowNode::setClass),
+          
+          InstanceMethod("matches", &StickySectionShadowNode::matches),
+          // removeChild
+          InstanceMethod("removeChild", &StickySectionShadowNode::removeChild),
+          // setLayoutCallback
+          InstanceMethod("setLayoutCallback",
+                         &StickySectionShadowNode::setLayoutCallback),
+                         // setTouchEventNeedsLocalCoords
+          InstanceMethod("setTouchEventNeedsLocalCoords",
+                         &StickySectionShadowNode::setTouchEventNeedsLocalCoords),
           // getter isConnected
           InstanceAccessor("isConnected", &StickySectionShadowNode::isConnected, nullptr,
                             static_cast<napi_property_attributes>(

@@ -182,7 +182,7 @@ namespace WebSocket {
                     logger->error("callbackId not found: {}", callbackId);
                 }
             }
-            if (futureObj.wait_for(std::chrono::milliseconds(10)) == std::future_status::ready) {
+            if (futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready) {
                 break;
             }
         }

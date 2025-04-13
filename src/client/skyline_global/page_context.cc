@@ -377,11 +377,12 @@ void PageContext::startRender(const Napi::CallbackInfo &info) {
   }
   if (!info[0].IsFunction()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a function");
-  }
-  auto func = info[0].As<Napi::Function>(); 
+  } 
   // 发送消息到 WebSocket
-  nlohmann::json data;
-  WebSocket::registerDynamicCallbackSync(m_instanceId, __func__, func);
+  nlohmann::json args;
+  auto env = info.Env();
+  args[0] = Convert::convertValue2Json(env, info[0]);
+  WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 
 void PageContext::updateRouteConfig(const Napi::CallbackInfo &info) {

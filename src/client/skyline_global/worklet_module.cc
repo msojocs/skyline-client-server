@@ -52,18 +52,19 @@ namespace WorkletModule {
   }
   Napi::Value registerEventHandler(const Napi::CallbackInfo &info) {
     auto env = info.Env();
-    // 发送消息到 WebSocket
-    // auto func = info[0].As<Napi::Function>();
-    // auto result = WebSocket::registerStaticCallbackSync("SkylineWorkletModule", __func__, func);
-    // auto returnValue = result["returnValue"];
-    // return Convert::convertJson2Value(env, returnValue);
-    return env.Undefined();
+    nlohmann::json args;
+    for (int i = 0; i < info.Length(); i++) {
+      args[i] = Convert::convertValue2Json(env, info[i]);
+    }
+    auto result = WebSocket::callStaticSync("SkylineWorkletModule", __func__, args);
+    auto returnValue = result["returnValue"];
+    return Convert::convertJson2Value(env, returnValue);
   }
   void Init(Napi::Env env, Napi::Object exports) {
     exports.Set(Napi::String::New(env, "installCoreFunctions"), Napi::Function::New(env, installCoreFunctions));
     exports.Set(Napi::String::New(env, "makeShareable"), Napi::Function::New(env, makeShareable));
     exports.Set(Napi::String::New(env, "makeMutable"), Napi::Function::New(env, makeMutable));
-    // exports.Set(Napi::String::New(env, "registerEventHandler"), Napi::Function::New(env, registerEventHandler));
+    exports.Set(Napi::String::New(env, "registerEventHandler"), Napi::Function::New(env, registerEventHandler));
   }
 }
 }

@@ -34,6 +34,9 @@ Napi::FunctionReference *StickyHeaderShadowNode::GetClazz(Napi::Env env) {
                          &StickyHeaderShadowNode::setLayoutCallback),
           InstanceMethod("setTouchEventNeedsLocalCoords",
                          &StickyHeaderShadowNode::setTouchEventNeedsLocalCoords),
+          // setAttribute
+          InstanceMethod("setAttribute",
+                         &StickyHeaderShadowNode::setAttribute),
           // getter isConnected
           InstanceAccessor("isConnected", &StickyHeaderShadowNode::isConnected,
                            nullptr,

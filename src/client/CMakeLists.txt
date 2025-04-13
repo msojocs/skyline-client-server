@@ -27,6 +27,10 @@ set(CLIENT_DIR_LIST
     skyline_global/shadow_node/sticky_section.cc
     skyline_global/shadow_node/sticky_header.cc
     skyline_global/shadow_node/text.cc
+    skyline_global/shadow_node/image.cc
+    skyline_global/shadow_node/swiper.cc
+    skyline_global/shadow_node/swiper_item.cc
+    skyline_global/shadow_node/grid_view.cc
     include/fragment_binding.hh
     skyline_global/fragment_binding.cc
 )

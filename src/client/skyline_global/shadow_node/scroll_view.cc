@@ -31,6 +31,8 @@ Napi::FunctionReference *ScrollViewShadowNode::GetClazz(Napi::Env env) {
         InstanceMethod("setLayoutCallback", &ScrollViewShadowNode::setLayoutCallback),
         // setTouchEventNeedsLocalCoords
         InstanceMethod("setTouchEventNeedsLocalCoords", &ScrollViewShadowNode::setTouchEventNeedsLocalCoords),
+        // setAttribute
+        InstanceMethod("setAttribute", &ScrollViewShadowNode::setAttribute),
         // getter isConnected
         InstanceAccessor("isConnected", &ScrollViewShadowNode::isConnected, nullptr,
                           static_cast<napi_property_attributes>(

@@ -31,6 +31,8 @@ Napi::FunctionReference *ViewShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("setLayoutCallback", &ViewShadowNode::setLayoutCallback),
           // setTouchEventNeedsLocalCoords
           InstanceMethod("setTouchEventNeedsLocalCoords", &ViewShadowNode::setTouchEventNeedsLocalCoords),
+          // setAttribute
+          InstanceMethod("setAttribute", &ViewShadowNode::setAttribute),
           // getter isConnected
           InstanceAccessor("isConnected", &ViewShadowNode::isConnected, nullptr,
                            static_cast<napi_property_attributes>(

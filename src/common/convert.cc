@@ -3,10 +3,14 @@
 #include "../client/include/fragment_binding.hh"
 #include "../client/include/mutable_value.hh"
 #include "../client/skyline_global/shadow_node/list_view.hh"
+#include "../client/skyline_global/shadow_node/grid_view.hh"
 #include "../client/skyline_global/shadow_node/scroll_view.hh"
 #include "../client/skyline_global/shadow_node/sticky_header.hh"
 #include "../client/skyline_global/shadow_node/sticky_section.hh"
 #include "../client/skyline_global/shadow_node/text.hh"
+#include "../client/skyline_global/shadow_node/image.hh"
+#include "../client/skyline_global/shadow_node/swiper.hh"
+#include "../client/skyline_global/shadow_node/swiper_item.hh"
 #include "../client/skyline_global/shadow_node/view.hh"
 #include "../client/websocket.hh"
 #include "../include/snowflake.hh"
@@ -36,7 +40,12 @@ void RegisteInstanceType(Napi::Env &env) {
   // 注册实例类型和对应的构造函数
   funcMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
   funcMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
+  funcMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
+  funcMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
+  // SwiperItemShadoNode就是少了一个w
+  funcMap["SwiperItemShadoNode"] = Skyline::SwiperItemShadowNode::GetClazz(env);
   funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
+  funcMap["GridViewShadowNode"] = Skyline::GridViewShadowNode::GetClazz(env);
   funcMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
   funcMap["ListViewShadowNode"] = Skyline::ListViewShadowNode::GetClazz(env);
   funcMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);

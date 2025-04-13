@@ -32,6 +32,8 @@ Napi::FunctionReference *ListViewShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("setLayoutCallback", &ListViewShadowNode::setLayoutCallback),
           // setTouchEventNeedsLocalCoords
           InstanceMethod("setTouchEventNeedsLocalCoords", &ListViewShadowNode::setTouchEventNeedsLocalCoords),
+          // setAttribute
+          InstanceMethod("setAttribute", &ListViewShadowNode::setAttribute),
           
           // getter isConnected
           InstanceAccessor("isConnected", &ListViewShadowNode::isConnected, nullptr,

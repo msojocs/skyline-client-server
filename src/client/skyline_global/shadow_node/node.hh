@@ -79,6 +79,7 @@ updateStyle: ƒ updateStyle()
   Napi::Value removeChild(const Napi::CallbackInfo &info);
   Napi::Value setLayoutCallback(const Napi::CallbackInfo &info);
   Napi::Value setTouchEventNeedsLocalCoords(const Napi::CallbackInfo &info);
+  Napi::Value setAttribute(const Napi::CallbackInfo &info);
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

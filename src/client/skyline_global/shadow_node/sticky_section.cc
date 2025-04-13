@@ -32,6 +32,8 @@ namespace Skyline {
                          // setTouchEventNeedsLocalCoords
           InstanceMethod("setTouchEventNeedsLocalCoords",
                          &StickySectionShadowNode::setTouchEventNeedsLocalCoords),
+          //setAttribute
+          InstanceMethod("setAttribute", &StickySectionShadowNode::setAttribute),
           // getter isConnected
           InstanceAccessor("isConnected", &StickySectionShadowNode::isConnected, nullptr,
                             static_cast<napi_property_attributes>(

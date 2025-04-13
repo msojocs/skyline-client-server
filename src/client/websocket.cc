@@ -19,11 +19,9 @@ using Logger::logger;
 namespace WebSocket {
     static ix::WebSocket webSocket;
     static std::map<std::string, std::shared_ptr<std::promise<std::string>>> wsRequest;
-    static std::map<std::string, Convert::CallbackData> callback;
 
     using snowflake_t = snowflake<1534832906275L>;
     snowflake_t serverCommunicationUuid;
-    snowflake_t callbackUuid;
     std::string serverUrl = "ws://127.0.0.1:3001"; // Added server URL variable
     std::queue<nlohmann::json> callbackQueue;
     bool blocked = false;
@@ -31,7 +29,6 @@ namespace WebSocket {
     void initWebSocket() {
         ix::initNetSystem();
         serverCommunicationUuid.init(1, 1);
-        callbackUuid.init(2, 1);
         // Connect to a server with encryption
         // See https://machinezone.github.io/IXWebSocket/usage/#tls-support-and-configuration
         std::string url(serverUrl);
@@ -71,14 +68,6 @@ namespace WebSocket {
                             std::string callbackId = json["callbackId"].get<std::string>();
                             // 触发回调函数
                             auto ptr = Convert::find_callback(callbackId);
-                            auto it = callback.find(callbackId);
-                            if (ptr == nullptr) {
-                                if (it == callback.end()) {
-                                    logger->error("callbackId not found: {}", callbackId);
-                                    return;
-                                }
-                                ptr = &it->second;
-                            }
                             if (ptr != nullptr) {
                                 logger->info("callbackId found: {}", callbackId);
                                 // 在正确的线程上调用回调
@@ -162,15 +151,6 @@ namespace WebSocket {
                 logger->info("start to handle callback.");
                 std::string callbackId = json["callbackId"].get<std::string>();
                 auto ptr = Convert::find_callback(callbackId);
-                auto it = callback.find(callbackId);
-                if (ptr == nullptr) {
-                    if (it == callback.end()) {
-                        logger->error("callbackId not found: {}", callbackId);
-                        continue;
-                    }
-                    
-                    ptr = &it->second;
-                }
                 if (ptr != nullptr) {
                     logger->info("callbackId found: {}", callbackId);
                     // 在正确的线程上调用回调
@@ -287,39 +267,39 @@ namespace WebSocket {
         
         return sendMessageSync(json);
     }
-    nlohmann::json registerDynamicCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
-        std::string callbackId = std::to_string(callbackUuid.nextid());
-        nlohmann::json json {
-            {"type", "registerCallback"},
-            {"action", action},
-            {"data", {
-                {"instanceId", instanceId},
-                {"callbackId", callbackId}
-            }}
-        };
-        // 把callbackId保存到map中，收到消息时调用Callback函数
-        auto result = sendMessageSync(json);
-        auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
-        callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
-        return result;
-    }
-    nlohmann::json registerDynamicBlockCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
-        std::string callbackId = std::to_string(callbackUuid.nextid());
-        nlohmann::json json {
-            {"type", "registerCallback"},
-            {"action", action},
-            {"data", {
-                {"instanceId", instanceId},
-                {"callbackId", callbackId},
-                {"syncCallback", true}
-            }}
-        };
-        // 把callbackId保存到map中，收到消息时调用Callback函数
-        auto result = sendMessageSync(json);
-        auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
-        callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
-        return result;
-    }
+    // nlohmann::json registerDynamicCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
+    //     std::string callbackId = std::to_string(callbackUuid.nextid());
+    //     nlohmann::json json {
+    //         {"type", "registerCallback"},
+    //         {"action", action},
+    //         {"data", {
+    //             {"instanceId", instanceId},
+    //             {"callbackId", callbackId}
+    //         }}
+    //     };
+    //     // 把callbackId保存到map中，收到消息时调用Callback函数
+    //     auto result = sendMessageSync(json);
+    //     auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
+    //     callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
+    //     return result;
+    // }
+    // nlohmann::json registerDynamicBlockCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
+    //     std::string callbackId = std::to_string(callbackUuid.nextid());
+    //     nlohmann::json json {
+    //         {"type", "registerCallback"},
+    //         {"action", action},
+    //         {"data", {
+    //             {"instanceId", instanceId},
+    //             {"callbackId", callbackId},
+    //             {"syncCallback", true}
+    //         }}
+    //     };
+    //     // 把callbackId保存到map中，收到消息时调用Callback函数
+    //     auto result = sendMessageSync(json);
+    //     auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
+    //     callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
+    //     return result;
+    // }
     // nlohmann::json registerStaticCallbackSync(const std::string& clazz, const std::string& action, Napi::Function& func) {
     //     std::string callbackId = std::to_string(callbackUuid.nextid());
     //     nlohmann::json json {

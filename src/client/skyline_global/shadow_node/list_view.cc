@@ -22,7 +22,13 @@ Napi::FunctionReference *ListViewShadowNode::GetClazz(Napi::Env env) {
           
           InstanceMethod("setAttributes", &ListViewShadowNode::setAttributes),
           InstanceMethod("getBoundingClientRect", &ListViewShadowNode::getBoundingClientRect),
+          // setClass 
           
+          InstanceMethod("setClass", &ListViewShadowNode::setClass),
+          // getter isConnected
+          InstanceAccessor("isConnected", &ListViewShadowNode::isConnected, nullptr,
+                           static_cast<napi_property_attributes>(
+                               napi_writable | napi_configurable)),
           // getter instanceId
           InstanceAccessor("instanceId", &ListViewShadowNode::getInstanceId, nullptr,
                          static_cast<napi_property_attributes>(

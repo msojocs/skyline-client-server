@@ -23,6 +23,11 @@ Napi::FunctionReference *ScrollViewShadowNode::GetClazz(Napi::Env env) {
        InstanceMethod("getBoundingClientRect",
                       &ScrollViewShadowNode::getBoundingClientRect),
         InstanceMethod("setRefresherHeader", &ScrollViewShadowNode::setRefresherHeader),
+        InstanceMethod("setClass", &ScrollViewShadowNode::setClass),
+        // getter isConnected
+        InstanceAccessor("isConnected", &ScrollViewShadowNode::isConnected, nullptr,
+                          static_cast<napi_property_attributes>(
+                              napi_writable | napi_configurable)),
        // getter instanceId
        InstanceAccessor("instanceId", &ScrollViewShadowNode::getInstanceId, nullptr,
                         static_cast<napi_property_attributes>(

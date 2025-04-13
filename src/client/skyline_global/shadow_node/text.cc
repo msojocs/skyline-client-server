@@ -23,6 +23,11 @@ Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("setAttributes", &TextShadowNode::setAttributes),
           InstanceMethod("getBoundingClientRect", &TextShadowNode::getBoundingClientRect),
           
+          InstanceMethod("setClass", &TextShadowNode::setClass),
+          // getter isConnected
+          InstanceAccessor("isConnected", &TextShadowNode::isConnected, nullptr,
+                           static_cast<napi_property_attributes>(
+                               napi_writable | napi_configurable)),
           // getter instanceId
           InstanceAccessor("instanceId", &TextShadowNode::getInstanceId, nullptr,
                          static_cast<napi_property_attributes>(

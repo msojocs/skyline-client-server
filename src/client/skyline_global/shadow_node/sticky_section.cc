@@ -20,6 +20,12 @@ namespace Skyline {
          InstanceMethod("setAttributes", &StickySectionShadowNode::setAttributes),
          InstanceMethod("getBoundingClientRect",
                         &StickySectionShadowNode::getBoundingClientRect),
+                        
+          InstanceMethod("setClass", &StickySectionShadowNode::setClass),
+          // getter isConnected
+          InstanceAccessor("isConnected", &StickySectionShadowNode::isConnected, nullptr,
+                            static_cast<napi_property_attributes>(
+                                napi_writable | napi_configurable)),
 
          // getter instanceId
          InstanceAccessor("instanceId", &StickySectionShadowNode::getInstanceId, nullptr,

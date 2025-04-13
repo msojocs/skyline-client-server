@@ -34,7 +34,7 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
   if (value.IsString()) {
     return value.As<Napi::String>().Utf8Value();
   } else if (value.IsNumber()) {
-    return value.As<Napi::Number>().Int32Value();
+    return value.As<Napi::Number>().Int64Value();
   } else if (value.IsBoolean()) {
     return value.As<Napi::Boolean>().Value();
   } else if (value.IsBuffer()) {
@@ -55,7 +55,7 @@ nlohmann::json convertValue2Json(const Napi::Value &value) {
     return jsonArr;
   } else if (value.IsArray()) {
     Napi::Array arr = value.As<Napi::Array>();
-    nlohmann::json jsonArr;
+    nlohmann::json jsonArr = nlohmann::json::array();
     for (uint32_t i = 0; i < arr.Length(); i++) {
       jsonArr[i] = convertValue2Json(arr.Get(i));
     }

@@ -5,6 +5,7 @@
 #include "../include/logger.hh"
 #include <nlohmann/json.hpp>
 #include <future>
+#include <synchapi.h>
 #include "../include/snowflake.hh"
 #include "../include/convert.hh"
 
@@ -52,7 +53,6 @@ int startInner(std::string &host, int port) {
 
       if (msg->type == ix::WebSocketMessageType::Message) {
         logger->info("Received: {}", msg->str);
-
         try {
           // Capture the message
           std::string message = msg->str;
@@ -63,6 +63,7 @@ int startInner(std::string &host, int port) {
             logger->info("received message: {}", json["id"].get<std::string>());
             if (wsRequest.find(id) != wsRequest.end())
             {
+              logger->info("found id: {}", id.get<std::string>());
               // server发出的消息的回复
               wsRequest[id]->set_value(msg->str);
               wsRequest.erase(id);
@@ -78,13 +79,22 @@ int startInner(std::string &host, int port) {
           auto callback = [message](Napi::Env env, Napi::Function jsCallback) {
             auto ws = Napi::Object::New(env);
             ws.Set("send", Napi::Function::New(env, sendMsg));
-            jsCallback.Call({ws, Napi::String::New(env, message)});
+            try {
+              jsCallback.Call({ws, Napi::String::New(env, message)});
+            }catch (const std::exception &e) {
+              logger->error("Error in callback: {}", e.what());
+            } catch (...) {
+              logger->error("Unknown error occurred in callback");
+            }
           };
 
           tsfn.BlockingCall(callback);
         }
         catch (const std::exception &e) {
           logger->error("Error parsing JSON: {}", e.what());
+        }
+        catch (...) {
+          logger->error("Unknown error occurred");
         }
 
       }
@@ -161,13 +171,10 @@ Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
     throw Napi::Error::New(info.Env(), "No clients connected");
   }
   logger->info("send to client: {}", json.dump());
-  auto log = info.Env().Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-  log.Call( {Napi::String::New(info.Env(), "Sending message: " + json.dump())});
   std::thread t1([clients, json]() {
     clients.begin()->get()->send(json.dump());
   });
   t1.detach();
-  log.Call( {Napi::String::New(info.Env(), "Message sent")});
   auto promiseObj = std::make_shared<std::promise<std::string>>();
   std::future<std::string> futureObj = promiseObj->get_future();
   wsRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]

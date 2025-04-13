@@ -72,6 +72,8 @@ updateStyle: ƒ updateStyle()
   Napi::Value release(const Napi::CallbackInfo &info);
   Napi::Value setAttributes(const Napi::CallbackInfo &info);
   Napi::Value getBoundingClientRect(const Napi::CallbackInfo &info);
+  Napi::Value isConnected(const Napi::CallbackInfo &info);
+  Napi::Value setClass(const Napi::CallbackInfo &info);
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

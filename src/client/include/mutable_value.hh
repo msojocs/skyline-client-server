@@ -5,6 +5,9 @@
 #include "napi.h"
 
 namespace Skyline {
+  /**
+   * 在InstallCoreFunctions之后才能被调用，否则模块会崩溃。
+   */
   class MutableValue: public Napi::ObjectWrap<MutableValue>, public BaseClient {
   public:
   MutableValue(const Napi::CallbackInfo& info);

@@ -38,7 +38,7 @@ private:
   void getComputedStyle(const Napi::CallbackInfo &info);
   void getHostNode(const Napi::CallbackInfo &info);
   void getNodeFromPoint(const Napi::CallbackInfo &info);
-  void getRootNode(const Napi::CallbackInfo &info);
+  Napi::Value getRootNode(const Napi::CallbackInfo &info);
   void getWindowId(const Napi::CallbackInfo &info);
   void isTab(const Napi::CallbackInfo &info);
   void loadFontFace(const Napi::CallbackInfo &info);

@@ -31,13 +31,6 @@ CallbackData * find_callback(const std::string &callbackId)
   }
   return nullptr;
 }
-void remove_callback(const std::string &callbackId) {
-  auto it = callback.find(callbackId);
-  if (it != callback.end()) {
-    it->second.tsfn.Release();
-    callback.erase(it);
-  }
-}
 void RegisteInstanceType(Napi::Env &env) {
   callbackUuid.init(2, 1);
   // 注册实例类型和对应的构造函数

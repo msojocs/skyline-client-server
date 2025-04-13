@@ -17,13 +17,9 @@
 using Logger::logger;
 
 namespace WebSocket {
-    struct CallbackData {
-        std::shared_ptr<Napi::FunctionReference> funcRef;
-        Napi::ThreadSafeFunction tsfn;
-    };
     static ix::WebSocket webSocket;
     static std::map<std::string, std::shared_ptr<std::promise<std::string>>> wsRequest;
-    static std::map<std::string, CallbackData> callback;
+    static std::map<std::string, Convert::CallbackData> callback;
 
     using snowflake_t = snowflake<1534832906275L>;
     snowflake_t serverCommunicationUuid;
@@ -74,12 +70,20 @@ namespace WebSocket {
                             // 回调触发
                             std::string callbackId = json["callbackId"].get<std::string>();
                             // 触发回调函数
+                            auto ptr = Convert::find_callback(callbackId);
                             auto it = callback.find(callbackId);
-                            if (it != callback.end()) {
+                            if (ptr == nullptr) {
+                                if (it == callback.end()) {
+                                    logger->error("callbackId not found: {}", callbackId);
+                                    return;
+                                }
+                                ptr = &it->second;
+                            }
+                            if (ptr != nullptr) {
                                 logger->info("callbackId found: {}", callbackId);
                                 // 在正确的线程上调用回调
                                 logger->info("create ThreadSafeFunction success!");
-                                auto callResult = it->second.tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                                auto callResult = ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
                                     
                                     auto args = json["data"]["args"];
                                     std::string callbackId = json["callbackId"].get<std::string>();
@@ -107,9 +111,6 @@ namespace WebSocket {
                                         webSocket.send(callbakcResult.dump());
                                     }
                                 });
-                                if (callResult == napi_ok) {
-                                    callback.erase(it);
-                                }
                             }
                             else {
                                 logger->error("callbackId not found: {}", callbackId);
@@ -158,12 +159,22 @@ namespace WebSocket {
             if (callbackQueue.size() > 0) {
                 auto json = callbackQueue.front();
                 callbackQueue.pop();
+                logger->info("start to handle callback.");
                 std::string callbackId = json["callbackId"].get<std::string>();
+                auto ptr = Convert::find_callback(callbackId);
                 auto it = callback.find(callbackId);
-                if (it != callback.end()) {
+                if (ptr == nullptr) {
+                    if (it == callback.end()) {
+                        logger->error("callbackId not found: {}", callbackId);
+                        continue;
+                    }
+                    
+                    ptr = &it->second;
+                }
+                if (ptr != nullptr) {
                     logger->info("callbackId found: {}", callbackId);
                     // 在正确的线程上调用回调
-                    auto env = it->second.funcRef->Env();
+                    auto env = ptr->funcRef->Env();
                     auto args = json["data"]["args"];
                     std::string callbackId = json["callbackId"].get<std::string>();
                     Napi::HandleScope scope(env);
@@ -172,7 +183,7 @@ namespace WebSocket {
                     for (auto& arg : args) {
                         argsVec.push_back(Convert::convertJson2Value(env, arg));
                     }
-                    std::shared_ptr<Napi::FunctionReference> funcRef = it->second.funcRef;
+                    std::shared_ptr<Napi::FunctionReference> funcRef = ptr->funcRef;
                     auto resultValue = funcRef->Value().Call(argsVec);
 
                     // 发送回调结果
@@ -197,12 +208,12 @@ namespace WebSocket {
         }
         // TODO: 3秒超时
         std::string result = futureObj.get();
+        blocked = false;
         logger->info("result: {}", result.c_str());
         auto resp = nlohmann::json::parse(result);
         if (resp.contains("error")) {
             throw std::runtime_error(resp["error"].get<std::string>());
         }
-        blocked = false;
         return resp["result"];
     }
     void sendMessageAsync(nlohmann::json& data) {
@@ -289,7 +300,7 @@ namespace WebSocket {
         // 把callbackId保存到map中，收到消息时调用Callback函数
         auto result = sendMessageSync(json);
         auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
-        callback.emplace(callbackId, CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
+        callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
         return result;
     }
     nlohmann::json registerDynamicBlockCallbackSync(const std::string& instanceId, const std::string& action, Napi::Function& func) {
@@ -306,7 +317,7 @@ namespace WebSocket {
         // 把callbackId保存到map中，收到消息时调用Callback函数
         auto result = sendMessageSync(json);
         auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
-        callback.emplace(callbackId, CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
+        callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
         return result;
     }
     nlohmann::json registerStaticCallbackSync(const std::string& clazz, const std::string& action, Napi::Function& func) {
@@ -322,7 +333,7 @@ namespace WebSocket {
         // 把callbackId保存到map中，收到消息时调用Callback函数
         auto result = sendMessageSync(json);
         auto tsfn = Napi::ThreadSafeFunction::New(func.Env(), func, "WebSocket Callback", 0, 1);
-        callback.emplace(callbackId, CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
+        callback.emplace(callbackId, Convert::CallbackData{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)), tsfn});
         return result;
     }
     nlohmann::json callStaticSync(const std::string& clazz, const std::string& action, nlohmann::json& args) {

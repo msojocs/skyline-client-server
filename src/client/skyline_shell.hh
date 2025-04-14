@@ -14,6 +14,38 @@ public:
   Napi::Value getInstanceId(const Napi::CallbackInfo &info);
 
 private:
+/**
+ * createWindow: ƒ createWindow()
+destroyWindow: ƒ destroyWindow()
+dispatchCharEvent: ƒ dispatchCharEvent()
+dispatchKeyboardEvent: ƒ dispatchKeyboardEvent()
+dispatchTouchCancelEvent: ƒ dispatchTouchCancelEvent()
+dispatchTouchEndEvent: ƒ dispatchTouchEndEvent()
+dispatchTouchMoveEvent: ƒ dispatchTouchMoveEvent()
+dispatchTouchOverEvent: ƒ dispatchTouchOverEvent()
+dispatchTouchStartEvent: ƒ dispatchTouchStartEvent()
+dispatchWheelEvent: ƒ dispatchWheelEvent()
+notifyAppLaunch: ƒ notifyAppLaunch()
+notifyAutoReLaunch: ƒ notifyAutoReLaunch()
+notifyHttpRequestComplete: ƒ notifyHttpRequestComplete()
+notifyNavigateBack: ƒ notifyNavigateBack()
+notifyNavigateTo: ƒ notifyNavigateTo()
+notifyReLaunch: ƒ notifyReLaunch()
+notifyRedirectTo: ƒ notifyRedirectTo()
+notifyResourceLoad: ƒ notifyResourceLoad()
+notifySwitchTab: ƒ notifySwitchTab()
+onPlatformBrightnessChanged: ƒ onPlatformBrightnessChanged()
+setHttpRequestCallback: ƒ setHttpRequestCallback()
+setLoadResourceAsyncCallback: ƒ setLoadResourceAsyncCallback()
+setLoadResourceCallback: ƒ setLoadResourceCallback()
+setNavigateBackCallback: ƒ setNavigateBackCallback()
+setNavigateBackDoneCallback: ƒ setNavigateBackDoneCallback()
+setNotifyBootstrapDoneCallback: ƒ setNotifyBootstrapDoneCallback()
+setNotifyRouteDoneCallback: ƒ setNotifyRouteDoneCallback()
+setNotifyWindowReadyCallback: ƒ setNotifyWindowReadyCallback()
+setSafeAreaEdgeInsets: ƒ setSafeAreaEdgeInsets()
+setSendLogCallback: ƒ setSendLogCallback()
+ */
   void setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info);
   void setNotifyWindowReadyCallback(const Napi::CallbackInfo &info);
   void setNotifyRouteDoneCallback(const Napi::CallbackInfo &info);
@@ -37,6 +69,7 @@ private:
   void dispatchTouchCancelEvent(const Napi::CallbackInfo &info);
   void dispatchKeyboardEvent(const Napi::CallbackInfo &info);
   void dispatchWheelEvent(const Napi::CallbackInfo &info);
+  Napi::Value notifyHttpRequestComplete(const Napi::CallbackInfo &info);
 };
 } // namespace SkylineShell
 #endif

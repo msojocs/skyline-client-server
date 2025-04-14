@@ -107,27 +107,29 @@ void registerNavigateBackInterceptCallback(const Napi::CallbackInfo &info) {
   // 发送消息到 WebSocket
   WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
-void registerJsValue(const Napi::CallbackInfo &info) {
+Napi::Value registerJsValue(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
   }
-  // TODO：参数是任意值
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::String>().Utf8Value();
   // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, data);
+  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
 }
-void unRegisterJsValue(const Napi::CallbackInfo &info) {
+Napi::Value unRegisterJsValue(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
   // TODO：参数是任意值
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::String>().Utf8Value();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  
   // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, data);
+  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
 }
 Napi::Value getJsValueById(const Napi::CallbackInfo &info) {
   auto env = info.Env();

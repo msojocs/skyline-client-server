@@ -1,6 +1,7 @@
 #include "skyline_shell.hh"
 #include "napi.h"
 #include "websocket.hh"
+#include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include <utility>
 #include <windows.h>
@@ -48,6 +49,9 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
                       &SkylineShell::dispatchKeyboardEvent),
         InstanceMethod("dispatchWheelEvent",
                       &SkylineShell::dispatchWheelEvent),
+            // notifyHttpRequestComplete
+        InstanceMethod("notifyHttpRequestComplete",
+                      &SkylineShell::notifyHttpRequestComplete),
                     });
   
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
@@ -488,5 +492,15 @@ void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   WebSocket::callDynamicSync(m_instanceId, __func__, data);
+}
+Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  auto env = info.Env();
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, "notifyHttpRequestComplete", args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
 }
 } // namespace SkylineShell

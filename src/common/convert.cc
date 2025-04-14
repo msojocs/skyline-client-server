@@ -12,6 +12,7 @@
 #include "../client/skyline_global/shadow_node/swiper.hh"
 #include "../client/skyline_global/shadow_node/swiper_item.hh"
 #include "../client/skyline_global/shadow_node/view.hh"
+#include "../client/skyline_global/shadow_node/hero.hh"
 #include "../client/websocket.hh"
 #include "../include/snowflake.hh"
 #include "napi.h"
@@ -52,6 +53,7 @@ void RegisteInstanceType(Napi::Env &env) {
   funcMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
   funcMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
   funcMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
+  funcMap["HeroShadowNode"] = Skyline::HeroShadowNode::GetClazz(env);
 }
 #endif
 

@@ -1,5 +1,7 @@
 #include "text.hh"
 #include "napi.h"
+#include "../../websocket.hh"
+#include "../../../include/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {
@@ -33,6 +35,8 @@ Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {
           InstanceMethod("setTouchEventNeedsLocalCoords", &TextShadowNode::setTouchEventNeedsLocalCoords),
           // setAttribute
           InstanceMethod("setAttribute", &TextShadowNode::setAttribute),
+          // setText
+          InstanceMethod("setText", &TextShadowNode::setText),
           // getter isConnected
           InstanceAccessor("isConnected", &TextShadowNode::isConnected, nullptr,
                            static_cast<napi_property_attributes>(
@@ -58,5 +62,14 @@ TextShadowNode::TextShadowNode(const Napi::CallbackInfo &info)
                                "Constructor: First argument must be a string");
   }
   m_instanceId = info[0].As<Napi::String>().Utf8Value();
+}
+Napi::Value TextShadowNode::setText(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  auto env = info.Env();
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, "setText", args);
+  return Convert::convertJson2Value(env, result["returnValue"]);
 }
 } // namespace Skyline

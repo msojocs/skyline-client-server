@@ -235,4 +235,312 @@ Napi::Value ShadowNode::getParentNode(const Napi::CallbackInfo &info) {
   return Convert::convertJson2Value(env, returnValue);
 }
 
+Napi::Value ShadowNode::addAnimatedStyle(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::appendFragment(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::appendStyle(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::associateComponent(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::clearAnimatedStyle(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::clearClasses(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::cloneNode(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::createIntersectionObserver(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::equal(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::findChildPosition(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::getAfterPseudoNode(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::getBeforePseudoNode(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::getChildNode(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::getOffsetPosition(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::insertBefore(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::insertChild(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::insertFragmentBefore(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::length(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::markAsListItem(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::markAsRepaintBoundary(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::preventSnapshot(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::removeAttribute(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::removeClass(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::replaceChild(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::setIntersectionListener(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::splice(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::spliceBefore(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
+Napi::Value ShadowNode::updateStyle(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  nlohmann::json args;
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+
 } // namespace Skyline

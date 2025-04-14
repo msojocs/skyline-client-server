@@ -16,11 +16,13 @@
 #include "../client/websocket.hh"
 #include "../include/snowflake.hh"
 #include "napi.h"
+#include <memory>
 #include <nlohmann/json_fwd.hpp>
 
 namespace Convert {
 
 static std::map<std::string, CallbackData> callback;
+static std::map<std::string, std::shared_ptr<Napi::ObjectReference>> instanceCache;
 using snowflake_t = snowflake<1534832906275L>;
 snowflake_t callbackUuid;
 
@@ -167,8 +169,17 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
       if (it != funcMap.end()) {
         try {
           Napi::FunctionReference *func = it->second;
+          // 创建实例
+          // 先到cache找
+          auto instanceId = data["instanceId"].get<std::string>();
+          if (instanceCache.find(instanceId) != instanceCache.end()) {
+            return instanceCache[instanceId]->Value();
+          }
+          // cache找不到
           auto result = func->New(
               {Napi::String::New(env, data["instanceId"].get<std::string>())});
+          auto ref = Napi::Persistent(result);
+          instanceCache.emplace(instanceId, std::make_shared<Napi::ObjectReference>(std::move(ref)) );
           return result;
         } catch (const std::exception &e) {
           Napi::Error::New(env,

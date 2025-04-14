@@ -83,10 +83,10 @@ namespace WebSocket {
                                         argsVec.push_back(Convert::convertJson2Value(env, arg));
                                     }
                                     logger->info("call callback function...");
-                                    auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-                                    consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
+                                    // auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+                                    // consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
                                     auto resultValue = jsCallback.Call(argsVec);
-                                    consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
+                                    // consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
                                     logger->info("call callback function end...");
                                     // 发送回调结果
                                     auto resultJson = Convert::convertValue2Json(env, resultValue);
@@ -182,7 +182,7 @@ namespace WebSocket {
                     logger->error("callbackId not found: {}", callbackId);
                 }
             }
-            if (futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready) {
+            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
                 break;
             }
         }

@@ -34,6 +34,31 @@ private:
     scrollTo: ƒ scrollTo()
     setRefresherHeader: ƒ setRefresherHeader()
    */
+  // getScrollPosition
+  Napi::Value getScrollPosition(const Napi::CallbackInfo &info);
+  // holdPosition
+  Napi::Value holdPosition(const Napi::CallbackInfo &info);
+  // onRefresherAbortEvent
+  Napi::Value onRefresherAbortEvent(const Napi::CallbackInfo &info);
+  // onRefresherPullingEvent
+  Napi::Value onRefresherPullingEvent(const Napi::CallbackInfo &info);
+  // onRefresherRefreshEvent
+  Napi::Value onRefresherRefreshEvent(const Napi::CallbackInfo &info);
+  // onRefresherRestoreEvent
+  Napi::Value onRefresherRestoreEvent(const Napi::CallbackInfo &info);
+  // onRefresherStatusChangeEvent
+  Napi::Value onRefresherStatusChangeEvent(const Napi::CallbackInfo &info);
+  // onRefresherWillRefreshEvent
+  Napi::Value onRefresherWillRefreshEvent(const Napi::CallbackInfo &info);
+  Napi::Value onScrollEndEvent(const Napi::CallbackInfo &info);
+  Napi::Value onScrollEvent(const Napi::CallbackInfo &info);
+  Napi::Value onScrollStartEvent(const Napi::CallbackInfo &info);
+  Napi::Value onScrollToLowerEvent(const Napi::CallbackInfo &info);
+  Napi::Value onScrollToUpperEvent(const Napi::CallbackInfo &info);
+  Napi::Value requestRefresherRefresh(const Napi::CallbackInfo &info);
+  Napi::Value requestRefresherTwoLevel(const Napi::CallbackInfo &info);
+  Napi::Value scrollIntoView(const Napi::CallbackInfo &info);
+  Napi::Value scrollTo(const Napi::CallbackInfo &info);
   Napi::Value setRefresherHeader(const Napi::CallbackInfo &info);
 };
 

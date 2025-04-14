@@ -4,9 +4,7 @@
 namespace Skyline {
 Napi::FunctionReference *SwiperShadowNode::GetClazz(Napi::Env env) {
   auto methods = GetCommonMethods<SwiperShadowNode>();
-  
   Napi::Function func = DefineClass(env, "SwiperShadowNode", methods);
-  
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 

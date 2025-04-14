@@ -1,14 +1,11 @@
 #include "view.hh"
 #include "napi.h"
 #include "node.hh"
-#include <vector>
 
 namespace Skyline {
 Napi::FunctionReference *ViewShadowNode::GetClazz(Napi::Env env) {
   auto methods = GetCommonMethods<ViewShadowNode>();
-  
   Napi::Function func = DefineClass(env, "ViewShadowNode", methods);
-  
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 

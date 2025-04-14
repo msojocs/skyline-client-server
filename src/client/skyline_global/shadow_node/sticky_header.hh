@@ -14,6 +14,7 @@ private:
    * 相比view多出来的
    * onStickOnTopChangeEvent: ƒ onStickOnTopChangeEvent()
    */
+  Napi::Value onStickOnTopChangeEvent(const Napi::CallbackInfo &info);
 };
 }
 #endif

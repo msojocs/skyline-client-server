@@ -2,51 +2,13 @@
 
 namespace Skyline {
   Napi::FunctionReference *StickySectionShadowNode::GetClazz(Napi::Env env) {
-    Napi::Function func = DefineClass(
-        env, "StickySectionShadowNode",
-        {InstanceMethod("setStyleScope", &StickySectionShadowNode::setStyleScope),
-         InstanceMethod("addClass", &StickySectionShadowNode::addClass),
-         InstanceMethod("setStyle", &StickySectionShadowNode::setStyle),
-         InstanceMethod("setEventDefaultPrevented",
-                        &StickySectionShadowNode::setEventDefaultPrevented),
-         InstanceMethod("appendChild", &StickySectionShadowNode::appendChild),
-         InstanceMethod("spliceAppend", &StickySectionShadowNode::spliceAppend),
-
-         InstanceMethod("setId", &StickySectionShadowNode::setId),
-         InstanceMethod("forceDetached", &StickySectionShadowNode::forceDetached),
-         InstanceMethod("spliceRemove", &StickySectionShadowNode::spliceRemove),
-         InstanceMethod("release", &StickySectionShadowNode::release),
-
-         InstanceMethod("setAttributes", &StickySectionShadowNode::setAttributes),
-         InstanceMethod("getBoundingClientRect",
-                        &StickySectionShadowNode::getBoundingClientRect),
-                        
-          InstanceMethod("setClass", &StickySectionShadowNode::setClass),
-          
-          InstanceMethod("matches", &StickySectionShadowNode::matches),
-          // removeChild
-          InstanceMethod("removeChild", &StickySectionShadowNode::removeChild),
-          // setLayoutCallback
-          InstanceMethod("setLayoutCallback",
-                         &StickySectionShadowNode::setLayoutCallback),
-                         // setTouchEventNeedsLocalCoords
-          InstanceMethod("setTouchEventNeedsLocalCoords",
-                         &StickySectionShadowNode::setTouchEventNeedsLocalCoords),
-          //setAttribute
-          InstanceMethod("setAttribute", &StickySectionShadowNode::setAttribute),
-          // getter isConnected
-          InstanceAccessor("isConnected", &StickySectionShadowNode::isConnected, nullptr,
-                            static_cast<napi_property_attributes>(
-                                napi_writable | napi_configurable)),
-
-         // getter instanceId
-         InstanceAccessor("instanceId", &StickySectionShadowNode::getInstanceId, nullptr,
-                          static_cast<napi_property_attributes>(
-                              napi_writable | napi_configurable)),
-        });
+    auto methods = GetCommonMethods<StickySectionShadowNode>();
+    
+    Napi::Function func = DefineClass(env, "StickySectionShadowNode", methods);
+    
     Napi::FunctionReference *constructor = new Napi::FunctionReference();
     *constructor = Napi::Persistent(func);
-
+  
     return constructor;
   }
   StickySectionShadowNode::StickySectionShadowNode(const Napi::CallbackInfo &info)

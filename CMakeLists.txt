@@ -5,10 +5,17 @@ cmake_policy(SET CMP0042 NEW)
 
 project("module_example")
 
+# Improve dependency scanning and header file tracking
+set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
+set(CMAKE_CXX_STANDARD 17)
+# Enable header dependency scanning 
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /showIncludes")
+endif()
+
 set(VCPKG_ROOT $ENV{VCPKG_ROOT})
 message("VCPKG_ROOT: " ${VCPKG_ROOT})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CXX_STANDARD 17)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 set(CMAKE_VERBOSE_MAKEFILE ON)

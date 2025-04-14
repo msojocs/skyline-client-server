@@ -4,44 +4,10 @@
 
 namespace Skyline {
 Napi::FunctionReference *HeroShadowNode::GetClazz(Napi::Env env) {
+  auto methods = GetCommonMethods<HeroShadowNode>();
 
-  Napi::Function func = DefineClass(
-      env, "HeroShadowNode",
-      {
-          InstanceMethod("setStyleScope", &HeroShadowNode::setStyleScope),
-          InstanceMethod("addClass", &HeroShadowNode::addClass),
-          InstanceMethod("setStyle", &HeroShadowNode::setStyle),
-          InstanceMethod("setEventDefaultPrevented",
-                         &HeroShadowNode::setEventDefaultPrevented),
-          InstanceMethod("appendChild", &HeroShadowNode::appendChild),
-          InstanceMethod("spliceAppend", &HeroShadowNode::spliceAppend),
-          InstanceMethod("setId", &HeroShadowNode::setId),
-          InstanceMethod("forceDetached", &HeroShadowNode::forceDetached),
-          InstanceMethod("spliceRemove", &HeroShadowNode::spliceRemove),
-          InstanceMethod("release", &HeroShadowNode::release),
-          
-          InstanceMethod("setAttributes", &HeroShadowNode::setAttributes),
-          InstanceMethod("getBoundingClientRect", &HeroShadowNode::getBoundingClientRect),
-          
-          InstanceMethod("setClass", &HeroShadowNode::setClass),
-          InstanceMethod("matches", &HeroShadowNode::matches),
-          // removeChild
-          InstanceMethod("removeChild", &HeroShadowNode::removeChild),
-          // setLayoutCallback
-          InstanceMethod("setLayoutCallback", &HeroShadowNode::setLayoutCallback),
-          // setTouchEventNeedsLocalCoords
-          InstanceMethod("setTouchEventNeedsLocalCoords", &HeroShadowNode::setTouchEventNeedsLocalCoords),
-          // setAttribute
-          InstanceMethod("setAttribute", &HeroShadowNode::setAttribute),
-          // getter isConnected
-          InstanceAccessor("isConnected", &HeroShadowNode::isConnected, nullptr,
-                           static_cast<napi_property_attributes>(
-                               napi_writable | napi_configurable)),
-          // getter instanceId
-          InstanceAccessor("instanceId", &HeroShadowNode::getInstanceId, nullptr,
-                         static_cast<napi_property_attributes>(
-                             napi_writable | napi_configurable)),
-      });
+  Napi::Function func = DefineClass(env, "HeroShadowNode", methods);
+
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 

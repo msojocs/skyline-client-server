@@ -1,4 +1,3 @@
-
 set(CLIENT_NAME skylineClient)
 set(CLIENT_DIR_LIST
     client.cc
@@ -20,6 +19,7 @@ set(CLIENT_DIR_LIST
     skyline_global/mutable_value.cc
     skyline_global/worklet_module.cc
     skyline_global/async_style_sheets.cc
+    skyline_global/shadow_node/node.hh
     skyline_global/shadow_node/node.cc
     skyline_global/shadow_node/view.cc
     skyline_global/shadow_node/scroll_view.cc
@@ -36,11 +36,29 @@ set(CLIENT_DIR_LIST
     skyline_global/fragment_binding.cc
 )
 
+# Set the HEADER_DEPENDENCY_CHECK property to force rebuilding when headers change
+set_source_files_properties(
+    skyline_global/shadow_node/node.cc
+    PROPERTIES
+    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node/node.hh"
+)
+
 add_library(${CLIENT_NAME}
     SHARED
     ${CLIENT_DIR_LIST}
     ${CMAKE_JS_SRC}
     )
+target_include_directories(${CLIENT_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node>
+)
+
+# Enable unity builds for better header dependency tracking
+set_target_properties(${CLIENT_NAME} PROPERTIES UNITY_BUILD OFF)
+
+# Enable header dependency checking
+set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
+
 set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)

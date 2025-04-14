@@ -4,11 +4,44 @@
 #include <napi.h>
 
 namespace Skyline {
+template<typename T>
+std::vector<Napi::ClassPropertyDescriptor<T>> GetCommonMethods() {
+  std::vector<Napi::ClassPropertyDescriptor<T>> methods;
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setStyleScope", &T::setStyleScope));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("addClass", &T::addClass));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setStyle", &T::setStyle));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setEventDefaultPrevented", &T::setEventDefaultPrevented));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("appendChild", &T::appendChild));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("spliceAppend", &T::spliceAppend));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setId", &T::setId));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("forceDetached", &T::forceDetached));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("spliceRemove", &T::spliceRemove));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("release", &T::release));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setAttributes", &T::setAttributes));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("getBoundingClientRect", &T::getBoundingClientRect));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setClass", &T::setClass));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("matches", &T::matches));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("removeChild", &T::removeChild));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setLayoutCallback", &T::setLayoutCallback));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setTouchEventNeedsLocalCoords", &T::setTouchEventNeedsLocalCoords));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setAttribute", &T::setAttribute));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("getParentNode", &T::getParentNode));
+  // Add instance accessors
+  methods.push_back(Napi::InstanceWrap<T>::InstanceAccessor(
+    "isConnected", &T::isConnected, nullptr,
+    static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceAccessor(
+    "instanceId", &T::getInstanceId, nullptr,
+    static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
+
+  return methods;
+}
+
 class ShadowNode : public BaseClient {
 public:
   ShadowNode(const Napi::CallbackInfo &info);
   static Napi::FunctionReference *GetClazz(Napi::Env env);
-protected:
+// protected:
 /**
  * addAnimatedStyle: ƒ addAnimatedStyle()
 addClass: ƒ addClass()
@@ -80,6 +113,7 @@ updateStyle: ƒ updateStyle()
   Napi::Value setLayoutCallback(const Napi::CallbackInfo &info);
   Napi::Value setTouchEventNeedsLocalCoords(const Napi::CallbackInfo &info);
   Napi::Value setAttribute(const Napi::CallbackInfo &info);
+  Napi::Value getParentNode(const Napi::CallbackInfo &info);
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

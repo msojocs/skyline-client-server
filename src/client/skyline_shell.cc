@@ -52,6 +52,9 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
             // notifyHttpRequestComplete
         InstanceMethod("notifyHttpRequestComplete",
                       &SkylineShell::notifyHttpRequestComplete),
+          // dispatchTouchOverEvent
+        InstanceMethod("dispatchTouchOverEvent",
+                      &SkylineShell::dispatchTouchOverEvent),
                     });
   
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
@@ -500,6 +503,16 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     args[i] = Convert::convertValue2Json(env, info[i]);
   }
   auto result = WebSocket::callDynamicSync(m_instanceId, "notifyHttpRequestComplete", args);
+  auto returnValue = result["returnValue"];
+  return Convert::convertJson2Value(env, returnValue);
+}
+Napi:: Value SkylineShell::dispatchTouchOverEvent(const Napi::CallbackInfo &info) {
+  nlohmann::json args;
+  auto env = info.Env();
+  for (int i = 0; i < info.Length(); i++) {
+    args[i] = Convert::convertValue2Json(env, info[i]);
+  }
+  auto result = WebSocket::callDynamicSync(m_instanceId, "dispatchTouchOverEvent", args);
   auto returnValue = result["returnValue"];
   return Convert::convertJson2Value(env, returnValue);
 }

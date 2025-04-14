@@ -1,52 +1,20 @@
 #include "view.hh"
 #include "napi.h"
 #include "node.hh"
+#include <vector>
 
 namespace Skyline {
 Napi::FunctionReference *ViewShadowNode::GetClazz(Napi::Env env) {
-
-  Napi::Function func = DefineClass(
-      env, "ViewShadowNode",
-      {
-          InstanceMethod("setStyleScope", &ViewShadowNode::setStyleScope),
-          InstanceMethod("addClass", &ViewShadowNode::addClass),
-          InstanceMethod("setStyle", &ViewShadowNode::setStyle),
-          InstanceMethod("setEventDefaultPrevented",
-                         &ViewShadowNode::setEventDefaultPrevented),
-          InstanceMethod("appendChild", &ViewShadowNode::appendChild),
-          InstanceMethod("spliceAppend", &ViewShadowNode::spliceAppend),
-          InstanceMethod("setId", &ViewShadowNode::setId),
-          InstanceMethod("forceDetached", &ViewShadowNode::forceDetached),
-          InstanceMethod("spliceRemove", &ViewShadowNode::spliceRemove),
-          InstanceMethod("release", &ViewShadowNode::release),
-          
-          InstanceMethod("setAttributes", &ViewShadowNode::setAttributes),
-          InstanceMethod("getBoundingClientRect", &ViewShadowNode::getBoundingClientRect),
-          
-          InstanceMethod("setClass", &ViewShadowNode::setClass),
-          InstanceMethod("matches", &ViewShadowNode::matches),
-          // removeChild
-          InstanceMethod("removeChild", &ViewShadowNode::removeChild),
-          // setLayoutCallback
-          InstanceMethod("setLayoutCallback", &ViewShadowNode::setLayoutCallback),
-          // setTouchEventNeedsLocalCoords
-          InstanceMethod("setTouchEventNeedsLocalCoords", &ViewShadowNode::setTouchEventNeedsLocalCoords),
-          // setAttribute
-          InstanceMethod("setAttribute", &ViewShadowNode::setAttribute),
-          // getter isConnected
-          InstanceAccessor("isConnected", &ViewShadowNode::isConnected, nullptr,
-                           static_cast<napi_property_attributes>(
-                               napi_writable | napi_configurable)),
-          // getter instanceId
-          InstanceAccessor("instanceId", &ViewShadowNode::getInstanceId, nullptr,
-                         static_cast<napi_property_attributes>(
-                             napi_writable | napi_configurable)),
-      });
+  auto methods = GetCommonMethods<ViewShadowNode>();
+  
+  Napi::Function func = DefineClass(env, "ViewShadowNode", methods);
+  
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 
   return constructor;
 }
+
 ViewShadowNode::ViewShadowNode(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<ViewShadowNode>(info), ShadowNode(info) {
   if (info.Length() < 1) {

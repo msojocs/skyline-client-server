@@ -5,47 +5,11 @@
 
 namespace Skyline {
 Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {
-
-  Napi::Function func = DefineClass(
-      env, "TextShadowNode",
-      {
-          InstanceMethod("setStyleScope", &TextShadowNode::setStyleScope),
-          InstanceMethod("addClass", &TextShadowNode::addClass),
-          InstanceMethod("setStyle", &TextShadowNode::setStyle),
-          InstanceMethod("setEventDefaultPrevented",
-                         &TextShadowNode::setEventDefaultPrevented),
-          InstanceMethod("appendChild", &TextShadowNode::appendChild),
-          InstanceMethod("spliceAppend", &TextShadowNode::spliceAppend),
-          
-          InstanceMethod("setId", &TextShadowNode::setId),
-          InstanceMethod("forceDetached", &TextShadowNode::forceDetached),
-          InstanceMethod("spliceRemove", &TextShadowNode::spliceRemove),
-          InstanceMethod("release", &TextShadowNode::release),
-          
-          InstanceMethod("setAttributes", &TextShadowNode::setAttributes),
-          InstanceMethod("getBoundingClientRect", &TextShadowNode::getBoundingClientRect),
-          
-          InstanceMethod("setClass", &TextShadowNode::setClass),
-          InstanceMethod("matches", &TextShadowNode::matches),
-          // removeChild
-          InstanceMethod("removeChild", &TextShadowNode::removeChild),
-          // setLayoutCallback
-          InstanceMethod("setLayoutCallback", &TextShadowNode::setLayoutCallback),
-          //setTouchEventNeedsLocalCoords
-          InstanceMethod("setTouchEventNeedsLocalCoords", &TextShadowNode::setTouchEventNeedsLocalCoords),
-          // setAttribute
-          InstanceMethod("setAttribute", &TextShadowNode::setAttribute),
-          // setText
-          InstanceMethod("setText", &TextShadowNode::setText),
-          // getter isConnected
-          InstanceAccessor("isConnected", &TextShadowNode::isConnected, nullptr,
-                           static_cast<napi_property_attributes>(
-                               napi_writable | napi_configurable)),
-          // getter instanceId
-          InstanceAccessor("instanceId", &TextShadowNode::getInstanceId, nullptr,
-                         static_cast<napi_property_attributes>(
-                             napi_writable | napi_configurable)),
-      });
+  auto methods = GetCommonMethods<TextShadowNode>();
+  methods.push_back(
+      Napi::InstanceWrap<TextShadowNode>::InstanceMethod("setText", &TextShadowNode::setText));
+  Napi::Function func = DefineClass(env, "TextShadowNode", methods);
+  
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 

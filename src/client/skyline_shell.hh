@@ -70,6 +70,7 @@ setSendLogCallback: ƒ setSendLogCallback()
   void dispatchKeyboardEvent(const Napi::CallbackInfo &info);
   void dispatchWheelEvent(const Napi::CallbackInfo &info);
   Napi::Value notifyHttpRequestComplete(const Napi::CallbackInfo &info);
+  Napi::Value dispatchTouchOverEvent(const Napi::CallbackInfo &info);
 };
 } // namespace SkylineShell
 #endif

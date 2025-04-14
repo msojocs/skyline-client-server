@@ -4,44 +4,11 @@
 
 namespace Skyline {
 Napi::FunctionReference *ScrollViewShadowNode::GetClazz(Napi::Env env) {
-  Napi::Function func = DefineClass(
-      env, "ScrollViewShadowNode",
-      {InstanceMethod("setStyleScope", &ScrollViewShadowNode::setStyleScope),
-       InstanceMethod("addClass", &ScrollViewShadowNode::addClass),
-       InstanceMethod("setStyle", &ScrollViewShadowNode::setStyle),
-       InstanceMethod("setEventDefaultPrevented",
-                      &ScrollViewShadowNode::setEventDefaultPrevented),
-       InstanceMethod("appendChild", &ScrollViewShadowNode::appendChild),
-       InstanceMethod("spliceAppend", &ScrollViewShadowNode::spliceAppend),
+  auto methods = GetCommonMethods<ScrollViewShadowNode>();
+  methods.push_back(Napi::InstanceWrap<ScrollViewShadowNode>::InstanceMethod(
+      "setRefresherHeader", &ScrollViewShadowNode::setRefresherHeader));
+  Napi::Function func = DefineClass(env, "ScrollViewShadowNode", methods);
 
-       InstanceMethod("setId", &ScrollViewShadowNode::setId),
-       InstanceMethod("forceDetached", &ScrollViewShadowNode::forceDetached),
-       InstanceMethod("spliceRemove", &ScrollViewShadowNode::spliceRemove),
-       InstanceMethod("release", &ScrollViewShadowNode::release),
-
-       InstanceMethod("setAttributes", &ScrollViewShadowNode::setAttributes),
-       InstanceMethod("getBoundingClientRect",
-                      &ScrollViewShadowNode::getBoundingClientRect),
-        InstanceMethod("setRefresherHeader", &ScrollViewShadowNode::setRefresherHeader),
-        InstanceMethod("setClass", &ScrollViewShadowNode::setClass),
-        InstanceMethod("matches", &ScrollViewShadowNode::matches),
-        //removeChild
-        InstanceMethod("removeChild", &ScrollViewShadowNode::removeChild),
-        // setLayoutCallback
-        InstanceMethod("setLayoutCallback", &ScrollViewShadowNode::setLayoutCallback),
-        // setTouchEventNeedsLocalCoords
-        InstanceMethod("setTouchEventNeedsLocalCoords", &ScrollViewShadowNode::setTouchEventNeedsLocalCoords),
-        // setAttribute
-        InstanceMethod("setAttribute", &ScrollViewShadowNode::setAttribute),
-        // getter isConnected
-        InstanceAccessor("isConnected", &ScrollViewShadowNode::isConnected, nullptr,
-                          static_cast<napi_property_attributes>(
-                              napi_writable | napi_configurable)),
-       // getter instanceId
-       InstanceAccessor("instanceId", &ScrollViewShadowNode::getInstanceId, nullptr,
-                        static_cast<napi_property_attributes>(
-                            napi_writable | napi_configurable)),
-      });
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 

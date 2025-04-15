@@ -28,12 +28,6 @@ TextShadowNode::TextShadowNode(const Napi::CallbackInfo &info)
   m_instanceId = info[0].As<Napi::String>().Utf8Value();
 }
 Napi::Value TextShadowNode::setText(const Napi::CallbackInfo &info) {
-  nlohmann::json args;
-  auto env = info.Env();
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, "setText", args);
-  return Convert::convertJson2Value(env, result["returnValue"]);
+  return sendToServerSync(info, __func__);
 }
 } // namespace Skyline

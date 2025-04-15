@@ -12,19 +12,19 @@ public:
 private:
   Napi::Value getFrameworkType(const Napi::CallbackInfo &info);
   void setFrameworkType(const Napi::CallbackInfo &info, const Napi::Value &value);
-  void appendCompiledStyleSheets(const Napi::CallbackInfo &info);
-  void appendStyleSheet(const Napi::CallbackInfo &info);
+  Napi::Value appendCompiledStyleSheets(const Napi::CallbackInfo &info);
+  Napi::Value appendStyleSheet(const Napi::CallbackInfo &info);
   /**
    * 两个参数
    * * @param {string} path "wxlibfile://WAStyleIndex.fpiib"
    * * @param {number} id 0
    * * @return {number} undefined
    */
-  void appendStyleSheetIndex(const Napi::CallbackInfo &info);
-  void appendStyleSheets(const Napi::CallbackInfo &info);
+  Napi::Value appendStyleSheetIndex(const Napi::CallbackInfo &info);
+  Napi::Value appendStyleSheets(const Napi::CallbackInfo &info);
   Napi::Value attach(const Napi::CallbackInfo &info);
-  void attachCustomRoute(const Napi::CallbackInfo &info);
-  void clearStylesheets(const Napi::CallbackInfo &info);
+  Napi::Value attachCustomRoute(const Napi::CallbackInfo &info);
+  Napi::Value clearStylesheets(const Napi::CallbackInfo &info);
   Napi::Value createElement(const Napi::CallbackInfo &info);
   Napi::Value createFragment(const Napi::CallbackInfo &info);
   /**
@@ -33,21 +33,21 @@ private:
    */
   Napi::Value createStyleSheetIndexGroup(const Napi::CallbackInfo &info);
   Napi::Value createTextNode(const Napi::CallbackInfo &info);
-  void finishStyleSheetsCompilation(const Napi::CallbackInfo &info);
+  Napi::Value finishStyleSheetsCompilation(const Napi::CallbackInfo &info);
   Napi::Value getComputedStyle(const Napi::CallbackInfo &info);
-  void getHostNode(const Napi::CallbackInfo &info);
-  void getNodeFromPoint(const Napi::CallbackInfo &info);
+  Napi::Value getHostNode(const Napi::CallbackInfo &info);
+  Napi::Value getNodeFromPoint(const Napi::CallbackInfo &info);
   Napi::Value getRootNode(const Napi::CallbackInfo &info);
-  void getWindowId(const Napi::CallbackInfo &info);
-  void isTab(const Napi::CallbackInfo &info);
-  void loadFontFace(const Napi::CallbackInfo &info);
+  Napi::Value getWindowId(const Napi::CallbackInfo &info);
+  Napi::Value isTab(const Napi::CallbackInfo &info);
+  Napi::Value loadFontFace(const Napi::CallbackInfo &info);
   Napi::Value preCompileStyleSheets(const Napi::CallbackInfo &info);
-  void recalcStyle(const Napi::CallbackInfo &info);
-  void release(const Napi::CallbackInfo &info);
-  void setAsTab(const Napi::CallbackInfo &info);
-  void setNavigateBackInterception(const Napi::CallbackInfo &info);
-  void startRender(const Napi::CallbackInfo &info);
-  void updateRouteConfig(const Napi::CallbackInfo &info);
+  Napi::Value recalcStyle(const Napi::CallbackInfo &info);
+  Napi::Value release(const Napi::CallbackInfo &info);
+  Napi::Value setAsTab(const Napi::CallbackInfo &info);
+  Napi::Value setNavigateBackInterception(const Napi::CallbackInfo &info);
+  Napi::Value startRender(const Napi::CallbackInfo &info);
+  Napi::Value updateRouteConfig(const Napi::CallbackInfo &info);
 };
 } // namespace Skyline
 #endif

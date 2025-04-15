@@ -43,208 +43,64 @@ ScrollViewShadowNode::ScrollViewShadowNode(const Napi::CallbackInfo &info)
 }
 // getScrollPosition
 Napi::Value ScrollViewShadowNode::getScrollPosition(const Napi::CallbackInfo &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // holdPosition
 Napi::Value ScrollViewShadowNode::holdPosition(const Napi::CallbackInfo &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // onRefresherAbortEvent
 Napi::Value ScrollViewShadowNode::onRefresherAbortEvent(const Napi::CallbackInfo &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // onRefresherPullingEvent
 Napi::Value ScrollViewShadowNode::onRefresherPullingEvent(const Napi::CallbackInfo &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // onRefresherRefreshEvent
 Napi::Value ScrollViewShadowNode::onRefresherRefreshEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // onRefresherRestoreEvent
 Napi::Value ScrollViewShadowNode::onRefresherRestoreEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // onRefresherStatusChangeEvent
 Napi::Value ScrollViewShadowNode::onRefresherStatusChangeEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 // onRefresherWillRefreshEvent
 Napi::Value ScrollViewShadowNode::onRefresherWillRefreshEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::onScrollEndEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::onScrollEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::onScrollStartEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::onScrollToLowerEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::onScrollToUpperEvent(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::requestRefresherRefresh(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::requestRefresherTwoLevel(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::scrollIntoView(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::scrollTo(const Napi::CallbackInfo  &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value ScrollViewShadowNode::setRefresherHeader(const Napi::CallbackInfo &info) {
-  
-  auto env =  info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 }

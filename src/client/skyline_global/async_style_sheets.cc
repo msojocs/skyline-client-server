@@ -25,16 +25,7 @@ namespace Skyline {
     m_instanceId = info[0].As<Napi::String>().Utf8Value();
   }
 
-  void AsyncStyleSheets::setScopeId(const Napi::CallbackInfo& info) {
-    if (info.Length() < 1) {
-      throw Napi::TypeError::New(info.Env(), "setScopeId: Wrong number of arguments");
-    }
-    if (!info[0].IsNumber()) {
-      throw Napi::TypeError::New(info.Env(), "setScopeId: First argument must be a number");
-    }
-    auto scopeId = info[0].As<Napi::Number>().Int32Value();
-    nlohmann::json args;
-    args[0] = scopeId;
-    WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  Napi::Value AsyncStyleSheets::setScopeId(const Napi::CallbackInfo& info) {
+    return sendToServerSync(info, __func__);
   }
 }

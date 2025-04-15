@@ -9,7 +9,7 @@ namespace Skyline {
     AsyncStyleSheets(const Napi::CallbackInfo& info);
     static Napi::FunctionReference* GetClazz(Napi::Env env);
   private:
-    void setScopeId(const Napi::CallbackInfo& info);
+    Napi::Value setScopeId(const Napi::CallbackInfo& info);
   };
 }
 #endif // __ASYNC_STYLE_SHEETS_HH__

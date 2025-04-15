@@ -96,7 +96,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
       SkylineGlobal::Init(env);
       callbackPtr->Value().Call({});
     } catch (const Napi::Error& e) {
-      Napi::Error::Fatal("SkylineShell::setNotifyBootstrapDoneCallback", e.Message().c_str());
+      throw e;
     }
   });
   // 发送消息到 WebSocket
@@ -244,7 +244,7 @@ void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
   sendToServerAsync(info, __func__);
 }
 Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &info) {
-  return sendToServerSync(info, __func__);
+  return sendToServerAsync(info, __func__);
 }
 Napi:: Value SkylineShell::dispatchTouchOverEvent(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);

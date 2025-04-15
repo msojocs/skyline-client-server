@@ -88,7 +88,7 @@ int startInner(std::string &host, int port) {
             }
           };
 
-          tsfn.BlockingCall(callback);
+          tsfn.NonBlockingCall(callback);
         }
         catch (const std::exception &e) {
           logger->error("Error parsing JSON: {}", e.what());

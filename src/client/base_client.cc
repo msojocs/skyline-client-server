@@ -6,7 +6,7 @@
 namespace Skyline {
 
   Napi::Value BaseClient::getInstanceId(const Napi::CallbackInfo &info) {
-    return info.Env().Undefined();
+    return Napi::String::New(info.Env(), m_instanceId);
   }
 
 } // namespace SkylineShell

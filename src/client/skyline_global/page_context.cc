@@ -120,9 +120,6 @@ void PageContext::setFrameworkType(const Napi::CallbackInfo &info, const Napi::V
   // 发送消息到 WebSocket
   WebSocket::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
 }
-Napi::Value PageContext::getInstanceId(const Napi::CallbackInfo& info) {
-  return Napi::String::New(info.Env(), m_instanceId);
-}
 /**
  * 1个Array参数
  */

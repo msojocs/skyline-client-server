@@ -8,7 +8,6 @@ class PageContext : public Napi::ObjectWrap<PageContext>, public BaseClient {
 public:
   PageContext(const Napi::CallbackInfo &info);
   static void Init(Napi::Env env, Napi::Object exports);
-  Napi::Value getInstanceId(const Napi::CallbackInfo &info);
 
 private:
   Napi::Value getFrameworkType(const Napi::CallbackInfo &info);

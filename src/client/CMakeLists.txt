@@ -40,7 +40,7 @@ set(CLIENT_DIR_LIST
 set_source_files_properties(
     skyline_global/shadow_node/node.cc
     PROPERTIES
-    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node/node.hh"
+    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node/node.hh;${CMAKE_CURRENT_SOURCE_DIR}/include/base_client.hh"
 )
 
 add_library(${CLIENT_NAME}

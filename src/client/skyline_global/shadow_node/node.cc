@@ -15,9 +15,6 @@ ShadowNode::ShadowNode(const Napi::CallbackInfo &info) {
   }
   m_instanceId = info[0].As<Napi::String>().Utf8Value();
 }
-Napi::Value ShadowNode::getInstanceId(const Napi::CallbackInfo &info) {
-  return Napi::String::New(info.Env(), m_instanceId);
-}
 Napi::Value ShadowNode::setStyleScope(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   nlohmann::json args;

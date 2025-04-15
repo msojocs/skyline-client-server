@@ -128,7 +128,6 @@ public:
   Napi::Value appendChild(const Napi::CallbackInfo &info);
   Napi::Value forceDetached(const Napi::CallbackInfo &info);
   Napi::Value getBoundingClientRect(const Napi::CallbackInfo &info);
-  Napi::Value getInstanceId(const Napi::CallbackInfo &info);
   Napi::Value getParentNode(const Napi::CallbackInfo &info);
   Napi::Value isConnected(const Napi::CallbackInfo &info);
   Napi::Value matches(const Napi::CallbackInfo &info);

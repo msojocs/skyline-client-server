@@ -11,7 +11,6 @@ public:
   static void DispatchCallback(std::string &action, nlohmann::json &data);
 
   SkylineShell(const Napi::CallbackInfo &info);
-  Napi::Value getInstanceId(const Napi::CallbackInfo &info);
 
 private:
 /**

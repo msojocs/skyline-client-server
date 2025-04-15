@@ -9,7 +9,7 @@ Napi::FunctionReference *FragmentBinding::GetClazz(Napi::Env env) {
   Napi::Function func = DefineClass(
       env, "FragmentBinding",
       {
-        InstanceAccessor<&FragmentBinding::getInstanceId>("instanceId",
+        InstanceAccessor("instanceId", &FragmentBinding::getInstanceId, nullptr,
                          static_cast<napi_property_attributes>(napi_writable |
                                                               napi_configurable)),
           InstanceMethod("appendChild", &FragmentBinding::appendChild),
@@ -40,9 +40,6 @@ FragmentBinding::FragmentBinding(const Napi::CallbackInfo &info)
         info.Env(), "FragmentBinding: First argument must be a string");
   }
   m_instanceId = info[0].As<Napi::String>().Utf8Value();
-}
-Napi::Value FragmentBinding::getInstanceId(const Napi::CallbackInfo &info) {
-  return Napi::String::New(info.Env(), m_instanceId);
 }
 Napi::Value FragmentBinding::appendChild(const Napi::CallbackInfo &info) {
   auto env = info.Env();

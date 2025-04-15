@@ -26,6 +26,7 @@ namespace WorkletModule {
     auto env = info.Env();
     // 发送消息到 WebSocket
     auto func = info[0].As<Napi::Function>();
+    // auto runOnJS = func.Get("_closure").As<Napi::Object>().Get("runOnJS").As<Napi::Function>();
     // 从function里面提取数据
     nlohmann::json args {
       {
@@ -33,6 +34,14 @@ namespace WorkletModule {
         {"workletHash", func.Get("__workletHash").As<Napi::Number>().Int64Value()},
         {"location", func.Get("__location").As<Napi::String>().Utf8Value()},
         {"isWorklet", func.Get("__worklet").As<Napi::Boolean>().Value()},
+        // {
+        //   "runOnJS", {
+        //     {"asString", runOnJS.Get("asString").As<Napi::String>().Utf8Value()},
+        //     {"workletHash", runOnJS.Get("__workletHash").As<Napi::Number>().Int64Value()},
+        //     {"location", runOnJS.Get("__location").As<Napi::String>().Utf8Value()},
+        //     {"isWorklet", runOnJS.Get("__worklet").As<Napi::Boolean>().Value()},
+        //   }
+        // }
       }
     };
     auto result = WebSocket::callCustomHandleSync(__func__, args);

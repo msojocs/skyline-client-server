@@ -8,7 +8,6 @@ namespace Skyline {
   class FragmentBinding : public Napi::ObjectWrap<FragmentBinding>, public BaseClient {
   public:
     static Napi::FunctionReference *GetClazz(Napi::Env env);
-    Napi::Value getInstanceId(const Napi::CallbackInfo &info);
     FragmentBinding(const Napi::CallbackInfo &info);
   private:
     Napi::Value appendChild(const Napi::CallbackInfo &info);

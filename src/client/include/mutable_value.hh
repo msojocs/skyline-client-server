@@ -12,7 +12,6 @@ namespace Skyline {
   public:
   MutableValue(const Napi::CallbackInfo& info);
     static Napi::FunctionReference * GetClazz(Napi::Env env);
-    Napi::Value getInstanceId(const Napi::CallbackInfo& info) override;
     private:
     /**
      * value: (...)

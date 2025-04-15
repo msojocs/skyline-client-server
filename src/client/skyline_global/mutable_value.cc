@@ -34,10 +34,6 @@ MutableValue::MutableValue(const Napi::CallbackInfo &info)
   m_instanceId = info[0].As<Napi::String>().Utf8Value();
 }
 
-Napi::Value MutableValue::getInstanceId(const Napi::CallbackInfo &info) {
-  return Napi::String::New(info.Env(), m_instanceId);
-}
-
 Napi::Value MutableValue::installGetter(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   // 发送消息到 WebSocket

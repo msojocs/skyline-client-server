@@ -58,6 +58,7 @@ setSendLogCallback: ƒ setSendLogCallback()
   void createWindow(const Napi::CallbackInfo &info);
   void destroyWindow(const Napi::CallbackInfo &info);
   void notifyAppLaunch(const Napi::CallbackInfo &info);
+  Napi::Value notifyResourceLoad(const Napi::CallbackInfo &info);
   /**
    * @brief 通知平台亮度变化
    */

@@ -55,6 +55,8 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
           // dispatchTouchOverEvent
         InstanceMethod("dispatchTouchOverEvent",
                       &SkylineShell::dispatchTouchOverEvent),
+            InstanceMethod("notifyResourceLoad",
+                      &SkylineShell::notifyResourceLoad),
                     });
   
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
@@ -90,6 +92,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     try {
       nlohmann::json _t;
       WebSocket::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
+      //* 客户端初始化SkylineGlobal
       SkylineGlobal::Init(env);
       callbackPtr->Value().Call({});
     } catch (const Napi::Error& e) {
@@ -102,66 +105,16 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  auto func = info[0].As<Napi::Function>();
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setNotifyRouteDoneCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setNavigateBackCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -176,73 +129,21 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   
   // 发送消息到 WebSocket
   nlohmann::json args;
+  //* 特殊同步回调
   args[0] = Convert::convertValue2Json(env, info[0], true);
   WebSocket::callDynamicSync(m_instanceId, __func__, args);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setSendLogCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 4) {
-    throw Napi::Error::New(env, "参数长度必须为4");
-  }
-  if (!info[0].IsNumber() || !info[1].IsNumber() || !info[2].IsNumber() ||
-      !info[3].IsNumber()) {
-    throw Napi::Error::New(env, "所有参数必须都为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  data[1] = info[1].As<Napi::Number>().Int32Value();
-  data[2] = info[2].As<Napi::Number>().Int32Value();
-  data[3] = info[3].As<Napi::Number>().Int32Value();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 /**
  * createWindow(
@@ -315,201 +216,40 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
   WebSocket::callDynamicSync(m_instanceId, __func__, data);
 }
 void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 3) {
-    throw Napi::Error::New(env, "参数长度必须为3");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
-  }
-  if (!info[1].IsNumber()) {
-    throw Napi::Error::New(env, "参数1 pageId必须为Number类型");
-  }
-  if (!info[2].IsObject()) {
-    throw Napi::Error::New(env, "参数2 pageConfig必须为Object类型");
-  }
   Sleep(500);
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  data[1] = info[1].As<Napi::Number>().Int32Value();
-  data[2] = {};
-  auto pageConfig = info[2].As<Napi::Object>();
-  for (auto config: pageConfig) {
-    Napi::Value v = config.second;
-    auto key = config.first.As<Napi::String>().Utf8Value();
-    if (v.IsString()) {
-      data[2][key] = v.As<Napi::String>().Utf8Value();
-    } else if (v.IsNumber()) {
-      data[1] = v.As<Napi::Number>().Int32Value();
-    } else if (v.IsBoolean()) {
-      data[2][key] = v.As<Napi::Boolean>().Value();
-    } else if (v.IsObject()) {
-      data[2][key] = nlohmann::json::parse(v.As<Napi::String>().Utf8Value());
-    }
-  }
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 brightness必须为Number类型(1:Light;2:Dark)");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 3) {
-    throw Napi::Error::New(env, "参数长度必须为3");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Object类型");
-  }
-  if (!info[1].IsNumber()) {
-    throw Napi::Error::New(env, "参数1 x必须为Number类型");
-  }
-  if (!info[2].IsNumber()) {
-    throw Napi::Error::New(env, "参数2 y必须为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  data[1] = info[1].As<Napi::Number>().DoubleValue();
-  data[2] = info[2].As<Napi::Number>().DoubleValue();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::dispatchTouchEndEvent(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 3) {
-    throw Napi::Error::New(env, "参数长度必须为3");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Object类型");
-  }
-  if (!info[1].IsNumber()) {
-    throw Napi::Error::New(env, "参数1 x必须为Number类型");
-  }
-  if (!info[2].IsNumber()) {
-    throw Napi::Error::New(env, "参数2 y必须为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  data[1] = info[1].As<Napi::Number>().DoubleValue();
-  data[2] = info[2].As<Napi::Number>().DoubleValue();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 3) {
-    throw Napi::Error::New(env, "参数长度必须为3");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
-  }
-  if (!info[1].IsNumber()) {
-    throw Napi::Error::New(env, "参数1 x必须为Number类型");
-  }
-  if (!info[2].IsNumber()) {
-    throw Napi::Error::New(env, "参数2 y必须为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  data[1] = info[1].As<Napi::Number>().DoubleValue();
-  data[2] = info[2].As<Napi::Number>().DoubleValue();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 5) {
-    throw Napi::Error::New(env, "参数长度必须为5");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
-  }
-  if (!info[1].IsNumber()) {
-    throw Napi::Error::New(env, "参数1 key必须为Number类型");
-  }
-  if (!info[2].IsNumber()) {
-    throw Napi::Error::New(env, "参数2 scancode必须为Number类型");
-  }
-  if (!info[3].IsNumber()) {
-    throw Napi::Error::New(env, "参数3 action必须为Number类型");
-  }
-  if (!info[4].IsNumber()) {
-    throw Napi::Error::New(env, "参数4 mods必须为Number类型");
-  }
-  nlohmann::json data;
-  data[0] = info[0].As<Napi::Number>().Int32Value();
-  data[1] = info[1].As<Napi::Number>().Int32Value();
-  data[2] = info[2].As<Napi::Number>().Int32Value();
-  data[3] = info[3].As<Napi::Number>().Int32Value();
-  data[4] = info[4].As<Napi::Number>().Int32Value();
-
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerAsync(info, __func__);
 }
 void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
-  nlohmann::json data;
-  auto env = info.Env();
-  for (int i = 0; i < info.Length(); i++) {
-    data[i] = info[i].As<Napi::Number>().DoubleValue();
-  }
-  
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  sendToServerAsync(info, __func__);
 }
 Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &info) {
-  nlohmann::json args;
-  auto env = info.Env();
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, "notifyHttpRequestComplete", args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
 }
 Napi:: Value SkylineShell::dispatchTouchOverEvent(const Napi::CallbackInfo &info) {
-  nlohmann::json args;
-  auto env = info.Env();
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicSync(m_instanceId, "dispatchTouchOverEvent", args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return sendToServerSync(info, __func__);
+}
+Napi::Value SkylineShell::notifyResourceLoad(const Napi::CallbackInfo &info) {
+  return sendToServerAsync(info, __func__);
 }
 } // namespace SkylineShell

@@ -44,9 +44,13 @@ namespace WorkletModule {
         // }
       }
     };
-    auto result = WebSocket::callCustomHandleSync(__func__, args);
-    auto returnValue = result["returnValue"];
-    return Convert::convertJson2Value(env, returnValue);
+    try {
+      auto result = WebSocket::callCustomHandleSync(__func__, args);
+      auto returnValue = result["returnValue"];
+      return Convert::convertJson2Value(env, returnValue);
+    } catch (const std::exception &e) {
+      throw Napi::Error::New(env, e.what());
+    }
   }
   Napi::Value makeMutable(const Napi::CallbackInfo &info) {
     auto env = info.Env();

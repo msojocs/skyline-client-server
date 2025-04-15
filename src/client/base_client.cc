@@ -16,9 +16,16 @@ namespace Skyline {
     for (int i = 0; i < info.Length(); i++) {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
-    auto result = WebSocket::callDynamicSync(m_instanceId, methodName, args);
-    auto returnValue = result["returnValue"];
-    return Convert::convertJson2Value(env, returnValue);
+    try {
+      auto result = WebSocket::callDynamicSync(m_instanceId, methodName, args);
+      auto returnValue = result["returnValue"];
+      return Convert::convertJson2Value(env, returnValue);
+    } catch (const std::exception &e) {
+      throw Napi::Error::New(env, e.what());
+    }
+    catch (...) {
+      throw Napi::Error::New(env, "Unknown error occurred");
+    }
   }
   Napi::Value BaseClient::sendToServerAsync(const Napi::CallbackInfo &info, const std::string &methodName) {
     auto env = info.Env();
@@ -26,8 +33,15 @@ namespace Skyline {
     for (int i = 0; i < info.Length(); i++) {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
-    WebSocket::callDynamicAsync(m_instanceId, methodName, args);
-    return env.Undefined();
+    try {
+      WebSocket::callDynamicAsync(m_instanceId, methodName, args);
+      return env.Undefined();
+    } catch (const std::exception &e) {
+      throw Napi::Error::New(env, e.what());
+    }
+    catch (...) {
+      throw Napi::Error::New(env, "Unknown error occurred");
+    }
   }
 
 } // namespace SkylineShell

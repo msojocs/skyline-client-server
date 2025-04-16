@@ -109,28 +109,19 @@ void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
 }
 void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  try {
-    if (info.Length() != 1) {
-      throw Napi::Error::New(env, "参数长度必须为1");
-    }
-    if (!info[0].IsFunction()) {
-      throw Napi::Error::New(env, "参数必须为Function类型");
-    }
-    
-    auto func = info[0].As<Napi::Function>();
-    
-    // 发送消息到 WebSocket
-    nlohmann::json args;
-    //* 特殊同步回调
-    args[0] = Convert::convertValue2Json(env, info[0], true);
-    WebSocket::callDynamicSync(m_instanceId, __func__, args);
-  } catch (const std::exception &e) {
-    throw Napi::Error::New(env, e.what());
+  if (info.Length() != 1) {
+    throw Napi::Error::New(env, "参数长度必须为1");
   }
-  catch (...) {
-    throw Napi::Error::New(env, "Unknown error occurred");
+  if (!info[0].IsFunction()) {
+    throw Napi::Error::New(env, "参数必须为Function类型");
   }
+  
+  auto func = info[0].As<Napi::Function>();
+  //* 标记该回调使用同步方式调用
+  func.Set(Napi::String::New(env, "__syncCallback"), Napi::Boolean::New(env, true));
 
+  // 发送消息到 WebSocket
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
   sendToServerAsync(info, __func__);

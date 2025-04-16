@@ -64,7 +64,7 @@ void RegisteInstanceType(Napi::Env &env) {
 }
 #endif
 
-nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value, bool isSyncCallback) {
+nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value) {
   Napi::Object obj = value.As<Napi::Object>();
   if (obj.Get("instanceId").IsString()) {
     nlohmann::json jsonObj;
@@ -81,14 +81,11 @@ nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value, bool
     if (k.length() == 0) {
       continue;
     }
-    jsonObj[k] = convertValue2Json(env, val, isSyncCallback);
+    jsonObj[k] = convertValue2Json(env, val);
   }
   return jsonObj;
 }
 nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
-  return convertValue2Json(env, value, false);
-}
-nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value, bool isSyncCallback) {
   if (value.IsString()) {
     return value.As<Napi::String>().Utf8Value();
   } else if (value.IsNumber()) {
@@ -100,8 +97,12 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value, bool 
     nlohmann::json jsonObj;
     // 生成callbackId，把Function和callbackId绑定在一起
     std::string callbackId = std::to_string(callbackUuid.nextid());
+    bool isSync = func.Get(Napi::String::New(env, "__syncCallback")).IsBoolean();
+    if (isSync) {
+      isSync = func.Get(Napi::String::New(env, "__syncCallback")).As<Napi::Boolean>().Value();
+    }
     jsonObj["callbackId"] = callbackId;
-    jsonObj["syncCallback"] = isSyncCallback;
+    jsonObj["syncCallback"] = isSync;
 
     callback[callbackId] = {
         std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),
@@ -127,11 +128,11 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value, bool 
     Napi::Array arr = value.As<Napi::Array>();
     nlohmann::json jsonArr = nlohmann::json::array();
     for (uint32_t i = 0; i < arr.Length(); i++) {
-      jsonArr[i] = convertValue2Json(env, arr.Get(i), isSyncCallback);
+      jsonArr[i] = convertValue2Json(env, arr.Get(i));
     }
     return jsonArr;
   } else if (value.IsObject()) {
-    return convertObject2Json(env, value, isSyncCallback);
+    return convertObject2Json(env, value);
   }
   return nlohmann::json();
 }

@@ -46,60 +46,21 @@ Napi::Value MutableValue::installGetter(const Napi::CallbackInfo &info) {
   return env.Undefined();
 }
 Napi::Value MutableValue::getValue(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicPropertyGetSync(m_instanceId, "value", args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return getProperty(info, "value");
 }
 void MutableValue::setValue(const Napi::CallbackInfo &info, const Napi::Value &value) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  WebSocket::callDynamicPropertySetSync(m_instanceId, "value", args);
-  return;
+  setProperty(info, "value");
 }
 Napi::Value MutableValue::getAnimation(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicPropertyGetSync(m_instanceId, "_animation", args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return getProperty(info, "_animation");
 }
 void MutableValue::setAnimation(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  WebSocket::callDynamicPropertySetSync(m_instanceId, "_animation", args);
-  return;
+  setProperty(info, "_animation");
 }
 Napi::Value MutableValue::getWindowId(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicPropertyGetSync(m_instanceId, "_windowId", args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return getProperty(info, "_windowId");
 }
 void MutableValue::setWindowId(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  WebSocket::callDynamicPropertySetSync(m_instanceId, "_windowId", args);
-  return;
+  setProperty(info, "_windowId");
 }
 } // namespace Skyline

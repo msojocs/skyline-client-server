@@ -27,7 +27,7 @@ namespace WebSocket {
     std::queue<nlohmann::json> callbackQueue;
     bool blocked = false;
 
-    void initWebSocket() {
+    void initWebSocket(Napi::Env &env) {
         ix::initNetSystem();
         serverCommunicationUuid.init(1, 1);
         // Connect to a server with encryption
@@ -161,13 +161,14 @@ namespace WebSocket {
         // Now that our callback is setup, we can start our background thread and receive messages
         webSocket.start();
         logger->info("start end");
-        for (int i=0; i< 60; i++) {
+        for (int i=0; i< 10; i++) {
             Sleep(1000);
             if (webSocket.getReadyState() == ix::ReadyState::Open)
             {
                 return;
             }
         }
+        throw Napi::Error::New(env, "WebSocket connection failed");
     }
     nlohmann::json sendMessageSync(nlohmann::json& data) {
         std::string id = std::to_string(serverCommunicationUuid.nextid());
@@ -182,6 +183,7 @@ namespace WebSocket {
         auto promiseObj = std::make_shared<std::promise<std::string>>();
         std::future<std::string> futureObj = promiseObj->get_future();
         wsRequest.emplace(id, promiseObj);
+        auto start = std::chrono::steady_clock::now();
         while (true) {
             // logger->info("callbackQueue size: {}", callbackQueue.size());
             if (callbackQueue.size() > 0) {
@@ -221,11 +223,18 @@ namespace WebSocket {
                     logger->error("callbackId not found: {}", callbackId);
                 }
             }
+
+            // Implement timeout handling logic here
+            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            if (delta_ms > 3000) {
+                throw std::runtime_error("Operation timed out after 3 seconds");
+            }
+            
+            // Implement timeout handling logic here
             if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
                 break;
             }
         }
-        // TODO: 3秒超时
         std::string result = futureObj.get();
         blocked = false;
         logger->info("result: {}", result.c_str());
@@ -300,13 +309,12 @@ namespace WebSocket {
         
         return sendMessageSync(json);
     }
-    nlohmann::json callDynamicPropertyGetSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
+    nlohmann::json callDynamicPropertyGetSync(const std::string& instanceId, const std::string& action) {
         nlohmann::json json {
             {"type", "dynamicProperty"},
             {"action", action},
             {"data", {
                 {"instanceId", instanceId},
-                {"params", args},
                 {"propertyAction", "get"},
             }}
         };

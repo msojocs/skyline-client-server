@@ -58,14 +58,7 @@ Napi::Value ShadowNode::getBoundingClientRect(const Napi::CallbackInfo &info) {
 
 // isConnected
 Napi::Value ShadowNode::isConnected(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  auto result = WebSocket::callDynamicPropertyGetSync(m_instanceId, __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  return getProperty(info, __func__);
 }
 // setClass 
 Napi::Value ShadowNode::setClass(const Napi::CallbackInfo &info) {

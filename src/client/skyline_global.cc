@@ -3,30 +3,42 @@
 #include "include/runtime.hh"
 #include "include/worklet_module.hh"
 #include "napi.h"
+#include "websocket.hh"
+#include "../include/convert.hh"
 
 namespace SkylineGlobal {
   void Init(Napi::Env env) {
-    auto skylineGlobal = Napi::Object::New(env);
-    {
-      skylineGlobal.Set(Napi::String::New(env, "userAgent"), Napi::String::New(env, "skyline/1.4.0 (;8f190450e6301587ce41e08afcaa983db4dc712e;)"));
+    try {
+      auto skylineGlobal = Napi::Object::New(env);
+      {
+        nlohmann::json arg;
+        auto result = WebSocket::callStaticSync("SkylineGlobal", "userAgent", arg);
+        auto returnValue = result["returnValue"];
+        skylineGlobal.Set(Napi::String::New(env, "userAgent"), Napi::String::New(env, returnValue.get<std::string>()));
+      }
+      {
+        nlohmann::json arg;
+        auto result = WebSocket::callStaticSync("SkylineGlobal", "features", arg);
+        auto returnValue = result["returnValue"];
+        skylineGlobal.Set(Napi::String::New(env, "features"), Convert::convertJson2Value(env, returnValue));
+      }
+      {
+        Skyline::PageContext::Init(env, skylineGlobal);
+      }
+      {
+        Skyline::Runtime::Init(env, skylineGlobal);
+      }
+      {
+        auto workletModule = Napi::Object::New(env);
+        Skyline::WorkletModule::Init(env, workletModule);
+        skylineGlobal.Set(Napi::String::New(env, "workletModule"), workletModule);
+      }
+      env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
     }
-    {
-      auto features = Napi::Object::New(env);
-      features.Set(Napi::String::New(env, "contextOperation"), Napi::Number::New(env, 1));
-      features.Set(Napi::String::New(env, "eventDefaultPrevented"), Napi::Number::New(env, 1));
-      skylineGlobal.Set(Napi::String::New(env, "features"), features);
+    catch (const std::exception& e) {
+        throw Napi::Error::New(env, e.what());
+    } catch (...) {
+        throw Napi::Error::New(env, "Unknown error occurred during SkylineDebugInfo.");
     }
-    {
-      Skyline::PageContext::Init(env, skylineGlobal);
-    }
-    {
-      Skyline::Runtime::Init(env, skylineGlobal);
-    }
-    {
-      auto workletModule = Napi::Object::New(env);
-      Skyline::WorkletModule::Init(env, workletModule);
-      skylineGlobal.Set(Napi::String::New(env, "workletModule"), workletModule);
-    }
-    env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
   }
 }

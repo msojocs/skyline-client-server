@@ -71,41 +71,45 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
 
 SkylineShell::SkylineShell(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<SkylineShell>(info) {
-      spdlog::info("SkylineShell constructor");
-  nlohmann::json data;
-  auto result = WebSocket::callConstructorSync("SkylineShell", data);
-  this->m_instanceId = result["instanceId"].get<std::string>();
+  m_instanceId = sendConstructorToServerSync(info, __func__);
 }
 
 void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  
-  // 使用指针来存储 callback
-  auto callbackPtr = new Napi::FunctionReference();
-  *callbackPtr = Napi::Persistent(info[0].As<Napi::Function>());
-
-  auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
-    auto env = info.Env();
-    try {
-      nlohmann::json _t;
-      WebSocket::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
-      //* 客户端初始化SkylineGlobal
-      SkylineGlobal::Init(env);
-      callbackPtr->Value().Call({});
-    } catch (const Napi::Error& e) {
-      throw e;
+  try {
+    if (info.Length() != 1) {
+      throw Napi::Error::New(env, "参数长度必须为1");
     }
-  });
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, func1);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+    if (!info[0].IsFunction()) {
+      throw Napi::Error::New(env, "参数必须为Function类型");
+    }
+    
+    // 使用指针来存储 callback
+    auto callbackPtr = new Napi::FunctionReference();
+    *callbackPtr = Napi::Persistent(info[0].As<Napi::Function>());
+
+    auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
+      auto env = info.Env();
+      try {
+        nlohmann::json _t;
+        WebSocket::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
+        //* 客户端初始化SkylineGlobal
+        SkylineGlobal::Init(env);
+        callbackPtr->Value().Call({});
+      } catch (const Napi::Error& e) {
+        throw e;
+      }
+    });
+    // 发送消息到 WebSocket
+    nlohmann::json args;
+    args[0] = Convert::convertValue2Json(env, func1);
+    WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  } catch (const std::exception &e) {
+    throw Napi::Error::New(env, e.what());
+  }
+  catch (...) {
+    throw Napi::Error::New(env, "Unknown error occurred");
+  }
 }
 void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) {
   sendToServerAsync(info, __func__);
@@ -121,20 +125,28 @@ void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
 }
 void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
+  try {
+    if (info.Length() != 1) {
+      throw Napi::Error::New(env, "参数长度必须为1");
+    }
+    if (!info[0].IsFunction()) {
+      throw Napi::Error::New(env, "参数必须为Function类型");
+    }
+    
+    auto func = info[0].As<Napi::Function>();
+    
+    // 发送消息到 WebSocket
+    nlohmann::json args;
+    //* 特殊同步回调
+    args[0] = Convert::convertValue2Json(env, info[0], true);
+    WebSocket::callDynamicSync(m_instanceId, __func__, args);
+  } catch (const std::exception &e) {
+    throw Napi::Error::New(env, e.what());
   }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
+  catch (...) {
+    throw Napi::Error::New(env, "Unknown error occurred");
   }
-  
-  auto func = info[0].As<Napi::Function>();
-  
-  // 发送消息到 WebSocket
-  nlohmann::json args;
-  //* 特殊同步回调
-  args[0] = Convert::convertValue2Json(env, info[0], true);
-  WebSocket::callDynamicSync(m_instanceId, __func__, args);
+
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
   sendToServerAsync(info, __func__);
@@ -163,60 +175,67 @@ void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
  */
 void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  if (info.Length() != 8) {
-    throw Napi::Error::New(env, "参数长度必须为8");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
-  }
-  if (!info[1].IsString()) {
-    throw Napi::Error::New(env, "参数1 bundlePath必须为String类型");
-  }
-  if (!info[2].IsNumber()) {
-    throw Napi::Error::New(env, "参数2 width必须为Number类型");
-  }
-  if (!info[3].IsNumber()) {
-    throw Napi::Error::New(env, "参数3 height必须为Number类型");
-  }
-  if (!info[4].IsNumber()) {
-    throw Napi::Error::New(env, "参数4 devicePixelRatio必须为Number类型");
-  }
-  if (!info[5].IsBoolean()) {
-    throw Napi::Error::New(env, "参数5 hideWindow必须为Boolean类型");
-  }
-  if (!info[6].IsString()) {
-    throw Napi::Error::New(env, "参数6 sharedMemoryKey必须为String类型");
-  }
-  if (!info[7].IsString()) {
-    throw Napi::Error::New(env, "参数7 skylineAddonPath必须为String类型");
-  }
-  auto windowId = info[0].As<Napi::Number>().Int32Value();
-  auto bundlePath = info[1].As<Napi::String>().Utf8Value();
-  auto width = info[2].As<Napi::Number>().Int32Value();
-  auto height = info[3].As<Napi::Number>().Int32Value();
-  auto devicePixelRatio = info[4].As<Napi::Number>().Int32Value();
-  auto hideWindow = info[5].As<Napi::Boolean>().Value();
-  auto sharedMemoryKey = info[6].As<Napi::String>().Utf8Value();
+  try {
+    if (info.Length() != 8) {
+      throw Napi::Error::New(env, "参数长度必须为8");
+    }
+    if (!info[0].IsNumber()) {
+      throw Napi::Error::New(env, "参数0 windowId必须为Number类型");
+    }
+    if (!info[1].IsString()) {
+      throw Napi::Error::New(env, "参数1 bundlePath必须为String类型");
+    }
+    if (!info[2].IsNumber()) {
+      throw Napi::Error::New(env, "参数2 width必须为Number类型");
+    }
+    if (!info[3].IsNumber()) {
+      throw Napi::Error::New(env, "参数3 height必须为Number类型");
+    }
+    if (!info[4].IsNumber()) {
+      throw Napi::Error::New(env, "参数4 devicePixelRatio必须为Number类型");
+    }
+    if (!info[5].IsBoolean()) {
+      throw Napi::Error::New(env, "参数5 hideWindow必须为Boolean类型");
+    }
+    if (!info[6].IsString()) {
+      throw Napi::Error::New(env, "参数6 sharedMemoryKey必须为String类型");
+    }
+    if (!info[7].IsString()) {
+      throw Napi::Error::New(env, "参数7 skylineAddonPath必须为String类型");
+    }
+    auto windowId = info[0].As<Napi::Number>().Int32Value();
+    auto bundlePath = info[1].As<Napi::String>().Utf8Value();
+    auto width = info[2].As<Napi::Number>().Int32Value();
+    auto height = info[3].As<Napi::Number>().Int32Value();
+    auto devicePixelRatio = info[4].As<Napi::Number>().Int32Value();
+    auto hideWindow = info[5].As<Napi::Boolean>().Value();
+    auto sharedMemoryKey = info[6].As<Napi::String>().Utf8Value();
 
-  // 获取Server端的skyline路径
-  nlohmann::json data1;
-  auto resp = WebSocket::callCustomHandleSync("getSkylineAddonPath", data1);
-  auto returnValue = resp["returnValue"];
-  auto skylineAddonPath = returnValue.get<std::string>();
+    // 获取Server端的skyline路径
+    nlohmann::json data1;
+    auto resp = WebSocket::callCustomHandleSync("getSkylineAddonPath", data1);
+    auto returnValue = resp["returnValue"];
+    auto skylineAddonPath = returnValue.get<std::string>();
 
-  // 两个path要替换为server端路径
-  nlohmann::json data{
-    windowId,
-    skylineAddonPath + "\\bundle",
-    width,
-    height,
-    devicePixelRatio,
-    hideWindow,
-    sharedMemoryKey,
-    skylineAddonPath + "\\build\\skyline.node",
-  };
-  // 发送消息到 WebSocket
-  WebSocket::callDynamicSync(m_instanceId, __func__, data);
+    // 两个path要替换为server端路径
+    nlohmann::json data{
+      windowId,
+      skylineAddonPath + "\\bundle",
+      width,
+      height,
+      devicePixelRatio,
+      hideWindow,
+      sharedMemoryKey,
+      skylineAddonPath + "\\build\\skyline.node",
+    };
+    // 发送消息到 WebSocket
+    WebSocket::callDynamicSync(m_instanceId, __func__, data);
+  } catch (const std::exception &e) {
+    throw Napi::Error::New(env, e.what());
+  }
+  catch (...) {
+    throw Napi::Error::New(env, "Unknown error occurred");
+  }
 }
 void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);

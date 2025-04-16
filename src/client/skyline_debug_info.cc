@@ -1,6 +1,5 @@
 #include "./skyline_debug_info.hh"
 #include <string>
-#include <ctime>
 #include "websocket.hh"
 #include <spdlog/spdlog.h>
 
@@ -9,20 +8,28 @@ namespace SkylineDebugInfo{
     
     // 创建一个函数，每次调用时返回最新的时间戳
     Napi::Function func = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-        time_t now = time(nullptr);
-        spdlog::info("Call GetVersion sub...");
-        nlohmann::json reqData;
-        auto result = WebSocket::callStaticSync("global", "SkylineDebugInfo", reqData);
-        auto returnValue = result["returnValue"];
-        
-        auto gitRev = returnValue["skyline_git_rev"].get<std::string>();
-        auto flutterEngineRev = returnValue["flutter_engine_git_rev"].get<std::string>();
-        auto skylineVersion = returnValue["skyline_version"].get<std::string>();
-        auto obj = Napi::Object::New(info.Env());
-        obj.Set("skyline_git_rev", Napi::String::New(info.Env(), gitRev));
-        obj.Set("flutter_engine_git_rev", Napi::String::New(info.Env(), flutterEngineRev));
-        obj.Set("skyline_version", Napi::String::New(info.Env(), skylineVersion));
-        return obj;
+        try {
+            spdlog::info("Call GetVersion sub...");
+            nlohmann::json reqData;
+            auto result = WebSocket::callStaticSync("global", "SkylineDebugInfo", reqData);
+            auto returnValue = result["returnValue"];
+            
+            auto gitRev = returnValue["skyline_git_rev"].get<std::string>();
+            auto flutterEngineRev = returnValue["flutter_engine_git_rev"].get<std::string>();
+            auto skylineVersion = returnValue["skyline_version"].get<std::string>();
+            auto obj = Napi::Object::New(info.Env());
+            obj.Set("skyline_git_rev", Napi::String::New(info.Env(), gitRev));
+            obj.Set("flutter_engine_git_rev", Napi::String::New(info.Env(), flutterEngineRev));
+            obj.Set("skyline_version", Napi::String::New(info.Env(), skylineVersion));
+            return obj;
+        }
+        catch (const std::exception& e) {
+            spdlog::error("Error: {}", e.what());
+            throw Napi::Error::New(info.Env(), e.what());
+        } catch (...) {
+            spdlog::error("Unknown error occurred during SkylineDebugInfo.");
+            throw Napi::Error::New(info.Env(), "Unknown error occurred during SkylineDebugInfo.");
+        }
     });
     // 使用Object.defineProperty为global对象添加一个getter
     Napi::Object global = env.Global();

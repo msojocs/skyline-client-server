@@ -12,23 +12,31 @@ using Logger::logger;
 
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {
-  // 初始化崩溃处理器
-  CrashHandler::init();
-  
-  // 初始化日志
-  spdlog::set_level(spdlog::level::debug);
-  spdlog::info("Starting Skyline Client...");
-  
-  Logger::Init();
-  logger->info("initWebSocket start");
-  WebSocket::initWebSocket();
+  try {
+    // 初始化崩溃处理器
+    CrashHandler::init();
+    
+    // 初始化日志
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::info("Starting Skyline Client...");
+    
+    Logger::Init();
+    logger->info("initWebSocket start");
+    WebSocket::initWebSocket(env);
 
-  logger->info("initWebSocket end");
-  SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
-  SkylineShell::SkylineShell::Init(env, exports);
-  Convert::RegisteInstanceType(env);
-  // exports.Set("setConsole", Napi::Function::New(env, Logger::set_console));
-  logger->info("return result");
+    logger->info("initWebSocket end");
+    SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
+    SkylineShell::SkylineShell::Init(env, exports);
+    Convert::RegisteInstanceType(env);
+    // exports.Set("setConsole", Napi::Function::New(env, Logger::set_console));
+    logger->info("return result");
+  }catch (const std::exception& e) {
+    logger->error("Error: {}", e.what());
+    throw Napi::Error::New(env, e.what());
+  }catch (...) {
+    logger->error("Unknown error occurred during initialization.");
+    throw Napi::Error::New(env, "Unknown error occurred during initialization.");
+  }
   return exports;
 }
 

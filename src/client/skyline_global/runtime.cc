@@ -203,7 +203,7 @@ Napi::Value preloadAssets(const Napi::CallbackInfo &info) {
   nlohmann::json data;
   data[0] = url;
   // 发送消息到 WebSocket
-  auto result = WebSocket::callDynamicSync("SkylineRuntime", __func__, data);
+  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, data);
   return Napi::String::New(env, result.dump());
 }
 

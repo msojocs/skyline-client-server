@@ -56,60 +56,11 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
 }
 PageContext::PageContext(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<PageContext>(info) {
-  if (info.Length() < 3) {
-    throw Napi::TypeError::New(info.Env(), "PageContext: Wrong number of arguments");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::TypeError::New(info.Env(), "First argument must be a number");
-  }
-  if (!info[1].IsNumber()) {
-    throw Napi::TypeError::New(info.Env(), "Second argument must be a number");
-  }
-  if (!info[2].IsObject()) {
-    throw Napi::TypeError::New(info.Env(), "Third argument must be an object");
-  }
-  spdlog::info("PageContext constructor");
-  auto pageId = info[0].As<Napi::Number>().Int32Value();
-  auto windowId = info[1].As<Napi::Number>().Int32Value();
-  auto options = info[2].As<Napi::Object>();
-  // 解析 options 对象
-  /**
-   * {defaultBlockLayout: true
-      defaultContentBox: false
-      enableImagePreload: false
-      enableScrollViewAutoSize: false
-      tagNameStyleIsolation: 0}
-   */
-  nlohmann::json optionsJson;
-  if (options.Has("defaultBlockLayout")) {
-    optionsJson["defaultBlockLayout"] = options.Get("defaultBlockLayout").As<Napi::Boolean>().Value();
-  }
-  if (options.Has("defaultContentBox")) {
-    optionsJson["defaultContentBox"] = options.Get("defaultContentBox").As<Napi::Boolean>().Value();
-  }
-  if (options.Has("enableImagePreload")) {
-    optionsJson["enableImagePreload"] = options.Get("enableImagePreload").As<Napi::Boolean>().Value();
-  }
-  if (options.Has("enableScrollViewAutoSize")) {
-    optionsJson["enableScrollViewAutoSize"] = options.Get("enableScrollViewAutoSize").As<Napi::Boolean>().Value();
-  }
-  if (options.Has("tagNameStyleIsolation")) {
-    optionsJson["tagNameStyleIsolation"] = options.Get("tagNameStyleIsolation").As<Napi::Number>().Int32Value();
-  }
-  nlohmann::json data {
-    pageId,
-    windowId,
-    optionsJson,
-  };
-  auto result = WebSocket::callConstructorSync("PageContext", data);
-  m_instanceId = result["instanceId"].get<std::string>();
+  m_instanceId = sendConstructorToServerSync(info, __func__);
 }
 
 Napi::Value PageContext::getFrameworkType(const Napi::CallbackInfo &info) {
-  nlohmann::json args;
-  auto result = WebSocket::callDynamicPropertyGetSync(m_instanceId, "frameworkType", args);
-  auto returnValue = result["returnValue"];
-  return Napi::Number::New(info.Env(), returnValue.get<int>());
+  return getProperty(info, "frameworkType");
 }
 void PageContext::setFrameworkType(const Napi::CallbackInfo &info, const Napi::Value &value) {
   nlohmann::json args;

@@ -21,6 +21,21 @@ protected:
    * 异步方法,不关心回复
    */
   Napi::Value sendToServerAsync(const Napi::CallbackInfo &info, const std::string &methodName);
+  /**
+   * 与服务器通信
+   * 
+   * 同步方法,用于构造函数
+   */
+  std::string sendConstructorToServerSync(const Napi::CallbackInfo &info, const std::string &className);
+
+  /**
+   * 获取property
+   */
+  void setProperty(const Napi::CallbackInfo &info, const std::string &propertyName);
+  /**
+   * 设置property
+   */
+  Napi::Value getProperty(const Napi::CallbackInfo &info, const std::string &propertyName);
 };
 
 } // namespace Skyline

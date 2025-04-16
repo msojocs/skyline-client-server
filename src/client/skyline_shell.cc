@@ -6,7 +6,6 @@
 #include <exception>
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
-#include <utility>
 #include <windows.h>
 #include "skyline_global.hh"
 #include "../include/convert.hh"
@@ -16,51 +15,36 @@ namespace SkylineShell {
 void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function func = DefineClass(
       env, "SkylineShell",
-      {InstanceMethod("setNotifyBootstrapDoneCallback",
-                      &SkylineShell::setNotifyBootstrapDoneCallback),
-       InstanceMethod("setNotifyWindowReadyCallback",
-                      &SkylineShell::setNotifyWindowReadyCallback),
-       InstanceMethod("setNotifyRouteDoneCallback",
-                      &SkylineShell::setNotifyRouteDoneCallback),
-       InstanceMethod("setNavigateBackCallback",
-                      &SkylineShell::setNavigateBackCallback),
-       InstanceMethod("setNavigateBackDoneCallback",
-                      &SkylineShell::setNavigateBackDoneCallback),
-       InstanceMethod("setLoadResourceCallback",
-                      &SkylineShell::setLoadResourceCallback),
-       InstanceMethod("setLoadResourceAsyncCallback",
-                      &SkylineShell::setLoadResourceAsyncCallback),
-       InstanceMethod("setHttpRequestCallback",
-                      &SkylineShell::setHttpRequestCallback),
-       InstanceMethod("setSendLogCallback", &SkylineShell::setSendLogCallback),
-       InstanceMethod("createWindow", &SkylineShell::createWindow),
-       InstanceMethod("destroyWindow", &SkylineShell::destroyWindow),
-       InstanceMethod("setSafeAreaEdgeInsets",
-                      &SkylineShell::setSafeAreaEdgeInsets),
-        InstanceMethod("notifyAppLaunch", &SkylineShell::notifyAppLaunch),
-        InstanceMethod("onPlatformBrightnessChanged",
-                      &SkylineShell::onPlatformBrightnessChanged),
-        InstanceMethod("dispatchTouchStartEvent",
-                      &SkylineShell::dispatchTouchStartEvent),
-        InstanceMethod("dispatchTouchEndEvent",
-                      &SkylineShell::dispatchTouchEndEvent),
-        InstanceMethod("dispatchTouchMoveEvent",
-                      &SkylineShell::dispatchTouchMoveEvent),
-        InstanceMethod("dispatchTouchCancelEvent",
-                      &SkylineShell::dispatchTouchCancelEvent),
-        InstanceMethod("dispatchKeyboardEvent",
-                      &SkylineShell::dispatchKeyboardEvent),
-        InstanceMethod("dispatchWheelEvent",
-                      &SkylineShell::dispatchWheelEvent),
-            // notifyHttpRequestComplete
-        InstanceMethod("notifyHttpRequestComplete",
-                      &SkylineShell::notifyHttpRequestComplete),
-          // dispatchTouchOverEvent
-        InstanceMethod("dispatchTouchOverEvent",
-                      &SkylineShell::dispatchTouchOverEvent),
-            InstanceMethod("notifyResourceLoad",
-                      &SkylineShell::notifyResourceLoad),
-                    });
+  {
+      InstanceMethod("createWindow", &SkylineShell::createWindow),
+      InstanceMethod("destroyWindow", &SkylineShell::destroyWindow),
+      InstanceMethod("dispatchCharEvent", &SkylineShell::dispatchCharEvent),
+      InstanceMethod("dispatchKeyboardEvent", &SkylineShell::dispatchKeyboardEvent),
+      InstanceMethod("dispatchTouchCancelEvent", &SkylineShell::dispatchTouchCancelEvent),
+      InstanceMethod("dispatchTouchEndEvent", &SkylineShell::dispatchTouchEndEvent),
+      InstanceMethod("dispatchTouchMoveEvent", &SkylineShell::dispatchTouchMoveEvent),
+      InstanceMethod("dispatchTouchStartEvent", &SkylineShell::dispatchTouchStartEvent),
+      InstanceMethod("dispatchWheelEvent", &SkylineShell::dispatchWheelEvent),
+        // dispatchTouchOverEvent
+      InstanceMethod("dispatchTouchOverEvent", &SkylineShell::dispatchTouchOverEvent),
+      InstanceMethod("notifyAppLaunch", &SkylineShell::notifyAppLaunch),
+      InstanceMethod("notifyResourceLoad", &SkylineShell::notifyResourceLoad),
+      InstanceMethod("notifySwitchTab", &SkylineShell::notifySwitchTab),
+      InstanceMethod("notifyNavigateTo", &SkylineShell::notifyNavigateTo),
+        // notifyHttpRequestComplete
+      InstanceMethod("notifyHttpRequestComplete", &SkylineShell::notifyHttpRequestComplete),
+      InstanceMethod("onPlatformBrightnessChanged", &SkylineShell::onPlatformBrightnessChanged),
+      InstanceMethod("setNotifyBootstrapDoneCallback", &SkylineShell::setNotifyBootstrapDoneCallback),
+      InstanceMethod("setNotifyWindowReadyCallback", &SkylineShell::setNotifyWindowReadyCallback),
+      InstanceMethod("setNotifyRouteDoneCallback", &SkylineShell::setNotifyRouteDoneCallback),
+      InstanceMethod("setNavigateBackCallback", &SkylineShell::setNavigateBackCallback),
+      InstanceMethod("setNavigateBackDoneCallback", &SkylineShell::setNavigateBackDoneCallback),
+      InstanceMethod("setLoadResourceCallback", &SkylineShell::setLoadResourceCallback),
+      InstanceMethod("setLoadResourceAsyncCallback", &SkylineShell::setLoadResourceAsyncCallback),
+      InstanceMethod("setHttpRequestCallback", &SkylineShell::setHttpRequestCallback),
+      InstanceMethod("setSafeAreaEdgeInsets", &SkylineShell::setSafeAreaEdgeInsets),
+      InstanceMethod("setSendLogCallback", &SkylineShell::setSendLogCallback),
+  });
   
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -259,8 +243,8 @@ void SkylineShell::dispatchTouchMoveEvent(const Napi::CallbackInfo &info) {
 void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
 }
-void SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+Napi::Value SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
+  return sendToServerAsync(info, __func__);
 }
 void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
   sendToServerAsync(info, __func__);
@@ -301,5 +285,14 @@ Napi:: Value SkylineShell::dispatchTouchOverEvent(const Napi::CallbackInfo &info
 }
 Napi::Value SkylineShell::notifyResourceLoad(const Napi::CallbackInfo &info) {
   return sendToServerAsync(info, __func__);
+}
+Napi::Value SkylineShell::notifyNavigateTo(const Napi::CallbackInfo &info) {
+  return sendToServerSync(info, __func__);
+}
+Napi::Value SkylineShell::dispatchCharEvent(const Napi::CallbackInfo &info) {
+  return sendToServerSync(info, __func__);
+}
+Napi::Value SkylineShell::notifySwitchTab(const Napi::CallbackInfo &info) {
+  return sendToServerSync(info, __func__);
 }
 } // namespace SkylineShell

@@ -45,32 +45,39 @@ setNotifyWindowReadyCallback: ƒ setNotifyWindowReadyCallback()
 setSafeAreaEdgeInsets: ƒ setSafeAreaEdgeInsets()
 setSendLogCallback: ƒ setSendLogCallback()
  */
-  void setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info);
-  void setNotifyWindowReadyCallback(const Napi::CallbackInfo &info);
-  void setNotifyRouteDoneCallback(const Napi::CallbackInfo &info);
-  void setNavigateBackCallback(const Napi::CallbackInfo &info);
-  void setNavigateBackDoneCallback(const Napi::CallbackInfo &info);
-  void setLoadResourceCallback(const Napi::CallbackInfo &info);
-  void setLoadResourceAsyncCallback(const Napi::CallbackInfo &info);
-  void setHttpRequestCallback(const Napi::CallbackInfo &info);
-  void setSendLogCallback(const Napi::CallbackInfo &info);
-  void setSafeAreaEdgeInsets(const Napi::CallbackInfo &info);
   void createWindow(const Napi::CallbackInfo &info);
   void destroyWindow(const Napi::CallbackInfo &info);
+  Napi::Value dispatchCharEvent(const Napi::CallbackInfo &info);
+  Napi::Value dispatchKeyboardEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchCancelEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchEndEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchMoveEvent(const Napi::CallbackInfo &info);
+  Napi::Value dispatchTouchOverEvent(const Napi::CallbackInfo &info);
+  void dispatchTouchStartEvent(const Napi::CallbackInfo &info);
+  void dispatchWheelEvent(const Napi::CallbackInfo &info);
   void notifyAppLaunch(const Napi::CallbackInfo &info);
+  void notifyAutoReLaunch(const Napi::CallbackInfo &info);
+  Napi::Value notifyHttpRequestComplete(const Napi::CallbackInfo &info);
+  void notifyNavigateBack(const Napi::CallbackInfo &info);
+  Napi::Value notifyNavigateTo(const Napi::CallbackInfo &info);
+  void notifyReLaunch(const Napi::CallbackInfo &info);
+  void notifyRedirectTo(const Napi::CallbackInfo &info);
   Napi::Value notifyResourceLoad(const Napi::CallbackInfo &info);
+  Napi::Value notifySwitchTab(const Napi::CallbackInfo &info);
   /**
    * @brief 通知平台亮度变化
    */
   void onPlatformBrightnessChanged(const Napi::CallbackInfo &info);
-  void dispatchTouchStartEvent(const Napi::CallbackInfo &info);
-  void dispatchTouchEndEvent(const Napi::CallbackInfo &info);
-  void dispatchTouchMoveEvent(const Napi::CallbackInfo &info);
-  void dispatchTouchCancelEvent(const Napi::CallbackInfo &info);
-  void dispatchKeyboardEvent(const Napi::CallbackInfo &info);
-  void dispatchWheelEvent(const Napi::CallbackInfo &info);
-  Napi::Value notifyHttpRequestComplete(const Napi::CallbackInfo &info);
-  Napi::Value dispatchTouchOverEvent(const Napi::CallbackInfo &info);
+  void setHttpRequestCallback(const Napi::CallbackInfo &info);
+  void setLoadResourceAsyncCallback(const Napi::CallbackInfo &info);
+  void setLoadResourceCallback(const Napi::CallbackInfo &info);
+  void setNavigateBackCallback(const Napi::CallbackInfo &info);
+  void setNavigateBackDoneCallback(const Napi::CallbackInfo &info);
+  void setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info);
+  void setNotifyRouteDoneCallback(const Napi::CallbackInfo &info);
+  void setNotifyWindowReadyCallback(const Napi::CallbackInfo &info);
+  void setSafeAreaEdgeInsets(const Napi::CallbackInfo &info);
+  void setSendLogCallback(const Napi::CallbackInfo &info);
 };
 } // namespace SkylineShell
 #endif

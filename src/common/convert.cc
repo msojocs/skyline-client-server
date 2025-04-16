@@ -15,6 +15,7 @@
 #include "../client/skyline_global/shadow_node/hero.hh"
 #include "../client/websocket.hh"
 #include "../include/snowflake.hh"
+#include "input.hh"
 #include "napi.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
@@ -46,6 +47,7 @@ void RegisteInstanceType(Napi::Env &env) {
   // 注册实例类型和对应的构造函数
   funcMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
   funcMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
+  funcMap["InputShadowNode"] = Skyline::InputShadowNode::GetClazz(env);
   funcMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
   funcMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
   // SwiperItemShadoNode就是少了一个w

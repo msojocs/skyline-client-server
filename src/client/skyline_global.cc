@@ -2,6 +2,7 @@
 #include "include/page_context.hh"
 #include "include/runtime.hh"
 #include "include/worklet_module.hh"
+#include "include/gesture_handler_module.hh"
 #include "napi.h"
 #include "websocket.hh"
 #include "../include/convert.hh"
@@ -32,6 +33,11 @@ namespace SkylineGlobal {
         auto workletModule = Napi::Object::New(env);
         Skyline::WorkletModule::Init(env, workletModule);
         skylineGlobal.Set(Napi::String::New(env, "workletModule"), workletModule);
+      }
+      {
+        auto gestureModule = Napi::Object::New(env);
+        Skyline::GestureHandlerModule::Init(env, gestureModule);
+        skylineGlobal.Set(Napi::String::New(env, "gestureHandlerModule"), gestureModule);
       }
       env.Global().Set(Napi::String::New(env, "SkylineGlobal"), skylineGlobal);
     }

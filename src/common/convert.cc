@@ -72,7 +72,7 @@ nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value, bool
         obj.Get("instanceId").As<Napi::String>().Utf8Value();
     return jsonObj;
   }
-  nlohmann::json jsonObj;
+  nlohmann::json jsonObj = nlohmann::json::object();
   Napi::Array propertyNames = obj.GetPropertyNames();
   for (uint32_t i = 0; i < propertyNames.Length(); i++) {
     Napi::String key = propertyNames.Get(i).As<Napi::String>();

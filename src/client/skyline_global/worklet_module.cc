@@ -5,6 +5,23 @@
 
 namespace Skyline {
 namespace WorkletModule {
+  Napi::Value sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
+    auto env = info.Env();
+    nlohmann::json args;
+    for (int i = 0; i < info.Length(); i++) {
+      args[i] = Convert::convertValue2Json(env, info[i]);
+    }
+    try {
+      auto result = WebSocket::callStaticSync("SkylineWorkletModule", methodName, args);
+      auto returnValue = result["returnValue"];
+      return Convert::convertJson2Value(env, returnValue);
+    } catch (const std::exception &e) {
+      throw Napi::Error::New(env, e.what());
+    }
+    catch (...) {
+      throw Napi::Error::New(env, "Unknown error occurred");
+    }
+  }
   Napi::Value installCoreFunctions(const Napi::CallbackInfo &info) {
     auto env = info.Env();
     // 发送消息到 WebSocket
@@ -73,6 +90,9 @@ namespace WorkletModule {
     auto returnValue = result["returnValue"];
     return Convert::convertJson2Value(env, returnValue);
   }
+  Napi::Value unregisterEventHandler(const Napi::CallbackInfo &info) {
+    return sendToServerSync(info, __func__);
+  }
   Napi::Value startMapper(const Napi::CallbackInfo &info) {
     auto env = info.Env();
     nlohmann::json args;
@@ -83,12 +103,17 @@ namespace WorkletModule {
     auto returnValue = result["returnValue"];
     return Convert::convertJson2Value(env, returnValue);
   }
+  Napi::Value makeRemote(const Napi::CallbackInfo &info) {
+    return sendToServerSync(info, __func__);
+  }
   void Init(Napi::Env env, Napi::Object exports) {
     exports.Set(Napi::String::New(env, "installCoreFunctions"), Napi::Function::New(env, installCoreFunctions));
     exports.Set(Napi::String::New(env, "makeShareable"), Napi::Function::New(env, makeShareable));
     exports.Set(Napi::String::New(env, "makeMutable"), Napi::Function::New(env, makeMutable));
     exports.Set(Napi::String::New(env, "registerEventHandler"), Napi::Function::New(env, registerEventHandler));
+    exports.Set(Napi::String::New(env, "unregisterEventHandler"), Napi::Function::New(env, unregisterEventHandler));
     exports.Set(Napi::String::New(env, "startMapper"), Napi::Function::New(env, startMapper));
+    exports.Set(Napi::String::New(env, "makeRemote"), Napi::Function::New(env, makeRemote));
   }
 }
 }

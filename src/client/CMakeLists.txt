@@ -18,6 +18,7 @@ set(CLIENT_DIR_LIST
     ../common/logger.cc
     skyline_global/runtime.cc
     skyline_global/mutable_value.cc
+    skyline_global/gesture_handler_module.cc
     skyline_global/worklet_module.cc
     skyline_global/async_style_sheets.cc
     skyline_global/shadow_node/node.hh

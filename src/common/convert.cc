@@ -18,13 +18,15 @@
 #include "napi.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
+#include <string>
 
 namespace Convert {
 
 static std::map<std::string, CallbackData> callback;
 static std::map<std::string, std::shared_ptr<Napi::ObjectReference>> instanceCache;
 using snowflake_t = snowflake<1534832906275L>;
-snowflake_t callbackUuid;
+static snowflake_t callbackUuid;
+static snowflake_t sharedMemoryUuid;
 
 static std::map<std::string, Napi::FunctionReference *> funcMap;
 
@@ -40,6 +42,7 @@ CallbackData * find_callback(const std::string &callbackId)
 }
 void RegisteInstanceType(Napi::Env &env) {
   callbackUuid.init(2, 1);
+  sharedMemoryUuid.init(4, 1);
   // 注册实例类型和对应的构造函数
   funcMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
   funcMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
@@ -72,7 +75,11 @@ nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value, bool
   for (uint32_t i = 0; i < propertyNames.Length(); i++) {
     Napi::String key = propertyNames.Get(i).As<Napi::String>();
     Napi::Value val = obj.Get(key);
-    jsonObj[key.Utf8Value()] = convertValue2Json(env, val, isSyncCallback);
+    auto k = key.Utf8Value();
+    if (k.length() == 0) {
+      continue;
+    }
+    jsonObj[k] = convertValue2Json(env, val, isSyncCallback);
   }
   return jsonObj;
 }

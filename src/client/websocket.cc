@@ -11,6 +11,7 @@
 #include <string>
 #include <synchapi.h>
 #include <napi.h>
+#include <thread>
 #include "../include/snowflake.hh"
 #include "../include/convert.hh"
 #include "../include/logger.hh"
@@ -41,6 +42,10 @@ namespace WebSocket {
                 {
                     logger->info("received message: {}", msg->str);
                     // Logger::log("received message: %s", msg->str.c_str());
+                    if (msg->str.length() == 0) {
+                        logger->error("received message is empty!");
+                        return;
+                    }
                     nlohmann::json json = nlohmann::json::parse(msg->str);
                     if (json["type"].empty() && json.contains("id"))
                     {
@@ -224,6 +229,9 @@ namespace WebSocket {
         std::string result = futureObj.get();
         blocked = false;
         logger->info("result: {}", result.c_str());
+        if (result.length() == 0) {
+            throw std::runtime_error("Server response is empty");
+        }
         auto resp = nlohmann::json::parse(result);
         if (resp.contains("error")) {
             throw std::runtime_error("Server response error: " + resp["error"].get<std::string>());
@@ -238,7 +246,11 @@ namespace WebSocket {
         {
             throw std::runtime_error("WebSocket is not open");
         }
-        webSocket.send(data.dump());
+        std::thread t([data]() {
+            webSocket.send(data.dump());
+        });
+        t.detach();
+        // webSocket.send(data.dump());
     }
     void callDynamicAsync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {

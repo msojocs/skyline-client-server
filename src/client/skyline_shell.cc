@@ -1,6 +1,9 @@
 #include "skyline_shell.hh"
 #include "napi.h"
 #include "websocket.hh"
+#include <cstdint>
+#include <cstring>
+#include <exception>
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include <utility>
@@ -244,7 +247,35 @@ void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
   sendToServerAsync(info, __func__);
 }
 Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &info) {
-  return sendToServerAsync(info, __func__);
+  auto env = info.Env();
+  try {
+    nlohmann::json args;
+    args[0] = Convert::convertValue2Json(env, info[0]);
+    args[1] = Convert::convertValue2Json(env, info[1]);
+    args[2] = Convert::convertValue2Json(env, info[2]);
+    args[3] = Convert::convertValue2Json(env, info[3]);
+    // args[4] = Convert::convertValue2Json(env, info[4]);
+    
+    auto sharedMemory = env.Global().Get("__sharedMemory").As<Napi::Object>();
+    std::string key = "resource_" + std::to_string(info[0].As<Napi::Number>().Int32Value());
+    args[4] = key;
+    auto buffer = info[4].As<Napi::Buffer<uint8_t>>();
+    auto mem = sharedMemory.Get("setMemory").As<Napi::Function>().Call({
+      Napi::String::New(env, key),
+      Napi::Number::New(env, buffer.Length())
+    }).As<Napi::ArrayBuffer>();
+    // Uint8Array包裹
+    Napi::TypedArrayOf<uint8_t> typedArray = Napi::TypedArrayOf<uint8_t>::New(env, buffer.Length(), mem, 0);
+    // 写入数据
+    memcpy(typedArray.Data(), buffer.Data(), buffer.Length());
+    
+    WebSocket::callDynamicAsync(m_instanceId, __func__, args);
+    return env.Undefined();
+    return sendToServerAsync(info, __func__);
+  } catch (const std::exception& e) {
+    throw Napi::Error::New(env, e.what());
+  }
+  return env.Undefined();
 }
 Napi:: Value SkylineShell::dispatchTouchOverEvent(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);

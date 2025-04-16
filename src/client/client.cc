@@ -6,11 +6,19 @@
 #include "skyline_debug_info.hh"
 #include "../include/logger.hh"
 #include "../include/convert.hh"
+#include "crash_handler.hh"
 
 using Logger::logger;
 
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  // 初始化崩溃处理器
+  CrashHandler::init();
+  
+  // 初始化日志
+  spdlog::set_level(spdlog::level::debug);
+  spdlog::info("Starting Skyline Client...");
+  
   Logger::Init();
   logger->info("initWebSocket start");
   WebSocket::initWebSocket();

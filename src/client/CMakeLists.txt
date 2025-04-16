@@ -9,6 +9,7 @@ set(CLIENT_DIR_LIST
     skyline_shell.cc
     skyline_global.hh
     skyline_global.cc
+    crash_handler.cc
     base_client.cc
     include/base_client.hh
     include/page_context.hh

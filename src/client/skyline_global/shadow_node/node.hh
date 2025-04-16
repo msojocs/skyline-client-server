@@ -63,7 +63,9 @@ std::vector<Napi::ClassPropertyDescriptor<T>> GetCommonMethods() {
   methods.push_back(Napi::InstanceWrap<T>::InstanceAccessor(
     "instanceId", &T::getInstanceId, nullptr,
     static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
-
+    methods.push_back(Napi::InstanceWrap<T>::InstanceAccessor(
+      "viewTag", &T::viewTag, nullptr,
+      static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
   return methods;
 }
 
@@ -130,6 +132,7 @@ public:
   Napi::Value getBoundingClientRect(const Napi::CallbackInfo &info);
   Napi::Value getParentNode(const Napi::CallbackInfo &info);
   Napi::Value isConnected(const Napi::CallbackInfo &info);
+  Napi::Value viewTag(const Napi::CallbackInfo &info);
   Napi::Value matches(const Napi::CallbackInfo &info);
   Napi::Value release(const Napi::CallbackInfo &info);
   Napi::Value removeChild(const Napi::CallbackInfo &info);

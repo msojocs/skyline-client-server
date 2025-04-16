@@ -67,7 +67,7 @@ namespace Skyline {
     nlohmann::json args;
     args[0] = Convert::convertValue2Json(env, info[0]);
     try {
-      auto result = WebSocket::callDynamicPropertySetSync(propertyName, propertyName, args);
+      auto result = WebSocket::callDynamicPropertySetSync(m_instanceId, propertyName, args);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());
     }

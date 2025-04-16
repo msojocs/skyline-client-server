@@ -1,6 +1,4 @@
 #include "node.hh"
-#include "../../../include/convert.hh"
-#include "../../websocket.hh"
 #include "napi.h"
 
 namespace Skyline {
@@ -58,6 +56,9 @@ Napi::Value ShadowNode::getBoundingClientRect(const Napi::CallbackInfo &info) {
 
 // isConnected
 Napi::Value ShadowNode::isConnected(const Napi::CallbackInfo &info) {
+  return getProperty(info, __func__);
+}
+Napi::Value ShadowNode::viewTag(const Napi::CallbackInfo &info) {
   return getProperty(info, __func__);
 }
 // setClass 

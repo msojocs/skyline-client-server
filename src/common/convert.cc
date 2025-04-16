@@ -13,9 +13,9 @@
 #include "../client/skyline_global/shadow_node/swiper_item.hh"
 #include "../client/skyline_global/shadow_node/view.hh"
 #include "../client/skyline_global/shadow_node/hero.hh"
+#include "../client/skyline_global/shadow_node/input.hh"
 #include "../client/websocket.hh"
 #include "../include/snowflake.hh"
-#include "input.hh"
 #include "napi.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>

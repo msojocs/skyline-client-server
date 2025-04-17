@@ -2,6 +2,8 @@
 #include "../../include/convert.hh"
 #include "../websocket.hh"
 #include "napi.h"
+#include <cstdint>
+#include <memory>
 #include <nlohmann/json.hpp>
 
 namespace Skyline {
@@ -107,29 +109,27 @@ void registerNavigateBackInterceptCallback(const Napi::CallbackInfo &info) {
   // 发送消息到 WebSocket
   WebSocket::callStaticSync("SkylineRuntime", __func__, args);
 }
+static std::unordered_map<int64_t, std::shared_ptr<Napi::Reference<Napi::Value>>> jsValue;
+static int64_t jsValueId = 0;
 Napi::Value registerJsValue(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  // 发送消息到 WebSocket
-  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  auto ref = std::make_shared<Napi::Reference<Napi::Value>>(Napi::Persistent(info[0]));
+  auto v = jsValue.emplace(jsValueId++, ref);
+  return Napi::Number::New(info.Env(), v.first->first);
 }
 Napi::Value unRegisterJsValue(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  // TODO：参数是任意值
-  nlohmann::json args;
-  for (int i = 0; i < info.Length(); i++) {
-    args[i] = Convert::convertValue2Json(env, info[i]);
+  auto env =  info.Env();
+  if (info.Length() != 1) {
+    throw Napi::Error::New(env, "参数长度必须为1");
   }
-  
-  // 发送消息到 WebSocket
-  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, args);
-  auto returnValue = result["returnValue"];
-  return Convert::convertJson2Value(env, returnValue);
+  if (!info[0].IsNumber()) {
+    throw Napi::Error::New(env, "参数0 id必须为Number类型");
+  }
+  auto v = jsValue.find(info[0].As<Napi::Number>().Int32Value());
+  if (v != jsValue.end()) {
+    v->second->Unref();
+    jsValue.erase(v);
+  }
+  return env.Undefined();
 }
 Napi::Value getJsValueById(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -140,13 +140,11 @@ Napi::Value getJsValueById(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(env, "参数0 id必须为Number类型");
   }
   int id = info[0].As<Napi::Number>().Int32Value();
-  nlohmann::json data;
-  data[0] = id;
-  // 发送消息到 WebSocket
-  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, data);
-  auto returnValue = result["returnValue"];
-  // TODO: 处理返回值
-  return Convert::convertJson2Value(env, returnValue);
+  auto it = jsValue.find(id);
+  if (it == jsValue.end()) {
+    return env.Undefined();
+  }
+  return it->second->Value();
 }
 
 void registerFontFaceCallback(const Napi::CallbackInfo &info) {

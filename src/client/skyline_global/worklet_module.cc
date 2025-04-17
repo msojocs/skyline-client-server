@@ -55,7 +55,7 @@ namespace WorkletModule {
   Napi::Value startMapper(const Napi::CallbackInfo &info) {
     return sendToServerSync(info, __func__);
   }
-  Napi::Value stopMapper(const Napi::CallbackInfo &info) {
+  Napi::Value stopMappers(const Napi::CallbackInfo &info) {
     return sendToServerSync(info, __func__);
   }
   Napi::Value makeRemote(const Napi::CallbackInfo &info) {
@@ -68,7 +68,7 @@ namespace WorkletModule {
     exports.Set(Napi::String::New(env, "registerEventHandler"), Napi::Function::New(env, registerEventHandler));
     exports.Set(Napi::String::New(env, "unregisterEventHandler"), Napi::Function::New(env, unregisterEventHandler));
     exports.Set(Napi::String::New(env, "startMapper"), Napi::Function::New(env, startMapper));
-    exports.Set(Napi::String::New(env, "stopMapper"), Napi::Function::New(env, stopMapper));
+    exports.Set(Napi::String::New(env, "stopMappers"), Napi::Function::New(env, stopMappers));
     exports.Set(Napi::String::New(env, "makeRemote"), Napi::Function::New(env, makeRemote));
   }
 }

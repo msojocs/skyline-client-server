@@ -23,51 +23,10 @@ namespace WorkletModule {
     }
   }
   Napi::Value installCoreFunctions(const Napi::CallbackInfo &info) {
-    auto env = info.Env();
-    // 发送消息到 WebSocket
-    auto func = info[0].As<Napi::Function>();
-    // 从function里面提取数据
-    nlohmann::json args {
-      {
-        {"asString", func.Get("asString").As<Napi::String>().Utf8Value()},
-        {"workletHash", func.Get("__workletHash").As<Napi::Number>().Int64Value()},
-        {"location", func.Get("__location").As<Napi::String>().Utf8Value()},
-        {"isWorklet", func.Get("__worklet").As<Napi::Boolean>().Value()},
-      }
-    };
-    auto result = WebSocket::callCustomHandleSync(__func__, args);
-    auto returnValue = result["returnValue"];
-    return Convert::convertJson2Value(env, returnValue);
+    return sendToServerSync(info, __func__);
   }
   Napi::Value makeShareable(const Napi::CallbackInfo &info) {
-    auto env = info.Env();
-    // 发送消息到 WebSocket
-    auto func = info[0].As<Napi::Function>();
-    // auto runOnJS = func.Get("_closure").As<Napi::Object>().Get("runOnJS").As<Napi::Function>();
-    // 从function里面提取数据
-    nlohmann::json args {
-      {
-        {"asString", func.Get("asString").As<Napi::String>().Utf8Value()},
-        {"workletHash", func.Get("__workletHash").As<Napi::Number>().Int64Value()},
-        {"location", func.Get("__location").As<Napi::String>().Utf8Value()},
-        {"isWorklet", func.Get("__worklet").As<Napi::Boolean>().Value()},
-        // {
-        //   "runOnJS", {
-        //     {"asString", runOnJS.Get("asString").As<Napi::String>().Utf8Value()},
-        //     {"workletHash", runOnJS.Get("__workletHash").As<Napi::Number>().Int64Value()},
-        //     {"location", runOnJS.Get("__location").As<Napi::String>().Utf8Value()},
-        //     {"isWorklet", runOnJS.Get("__worklet").As<Napi::Boolean>().Value()},
-        //   }
-        // }
-      }
-    };
-    try {
-      auto result = WebSocket::callCustomHandleSync(__func__, args);
-      auto returnValue = result["returnValue"];
-      return Convert::convertJson2Value(env, returnValue);
-    } catch (const std::exception &e) {
-      throw Napi::Error::New(env, e.what());
-    }
+    return sendToServerSync(info, __func__);
   }
   Napi::Value makeMutable(const Napi::CallbackInfo &info) {
     auto env = info.Env();
@@ -94,14 +53,10 @@ namespace WorkletModule {
     return sendToServerSync(info, __func__);
   }
   Napi::Value startMapper(const Napi::CallbackInfo &info) {
-    auto env = info.Env();
-    nlohmann::json args;
-    for (int i = 0; i < info.Length(); i++) {
-      args[i] = Convert::convertValue2Json(env, info[i]);
-    }
-    auto result = WebSocket::callStaticSync("SkylineWorkletModule", __func__, args);
-    auto returnValue = result["returnValue"];
-    return Convert::convertJson2Value(env, returnValue);
+    return sendToServerSync(info, __func__);
+  }
+  Napi::Value stopMapper(const Napi::CallbackInfo &info) {
+    return sendToServerSync(info, __func__);
   }
   Napi::Value makeRemote(const Napi::CallbackInfo &info) {
     return sendToServerSync(info, __func__);
@@ -113,6 +68,7 @@ namespace WorkletModule {
     exports.Set(Napi::String::New(env, "registerEventHandler"), Napi::Function::New(env, registerEventHandler));
     exports.Set(Napi::String::New(env, "unregisterEventHandler"), Napi::Function::New(env, unregisterEventHandler));
     exports.Set(Napi::String::New(env, "startMapper"), Napi::Function::New(env, startMapper));
+    exports.Set(Napi::String::New(env, "stopMapper"), Napi::Function::New(env, stopMapper));
     exports.Set(Napi::String::New(env, "makeRemote"), Napi::Function::New(env, makeRemote));
   }
 }

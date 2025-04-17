@@ -107,6 +107,13 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
     callback[callbackId] = {
         std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),
         Napi::ThreadSafeFunction::New(env, func, "Callback", 0, 1)};
+    if (func.Get("__worklet").IsBoolean()) {
+      jsonObj["asString"] = func.Get("asString").As<Napi::String>().Utf8Value();
+      jsonObj["__workletHash"] = func.Get("__workletHash").As<Napi::Number>().Int64Value();
+      jsonObj["__location"] = func.Get("__location").As<Napi::String>().Utf8Value();
+      jsonObj["__worklet"] = func.Get("__worklet").As<Napi::Boolean>().Value();
+      jsonObj["_closure"] = convertValue2Json(env, func.Get("_closure"));
+    }
     return jsonObj;
   } else if (value.IsBuffer()) {
     Napi::Buffer<uint8_t> buffer = value.As<Napi::Buffer<uint8_t>>();

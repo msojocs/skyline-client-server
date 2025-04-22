@@ -9,7 +9,7 @@
 #include "skyline_global.hh"
 #include "../common/convert.hh"
 
-#ifdef __WIN32
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>

@@ -14,7 +14,9 @@ using Logger::logger;
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   try {
     // 初始化崩溃处理器
+    #ifdef _WIN32
     CrashHandler::init();
+    #endif
     
     // 初始化日志
     spdlog::set_level(spdlog::level::debug);

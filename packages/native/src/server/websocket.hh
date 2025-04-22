@@ -3,9 +3,9 @@
 #include "napi.h"
 
 namespace WebSocketServer {
-  Napi::Number start(Napi::CallbackInfo &info);
-  void stop(Napi::CallbackInfo &info);
-  void setMessageCallback(Napi::CallbackInfo &info);
-  Napi::Value sendMessageSync(Napi::CallbackInfo &info);
+  Napi::Number start(const Napi::CallbackInfo &info);
+  void stop(const Napi::CallbackInfo &info);
+  void setMessageCallback(const Napi::CallbackInfo &info);
+  Napi::Value sendMessageSync(const Napi::CallbackInfo &info);
 }
 #endif

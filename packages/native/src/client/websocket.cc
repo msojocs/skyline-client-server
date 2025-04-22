@@ -9,7 +9,6 @@
 #include <future>
 #include <memory>
 #include <string>
-#include <synchapi.h>
 #include <napi.h>
 #include <thread>
 #include "../common/snowflake.hh"
@@ -162,7 +161,11 @@ namespace WebSocket {
         webSocket.start();
         logger->info("start end");
         for (int i=0; i< 10; i++) {
-            Sleep(1000);
+            #ifdef _WIN32
+            Sleep(500);
+            #else
+            sleep(500);
+            #endif
             if (webSocket.getReadyState() == ix::ReadyState::Open)
             {
                 return;

@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <windows.h>
 #include <dbghelp.h>
 #include <spdlog/spdlog.h>
@@ -180,3 +181,4 @@ namespace CrashHandler {
         spdlog::info("Crash handler initialized");
     }
 } 
+#endif

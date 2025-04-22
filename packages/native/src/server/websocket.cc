@@ -6,7 +6,6 @@
 #include <nlohmann/json.hpp>
 #include <future>
 #include <queue>
-#include <synchapi.h>
 #include "../common/snowflake.hh"
 #include "../common/convert.hh"
 
@@ -23,7 +22,7 @@ static bool isBlock = false;
 
 using snowflake_t = snowflake<1534832906275L>;
 snowflake_t communicationUuid;
-void sendMsg(Napi::CallbackInfo &info) {
+void sendMsg(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
     throw Napi::TypeError::New(info.Env(), "sendMsg: Wrong number of arguments");
   }
@@ -119,7 +118,7 @@ int startInner(std::string &host, int port) {
   return 0;
 }
 
-Napi::Number start(Napi::CallbackInfo &info) {
+Napi::Number start(const Napi::CallbackInfo &info) {
   if (info.Length() < 2) {
     throw Napi::TypeError::New(info.Env(), "start: Wrong number of arguments");
   }
@@ -134,7 +133,7 @@ Napi::Number start(Napi::CallbackInfo &info) {
   communicationUuid.init(3, 1);
   return Napi::Number::New(info.Env(), startInner(host, port));
 }
-void stop(Napi::CallbackInfo &info) {
+void stop(const Napi::CallbackInfo &info) {
   if (server) {
     // Release the thread-safe function
     if (tsfn) {
@@ -146,7 +145,7 @@ void stop(Napi::CallbackInfo &info) {
   }
 }
 
-void setMessageCallback(Napi::CallbackInfo &info) {
+void setMessageCallback(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
     throw Napi::TypeError::New(info.Env(), "setMessageCallback: Wrong number of arguments");
   }
@@ -169,7 +168,7 @@ void setMessageCallback(Napi::CallbackInfo &info) {
 /**
  * 给客户端发送消息
  */
-Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
+Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
     throw Napi::TypeError::New(info.Env(), "sendMessageSync: Wrong number of arguments");
   }

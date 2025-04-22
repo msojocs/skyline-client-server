@@ -6,9 +6,15 @@
 #include <exception>
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
-#include <windows.h>
 #include "skyline_global.hh"
 #include "../common/convert.hh"
+
+#ifdef __WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 namespace SkylineShell {
 
 
@@ -216,7 +222,11 @@ void SkylineShell::destroyWindow(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
 }
 void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
+  #ifdef _WIN32
   Sleep(500);
+  #else
+  usleep(500);
+  #endif
   sendToServerSync(info, __func__);
 }
 void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {

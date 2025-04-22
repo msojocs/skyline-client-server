@@ -5,9 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <windows.h>
 #include <unordered_map>
-#include <vector>
 
 namespace Skyline {
 namespace Runtime {

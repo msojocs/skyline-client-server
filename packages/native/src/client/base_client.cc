@@ -2,7 +2,6 @@
 #include "napi.h"
 #include "websocket.hh"
 #include <spdlog/spdlog.h>
-#include <windows.h>
 #include "../common/convert.hh"
 
 namespace Skyline {

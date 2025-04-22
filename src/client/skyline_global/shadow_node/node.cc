@@ -13,6 +13,9 @@ ShadowNode::ShadowNode(const Napi::CallbackInfo &info) {
   }
   m_instanceId = info[0].As<Napi::String>().Utf8Value();
 }
+Napi::Value ShadowNode::__secondaryAnimationMapperId(const Napi::CallbackInfo &info) {
+  return getProperty(info, __func__);
+}
 Napi::Value ShadowNode::setStyleScope(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);
 }

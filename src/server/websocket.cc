@@ -5,6 +5,7 @@
 #include "../include/logger.hh"
 #include <nlohmann/json.hpp>
 #include <future>
+#include <queue>
 #include <synchapi.h>
 #include "../include/snowflake.hh"
 #include "../include/convert.hh"
@@ -13,9 +14,12 @@ using Logger::logger;
 
 namespace WebSocketServer {
 
-std::shared_ptr<ix::WebSocketServer> server;
-Napi::ThreadSafeFunction tsfn;
+static std::shared_ptr<ix::WebSocketServer> server;
+static Napi::ThreadSafeFunction tsfn;
+static std::shared_ptr<Napi::FunctionReference> handleRef = nullptr;
 static std::map<std::string, std::shared_ptr<std::promise<std::string>>> wsRequest;
+static std::queue<std::string> blockQueue;
+static bool isBlock = false;
 
 using snowflake_t = snowflake<1534832906275L>;
 snowflake_t communicationUuid;
@@ -72,6 +76,13 @@ int startInner(std::string &host, int port) {
             else {
               logger->info("id not found: {}", id.get<std::string>());
             }
+          }
+
+          if (isBlock) {
+            // 如果当前处于阻塞状态，直接放入队列中
+            logger->info("blocked, push to queue...");
+            blockQueue.push(message);
+            return;
           }
 
           // Client发来的消息
@@ -151,9 +162,13 @@ void setMessageCallback(Napi::CallbackInfo &info) {
       0,                            // Unlimited queue
       1                             // Only one thread will use this initially
   );
+  handleRef = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()));
 
   logger->info("Set message callback");
 }
+/**
+ * 给客户端发送消息
+ */
 Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
   if (info.Length() < 1) {
     throw Napi::TypeError::New(info.Env(), "sendMessageSync: Wrong number of arguments");
@@ -161,6 +176,8 @@ Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "First argument must be a string");
   }
+  auto env = info.Env();
+  isBlock = true;
   logger->info("sendMessageSync: {}", info[0].As<Napi::String>().Utf8Value());
   // 解析json字符串
   auto message = info[0].As<Napi::String>().Utf8Value();
@@ -171,16 +188,50 @@ Napi::Value sendMessageSync(Napi::CallbackInfo &info) {
     throw Napi::Error::New(info.Env(), "No clients connected");
   }
   logger->info("send to client: {}", json.dump());
-  std::thread t1([clients, json]() {
-    clients.begin()->get()->send(json.dump());
-  });
-  t1.detach();
+  clients.begin()->get()->send(json.dump());
   auto promiseObj = std::make_shared<std::promise<std::string>>();
   std::future<std::string> futureObj = promiseObj->get_future();
   wsRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]
-  // TODO: 3秒超时
+  // 3秒超时
+  auto start = std::chrono::high_resolution_clock::now();
+  while (true) {
+    if (blockQueue.size() > 0) {
+      auto msg = blockQueue.front();
+      blockQueue.pop();
+      try {
+        // debug消息
+        auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+        log.Call({Napi::String::New(env, "Debug message: " + msg)});
+        // Client发来的消息
+        // Call the JavaScript callback through the thread-safe function
+        log.Call({Napi::String::New(env, "Prepare..." )});
+        auto ws = Napi::Object::New(env);
+        ws.Set("send", Napi::Function::New(env, sendMsg));
+        handleRef->Value().Call({ws, Napi::String::New(env, msg)});
+        log.Call({Napi::String::New(env, "Finish..." )});
+      }
+      catch (const std::exception &e) {
+        logger->error("Error parsing JSON: {}", e.what());
+        throw Napi::Error::New(info.Env(), e.what());
+      }
+      catch (...) {
+        logger->error("Unknown error occurred");
+        throw Napi::Error::New(info.Env(), "Unknown error occurred");
+      }
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    if (elapsed.count() > 3) {
+      wsRequest.erase(json["id"]);
+      isBlock = false;
+      throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + json.dump());
+    }
+    if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+      break;
+    }
+  }
+  isBlock = false;
   std::string result = futureObj.get();
-  auto env = info.Env();
   auto resp = nlohmann::json::parse(result);
   auto v = Convert::convertJson2Value(env, resp["result"]);
   return v;

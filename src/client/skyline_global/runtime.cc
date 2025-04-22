@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <windows.h>
+#include <unordered_map>
+#include <vector>
 
 namespace Skyline {
 namespace Runtime {
@@ -17,192 +20,98 @@ namespace Runtime {
  * "unRegisterJsValue", "getJsValueById", "registerFontFaceCallback",
  * "setFeatureFlags", "updateMapCustomCallout", "preloadAssets"
  */
-
+  Napi::Value sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
+    auto env = info.Env();
+    nlohmann::json args;
+    for (int i = 0; i < info.Length(); i++) {
+      args[i] = Convert::convertValue2Json(env, info[i]);
+    }
+    try {
+      auto result = WebSocket::callStaticSync("SkylineRuntime", methodName, args);
+      auto returnValue = result["returnValue"];
+      return Convert::convertJson2Value(env, returnValue);
+    } catch (const std::exception &e) {
+      throw Napi::Error::New(env, e.what());
+    }
+    catch (...) {
+      throw Napi::Error::New(env, "Unknown error occurred");
+    }
+  }
 void registerTouchCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void registerMouseCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void registerTransitionCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void registerAnimationCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void registerTriggerEventCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void registerPerformanceCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void registerNavigateBackInterceptCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
-static std::unordered_map<int64_t, std::shared_ptr<Napi::Reference<Napi::Value>>> jsValue;
-static int64_t jsValueId = 0;
+static std::unordered_map<int64_t, std::shared_ptr<Napi::Reference<Napi::Value>>> jsValueCache;
 Napi::Value registerJsValue(const Napi::CallbackInfo &info) {
-  auto ref = std::make_shared<Napi::Reference<Napi::Value>>(Napi::Persistent(info[0]));
-  auto v = jsValue.emplace(jsValueId++, ref);
-  return Napi::Number::New(info.Env(), v.first->first);
+  if (info[0].IsFunction()) {
+    info[0].As<Napi::Function>().Set("__syncCallback", Napi::Boolean::New(info.Env(), true));
+  }
+  auto jsId = sendToServerSync(info, __func__);
+  jsValueCache.emplace(jsId.As<Napi::Number>().Int64Value(), std::make_shared<Napi::Reference<Napi::Value>>(Napi::Persistent(info[0])));
+  return jsId;
 }
 Napi::Value unRegisterJsValue(const Napi::CallbackInfo &info) {
-  auto env =  info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 id必须为Number类型");
-  }
-  auto v = jsValue.find(info[0].As<Napi::Number>().Int32Value());
-  if (v != jsValue.end()) {
-    v->second->Unref();
-    jsValue.erase(v);
-  }
-  return env.Undefined();
+  jsValueCache.erase(info[0].As<Napi::Number>().Int64Value());
+  return sendToServerSync(info, __func__);
 }
 Napi::Value getJsValueById(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
+  if (info.Length() < 1) {
+    throw Napi::TypeError::New(info.Env(), "getJsValueById: Wrong number of arguments");
   }
   if (!info[0].IsNumber()) {
-    throw Napi::Error::New(env, "参数0 id必须为Number类型");
+    throw Napi::TypeError::New(info.Env(), "First argument must be a number");
   }
-  int id = info[0].As<Napi::Number>().Int32Value();
-  auto it = jsValue.find(id);
-  if (it == jsValue.end()) {
-    return env.Undefined();
+  /**
+   * Client                     Server
+   * registerJsValue
+   * worklet函数  ->   worklet函数
+   * getJsValue
+   * 普通函数 (问题点)  <----  worklet函数
+   * 
+   * 解决：本地存储删除取用；服务器存储删除，不取用。
+   */
+  auto jsId = info[0].As<Napi::Number>().Int64Value();
+  auto it = jsValueCache.find(jsId);
+  if (it != jsValueCache.end()) {
+    auto v = it->second;
+    return v->Value();
+  } else {
+    throw Napi::Error::New(info.Env(), "JsValue not found");
   }
-  return it->second->Value();
 }
 
 void registerFontFaceCallback(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsFunction()) {
-    throw Napi::Error::New(env, "参数必须为Function类型");
-  }
-  nlohmann::json args;
-  args[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, args);
+  sendToServerSync(info, __func__);
 }
 void setFeatureFlags(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsObject()) {
-    throw Napi::Error::New(env, "参数0 flags必须为Object类型");
-  }
-  nlohmann::json data;
-  data[0] = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, data);
+  sendToServerSync(info, __func__);
 }
 void updateMapCustomCallout(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsObject()) {
-    throw Napi::Error::New(env, "参数0 flags必须为Object类型");
-  }
-  nlohmann::json data = Convert::convertValue2Json(env, info[0]);
-  // 发送消息到 WebSocket
-  WebSocket::callStaticSync("SkylineRuntime", __func__, data);
+  sendToServerSync(info, __func__);
 }
 
 /**
  * TODO: 参数，返回值未确定
  */
 Napi::Value preloadAssets(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  if (info.Length() != 1) {
-    throw Napi::Error::New(env, "参数长度必须为1");
-  }
-  if (!info[0].IsString()) {
-    throw Napi::Error::New(env, "参数0 url必须为String类型");
-  }
-  std::string url = info[0].As<Napi::String>().Utf8Value();
-  nlohmann::json data;
-  data[0] = url;
-  // 发送消息到 WebSocket
-  auto result = WebSocket::callStaticSync("SkylineRuntime", __func__, data);
-  return Napi::String::New(env, result.dump());
+  return sendToServerSync(info, __func__);
 }
 
 void Init(Napi::Env env, Napi::Object exports) {

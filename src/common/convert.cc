@@ -29,7 +29,7 @@ using snowflake_t = snowflake<1534832906275L>;
 static snowflake_t callbackUuid;
 static snowflake_t sharedMemoryUuid;
 
-static std::map<std::string, Napi::FunctionReference *> funcMap;
+static std::map<std::string, Napi::FunctionReference *> clazzMap;
 
 #ifdef _SKYLINE_CLIENT_
 
@@ -45,22 +45,22 @@ void RegisteInstanceType(Napi::Env &env) {
   callbackUuid.init(2, 1);
   sharedMemoryUuid.init(4, 1);
   // 注册实例类型和对应的构造函数
-  funcMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
-  funcMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
-  funcMap["InputShadowNode"] = Skyline::InputShadowNode::GetClazz(env);
-  funcMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
-  funcMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
+  clazzMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
+  clazzMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
+  clazzMap["InputShadowNode"] = Skyline::InputShadowNode::GetClazz(env);
+  clazzMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
+  clazzMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
   // SwiperItemShadoNode就是少了一个w
-  funcMap["SwiperItemShadoNode"] = Skyline::SwiperItemShadowNode::GetClazz(env);
-  funcMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
-  funcMap["GridViewShadowNode"] = Skyline::GridViewShadowNode::GetClazz(env);
-  funcMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
-  funcMap["ListViewShadowNode"] = Skyline::ListViewShadowNode::GetClazz(env);
-  funcMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);
-  funcMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
-  funcMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
-  funcMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
-  funcMap["HeroShadowNode"] = Skyline::HeroShadowNode::GetClazz(env);
+  clazzMap["SwiperItemShadoNode"] = Skyline::SwiperItemShadowNode::GetClazz(env);
+  clazzMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
+  clazzMap["GridViewShadowNode"] = Skyline::GridViewShadowNode::GetClazz(env);
+  clazzMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
+  clazzMap["ListViewShadowNode"] = Skyline::ListViewShadowNode::GetClazz(env);
+  clazzMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);
+  clazzMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
+  clazzMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
+  clazzMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
+  clazzMap["HeroShadowNode"] = Skyline::HeroShadowNode::GetClazz(env);
 }
 #endif
 
@@ -101,6 +101,7 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
     if (isSync) {
       isSync = func.Get(Napi::String::New(env, "__syncCallback")).As<Napi::Boolean>().Value();
     }
+    isSync = true;
     jsonObj["callbackId"] = callbackId;
     jsonObj["syncCallback"] = isSync;
 
@@ -168,12 +169,11 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
       // 返回值是个函数，如makeShareable
       return Napi::Function::New(env, [data](const Napi::CallbackInfo &info) {
         auto env = info.Env();
-        nlohmann::json args;
+        nlohmann::json args = nlohmann::json::array();
         for (int i = 0; i < info.Length(); i++) {
           args[i] = convertValue2Json(env, info[i]);
         }
-        auto result = WebSocket::callStaticSync(
-            "functionData", data["instanceId"].get<std::string>(), args);
+        auto result = WebSocket::callStaticSync("functionData", data["instanceId"].get<std::string>(), args);
         auto returnValue = result["returnValue"];
 
         return Convert::convertJson2Value(env, returnValue);
@@ -182,8 +182,8 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
 #endif
 
     if (data.contains("instanceId") && data.contains("instanceType")) {
-      auto it = funcMap.find(data["instanceType"].get<std::string>());
-      if (it != funcMap.end()) {
+      auto it = clazzMap.find(data["instanceType"].get<std::string>());
+      if (it != clazzMap.end()) {
         try {
           Napi::FunctionReference *func = it->second;
           // 创建实例

@@ -77,9 +77,10 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   }
   {
     const jsValue = SkylineGlobal.runtime.getJsValueById(jsId)
+    console.info('jsValue:', jsValue)
     const result = jsValue()
     if (result !== 1) {
-      throw new Error('JsValue test failed!')
+      throw new Error(`JsValue test failed! ${result} !== 1`)
     }
   }
   {

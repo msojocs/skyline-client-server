@@ -227,7 +227,7 @@ namespace WebSocket {
             // Implement timeout handling logic here
             auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
             if (delta_ms > 3000) {
-                throw std::runtime_error("Operation timed out after 3 seconds");
+                throw std::runtime_error("Operation timed out after 3 seconds, request data:\n" + data.dump());
             }
             
             // Implement timeout handling logic here

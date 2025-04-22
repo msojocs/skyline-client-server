@@ -7,10 +7,14 @@
 namespace Skyline {
 Napi::FunctionReference *MutableValue::GetClazz(Napi::Env env) {
   auto func = DefineClass(
-      env, "Mutable",
-      {InstanceAccessor("value", &MutableValue::getValue, &MutableValue::setValue,
-                        static_cast<napi_property_attributes>(
-                            napi_writable | napi_configurable)),
+      env, "MutableValue",
+      {
+        InstanceMethod("installGetter", &MutableValue::installGetter, static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+        InstanceAccessor("value", &MutableValue::getValue, &MutableValue::setValue, static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+        InstanceAccessor("_value", &MutableValue::getValue, &MutableValue::setValue, static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+        InstanceAccessor("_animation", &MutableValue::getAnimation, &MutableValue::setAnimation, static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+        InstanceAccessor("_windowId", &MutableValue::getWindowId, &MutableValue::setWindowId, static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+        
       //  InstanceMethod("installGetter", &MutableValue::installGetter),
        InstanceAccessor("instanceId", &MutableValue::getInstanceId, nullptr,
                         static_cast<napi_property_attributes>(
@@ -36,14 +40,7 @@ MutableValue::MutableValue(const Napi::CallbackInfo &info)
 
 Napi::Value MutableValue::installGetter(const Napi::CallbackInfo &info) {
   auto env = info.Env();
-  // 发送消息到 WebSocket
-  nlohmann::json data;
-  for (int i = 0; i < info.Length(); i++) {
-    data[i] = Convert::convertValue2Json(env, info[i]);
-  }
-  WebSocket::callStaticSync("Mutable", __func__, data);
-
-  return env.Undefined();
+  return sendToServerSync(info, __func__);
 }
 Napi::Value MutableValue::getValue(const Napi::CallbackInfo &info) {
   return getProperty(info, "value");
@@ -54,13 +51,13 @@ void MutableValue::setValue(const Napi::CallbackInfo &info, const Napi::Value &v
 Napi::Value MutableValue::getAnimation(const Napi::CallbackInfo &info) {
   return getProperty(info, "_animation");
 }
-void MutableValue::setAnimation(const Napi::CallbackInfo &info) {
+void MutableValue::setAnimation(const Napi::CallbackInfo &info, const Napi::Value &value) {
   setProperty(info, "_animation");
 }
 Napi::Value MutableValue::getWindowId(const Napi::CallbackInfo &info) {
   return getProperty(info, "_windowId");
 }
-void MutableValue::setWindowId(const Napi::CallbackInfo &info) {
+void MutableValue::setWindowId(const Napi::CallbackInfo &info, const Napi::Value &value) {
   setProperty(info, "_windowId");
 }
 } // namespace Skyline

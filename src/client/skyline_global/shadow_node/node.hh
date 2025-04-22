@@ -66,6 +66,7 @@ std::vector<Napi::ClassPropertyDescriptor<T>> GetCommonMethods() {
     methods.push_back(Napi::InstanceWrap<T>::InstanceAccessor(
       "viewTag", &T::viewTag, nullptr,
       static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceAccessor("__secondaryAnimationMapperId", &T::__secondaryAnimationMapperId, nullptr, static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
   return methods;
 }
 
@@ -73,6 +74,7 @@ class ShadowNode : public BaseClient {
 public:
   ShadowNode(const Napi::CallbackInfo &info);
   static Napi::FunctionReference *GetClazz(Napi::Env env);
+  Napi::Value __secondaryAnimationMapperId(const Napi::CallbackInfo &info);
 /**
  * Available Shadow Node Methods:
  *

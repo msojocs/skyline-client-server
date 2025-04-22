@@ -31,9 +31,9 @@ installGetter: ƒ installGetter()
     Napi::Value getValue(const Napi::CallbackInfo& info);
     void setValue(const Napi::CallbackInfo& info, const Napi::Value &value);
     Napi::Value getAnimation(const Napi::CallbackInfo& info);
-    void setAnimation(const Napi::CallbackInfo& info);
+    void setAnimation(const Napi::CallbackInfo& info, const Napi::Value &value);
     Napi::Value getWindowId(const Napi::CallbackInfo& info);
-    void setWindowId(const Napi::CallbackInfo& info);
+    void setWindowId(const Napi::CallbackInfo& info, const Napi::Value &values);
     Napi::Value installGetter(const Napi::CallbackInfo& info);
   };
 }

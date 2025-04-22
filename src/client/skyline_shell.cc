@@ -96,16 +96,16 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
   }
 }
 void SkylineShell::setNotifyWindowReadyCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setNotifyRouteDoneCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setNavigateBackCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setNavigateBackDoneCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -124,13 +124,13 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setSendLogCallback(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::setSafeAreaEdgeInsets(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
@@ -220,7 +220,7 @@ void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
 }
 void SkylineShell::onPlatformBrightnessChanged(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 void SkylineShell::dispatchTouchStartEvent(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
@@ -235,10 +235,10 @@ void SkylineShell::dispatchTouchCancelEvent(const Napi::CallbackInfo &info) {
   sendToServerSync(info, __func__);
 }
 Napi::Value SkylineShell::dispatchKeyboardEvent(const Napi::CallbackInfo &info) {
-  return sendToServerAsync(info, __func__);
+  return sendToServerSync(info, __func__);
 }
 void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
-  sendToServerAsync(info, __func__);
+  sendToServerSync(info, __func__);
 }
 Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &info) {
   auto env = info.Env();
@@ -263,9 +263,8 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     // 写入数据
     memcpy(typedArray.Data(), buffer.Data(), buffer.Length());
     
-    WebSocket::callDynamicAsync(m_instanceId, __func__, args);
+    WebSocket::callDynamicSync(m_instanceId, __func__, args);
     return env.Undefined();
-    return sendToServerAsync(info, __func__);
   } catch (const std::exception& e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -275,7 +274,7 @@ Napi:: Value SkylineShell::dispatchTouchOverEvent(const Napi::CallbackInfo &info
   return sendToServerSync(info, __func__);
 }
 Napi::Value SkylineShell::notifyResourceLoad(const Napi::CallbackInfo &info) {
-  return sendToServerAsync(info, __func__);
+  return sendToServerSync(info, __func__);
 }
 Napi::Value SkylineShell::notifyNavigateTo(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);

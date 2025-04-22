@@ -3,7 +3,7 @@ cmake_policy(SET CMP0091 NEW)
 cmake_policy(SET CMP0042 NEW)
 # cmake_policy(SET CMP0167 NEW)
 
-project("module_example")
+project("module_skyline")
 
 # Improve dependency scanning and header file tracking
 set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)

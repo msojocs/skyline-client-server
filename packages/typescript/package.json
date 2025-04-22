@@ -1,0 +1,36 @@
+{
+  "name": "skyline-server-client",
+  "version": "0.0.1",
+  "description": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "rollup -c --configPlugin @rollup/plugin-typescript -w",
+    "build": "rollup -c --configPlugin @rollup/plugin-typescript"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/event-source-polyfill": "^1.0.5",
+    "@types/node": "^20.8.7",
+    "rollup": "^4.13.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@9.11.0+sha512.0a203ffaed5a3f63242cd064c8fb5892366c103e328079318f78062f24ea8c9d50bc6a47aa3567cabefd824d170e78fa2745ed1f16b132e16436146b7688f19b",
+  "dependencies": {
+    "@sapphire/snowflake": "^3.5.5",
+    "@trpc/client": "^11.0.2",
+    "@trpc/server": "^11.0.2",
+    "@ungap/url-search-params": "^0.2.2",
+    "abort-controller": "^3.0.0",
+    "event-source-polyfill": "^1.0.31",
+    "zod": "^3.24.2"
+  }
+}

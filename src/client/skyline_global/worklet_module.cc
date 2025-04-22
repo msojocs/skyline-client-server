@@ -1,6 +1,6 @@
-#include "../include/worklet_module.hh"
+#include "worklet_module.hh"
 #include "../websocket.hh"
-#include "../../include/convert.hh"
+#include "../../common/convert.hh"
 #include "napi.h"
 
 namespace Skyline {

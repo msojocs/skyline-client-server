@@ -1,7 +1,7 @@
 #include "image.hh"
 #include "napi.h"
 #include "../../websocket.hh"
-#include "../../../include/convert.hh"
+#include "../../../common/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *ImageShadowNode::GetClazz(Napi::Env env) {

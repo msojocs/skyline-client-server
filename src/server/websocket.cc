@@ -2,13 +2,13 @@
 #include "napi.h"
 #include <ixwebsocket/IXWebSocketServer.h>
 #include <memory>
-#include "../include/logger.hh"
+#include "../common/logger.hh"
 #include <nlohmann/json.hpp>
 #include <future>
 #include <queue>
 #include <synchapi.h>
-#include "../include/snowflake.hh"
-#include "../include/convert.hh"
+#include "../common/snowflake.hh"
+#include "../common/convert.hh"
 
 using Logger::logger;
 

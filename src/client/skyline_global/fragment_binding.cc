@@ -1,5 +1,5 @@
-#include "../include/fragment_binding.hh"
-#include "../../include/convert.hh"
+#include "fragment_binding.hh"
+#include "../../common/convert.hh"
 #include "../websocket.hh"
 
 

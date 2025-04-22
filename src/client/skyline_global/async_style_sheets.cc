@@ -1,4 +1,4 @@
-#include "../include/async_style_sheets.hh"
+#include "async_style_sheets.hh"
 #include "../websocket.hh"
 #include "napi.h"
 

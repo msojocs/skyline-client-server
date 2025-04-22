@@ -1,9 +1,9 @@
-#include "include/base_client.hh"
+#include "base_client.hh"
 #include "napi.h"
 #include "websocket.hh"
 #include <spdlog/spdlog.h>
 #include <windows.h>
-#include "../include/convert.hh"
+#include "../common/convert.hh"
 
 namespace Skyline {
 

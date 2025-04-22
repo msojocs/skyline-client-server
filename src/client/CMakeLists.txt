@@ -11,8 +11,8 @@ set(CLIENT_DIR_LIST
     skyline_global.cc
     crash_handler.cc
     base_client.cc
-    include/base_client.hh
-    include/page_context.hh
+    base_client.hh
+    skyline_global/page_context.hh
     skyline_global/page_context.cc
     ../common/convert.cc
     ../common/logger.cc
@@ -35,7 +35,7 @@ set(CLIENT_DIR_LIST
     skyline_global/shadow_node/swiper_item.cc
     skyline_global/shadow_node/grid_view.cc
     skyline_global/shadow_node/hero.cc
-    include/fragment_binding.hh
+    skyline_global/fragment_binding.hh
     skyline_global/fragment_binding.cc
 )
 
@@ -43,7 +43,7 @@ set(CLIENT_DIR_LIST
 set_source_files_properties(
     skyline_global/shadow_node/node.cc
     PROPERTIES
-    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node/node.hh;${CMAKE_CURRENT_SOURCE_DIR}/include/base_client.hh"
+    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node/node.hh;${CMAKE_CURRENT_SOURCE_DIR}/base_client.hh"
 )
 
 add_library(${CLIENT_NAME}

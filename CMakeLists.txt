@@ -95,6 +95,5 @@ include_directories(${CMAKE_JS_SRC})
 include_directories(${NODE_ADDON_API_DIR})
 
 
-add_subdirectory(src/client)
-add_subdirectory(src/server)
+add_subdirectory(src)
 ################test##################

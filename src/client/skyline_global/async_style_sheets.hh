@@ -1,7 +1,7 @@
 #ifndef __ASYNC_STYLE_SHEETS_HH__
 #define __ASYNC_STYLE_SHEETS_HH__
 #include <napi.h>
-#include "base_client.hh"
+#include "../base_client.hh"
 
 namespace Skyline {
   class AsyncStyleSheets: public Napi::ObjectWrap<AsyncStyleSheets>, public BaseClient {

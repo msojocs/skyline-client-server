@@ -1,11 +1,11 @@
 #include "skyline_global.hh"
-#include "include/page_context.hh"
-#include "include/runtime.hh"
-#include "include/worklet_module.hh"
-#include "include/gesture_handler_module.hh"
+#include "skyline_global/page_context.hh"
+#include "skyline_global/runtime.hh"
+#include "skyline_global/worklet_module.hh"
+#include "skyline_global/gesture_handler_module.hh"
 #include "napi.h"
 #include "websocket.hh"
-#include "../include/convert.hh"
+#include "../common/convert.hh"
 
 namespace SkylineGlobal {
   void Init(Napi::Env env) {

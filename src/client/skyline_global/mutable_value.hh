@@ -1,7 +1,7 @@
 #ifndef __MUTABLE_HH__
 #define __MUTABLE_HH__
 
-#include "base_client.hh"
+#include "../base_client.hh"
 #include "napi.h"
 
 namespace Skyline {

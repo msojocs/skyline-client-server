@@ -1,7 +1,7 @@
 
-#include "../include/gesture_handler_module.hh"
+#include "gesture_handler_module.hh"
 #include <nlohmann/json.hpp>
-#include "../include/convert.hh"
+#include "../../common/convert.hh"
 #include "../websocket.hh"
 
 namespace Skyline {

@@ -12,9 +12,9 @@
 #include <synchapi.h>
 #include <napi.h>
 #include <thread>
-#include "../include/snowflake.hh"
-#include "../include/convert.hh"
-#include "../include/logger.hh"
+#include "../common/snowflake.hh"
+#include "../common/convert.hh"
+#include "../common/logger.hh"
 using Logger::logger;
 
 namespace WebSocket {

@@ -2,7 +2,7 @@
 #include <sys/types.h>
 #include "websocket.hh"
 #include <ixwebsocket/IXWebSocketServer.h>
-#include "../include/logger.hh"
+#include "../common/logger.hh"
 using Logger::logger;
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {

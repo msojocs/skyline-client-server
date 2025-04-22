@@ -1,5 +1,5 @@
-#include "../include/mutable_value.hh"
-#include "../../include/convert.hh"
+#include "mutable_value.hh"
+#include "../../common/convert.hh"
 #include "../websocket.hh"
 #include "napi.h"
 

@@ -1,6 +1,6 @@
 #ifndef __SHADOW_NODE__HH__
 #define __SHADOW_NODE__HH__
-#include "../../include/base_client.hh"
+#include "../../base_client.hh"
 #include <napi.h>
 
 namespace Skyline {

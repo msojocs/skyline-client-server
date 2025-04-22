@@ -1,6 +1,6 @@
 #ifndef __FRAGMENT_BINDING_HH__
 #define __FRAGMENT_BINDING_HH__
-#include "base_client.hh"
+#include "../base_client.hh"
 #include "napi.h"
 
 

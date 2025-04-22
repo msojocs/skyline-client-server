@@ -4,8 +4,8 @@
 #include "skyline_shell.hh"
 #include "websocket.hh"
 #include "skyline_debug_info.hh"
-#include "../include/logger.hh"
-#include "../include/convert.hh"
+#include "../common/logger.hh"
+#include "../common/convert.hh"
 #include "crash_handler.hh"
 
 using Logger::logger;

@@ -1,7 +1,7 @@
-#include "../include/convert.hh"
-#include "../client/include/async_style_sheets.hh"
-#include "../client/include/fragment_binding.hh"
-#include "../client/include/mutable_value.hh"
+#include "convert.hh"
+#include "../client/skyline_global/async_style_sheets.hh"
+#include "../client/skyline_global/fragment_binding.hh"
+#include "../client/skyline_global/mutable_value.hh"
 #include "../client/skyline_global/shadow_node/list_view.hh"
 #include "../client/skyline_global/shadow_node/grid_view.hh"
 #include "../client/skyline_global/shadow_node/scroll_view.hh"
@@ -15,7 +15,7 @@
 #include "../client/skyline_global/shadow_node/hero.hh"
 #include "../client/skyline_global/shadow_node/input.hh"
 #include "../client/websocket.hh"
-#include "../include/snowflake.hh"
+#include "../common/snowflake.hh"
 #include "napi.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>

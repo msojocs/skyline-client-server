@@ -8,7 +8,7 @@
 #include <spdlog/spdlog.h>
 #include <windows.h>
 #include "skyline_global.hh"
-#include "../include/convert.hh"
+#include "../common/convert.hh"
 namespace SkylineShell {
 
 

@@ -1,9 +1,9 @@
-#include "../include/page_context.hh"
+#include "page_context.hh"
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include "../websocket.hh"
-#include "../../include/convert.hh"
+#include "../../common/convert.hh"
 
 namespace Skyline {
 void PageContext::Init(Napi::Env env, Napi::Object exports) {

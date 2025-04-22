@@ -1,7 +1,7 @@
 #include "swiper.hh"
 #include "napi.h"
 #include "../../websocket.hh"
-#include "../../../include/convert.hh"
+#include "../../../common/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *SwiperShadowNode::GetClazz(Napi::Env env) {

@@ -1,5 +1,5 @@
-#include "../include/runtime.hh"
-#include "../../include/convert.hh"
+#include "runtime.hh"
+#include "../../common/convert.hh"
 #include "../websocket.hh"
 #include "napi.h"
 #include <cstdint>

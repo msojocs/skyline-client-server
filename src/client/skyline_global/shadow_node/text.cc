@@ -1,7 +1,7 @@
 #include "text.hh"
 #include "napi.h"
 #include "../../websocket.hh"
-#include "../../../include/convert.hh"
+#include "../../../common/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {

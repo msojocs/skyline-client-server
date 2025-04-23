@@ -2,6 +2,7 @@
 #define __SHADOW_NODE__HH__
 #include "../../base_client.hh"
 #include <napi.h>
+#include <vector>
 
 namespace Skyline {
 template<typename T>
@@ -180,6 +181,10 @@ public:
   Napi::Value splice(const Napi::CallbackInfo &info);
   Napi::Value spliceBefore(const Napi::CallbackInfo &info);
   Napi::Value updateStyle(const Napi::CallbackInfo &info);
+  private:
+  int styleScope;
+  std::string id;
+  std::vector<std::string> classList;
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

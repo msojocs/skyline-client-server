@@ -6,7 +6,12 @@
 using Logger::logger;
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {
+
+  #ifdef _WIN32
+  // Required on Windows
   ix::initNetSystem();
+  #endif
+  
   Logger::Init();
   logger->info("initWebSocket end");
   exports.Set("start", Napi::Function::New(env, WebSocketServer::start));
@@ -17,4 +22,4 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   return exports;
 }
 
-NODE_API_MODULE(cmnative, Init)
+NODE_API_MODULE(skyline_server, Init)

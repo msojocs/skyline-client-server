@@ -12,7 +12,7 @@ try {
     // process.exit(1)
   })
   require('skyline-addon/build/skyline.node')
-  const server = require('D:/github/skyline-client/build/skylineServer.node')
+  const server = require('D:/github/skyline-client/packages/native/build/skylineServer.node')
   const g = global as any
   g.window = g
   window = g
@@ -129,6 +129,9 @@ try {
                 returnValue: result,
               },
             }));
+            if (req.action === 'matches' && result === true) {
+              console.info('matches:', instance, params, result)
+            }
           }
         } else {
           ws.send(JSON.stringify({

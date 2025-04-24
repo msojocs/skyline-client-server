@@ -21,4 +21,4 @@ mv *.node "$root_dir/packages/nwjs/node_modules/skyline-server/skylineServer.nod
 
 #pack
 cd "$root_dir/packages"
-tar -zcf "$root_dir/tmp/upload/skyline-nwjs-win32-x64.tar.gz" nwjs
+tar -zcf "$root_dir/tmp/upload/skyline-skylineServer-win32-x64.tar.gz" nwjs

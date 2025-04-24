@@ -12,7 +12,7 @@ try {
     // process.exit(1)
   })
   require('skyline-addon/build/skyline.node')
-  const server = require('D:/github/skyline-client/packages/native/build/skylineServer.node')
+  const server = require('skyline-server/skylineServer.node')
   const g = global as any
   g.window = g
   window = g
@@ -34,6 +34,10 @@ try {
         params?: any[]
         propertyAction?: 'set' | 'get'
       }
+    }
+    if (req.action === 'disconnected') {
+      (globalThis as any).parentSource.postMessage('disconnected')
+      return
     }
     try {
       log.info(`Received message => ${message}`);

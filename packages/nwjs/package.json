@@ -1,0 +1,15 @@
+{
+  "name": "skyline-win",
+  "main": "index.html",
+  "webview": {
+    "partitions": [
+      {
+        "name": "trusted",
+        "accessible_resources": [
+          "<all_urls>"
+        ]
+      }
+    ]
+  },
+    "chromium-args": "--disable-features=CrossSiteDocumentBlockingIfIsolating,CrossSiteDocumentBlockingAlways,BlockInsecurePrivateNetworkRequests --enable-experimental-web-platform-features -ignore-certificate-errors --disable-quic --allow-insecure-localhost --ignore-certificate-errors-spki-list=TWToqKvMjzR/4BKV/Dv8/bwL0BIdU5bClW2BMayCYB8= --js-flags=--harmony-weak-refs --enable-experimental-webassembly-features --ignore-gpu-blacklist --disable-features=RendererCodeIntegrity --remote-debugging-port=9222"
+  }

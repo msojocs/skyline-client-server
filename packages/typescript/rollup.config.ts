@@ -16,7 +16,7 @@ const options: RollupOptions[] = [
     output: {
       strict: false,
       // dir: outputDir,
-      dir: 'D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw',
+      dir: '../nwjs/webview',
       // file: 'server.js',
       format: 'cjs',
       // banner: (chunk) => {

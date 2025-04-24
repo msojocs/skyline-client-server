@@ -1,0 +1,23 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skyline webview</title>
+</head>
+
+<body>
+    <h1>Welcome to Skyline Server</h1>
+    <p>This is a server, run on windows or wine.</p>
+</body>
+<script>
+    window.addEventListener("message", (event) => {
+        if (event.data == 'set-source') {
+            console.info('set source')
+            global.parentSource = globalThis.parentSource = event.source
+        }
+    }, false);
+</script>
+<script src="./server.js"></script>
+
+</html>

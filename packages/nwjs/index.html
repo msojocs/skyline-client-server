@@ -1,0 +1,46 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skyline Server</title>
+</head>
+
+<body>
+    <h1>Welcome to Skyline Server</h1>
+    <p>This is a server, run on windows or wine.</p>
+    <button onclick="chrome.runtime.reload()">Reload</button>
+    <webview id="skyline" partition='trusted' src="webview/index.html" style="width:640px; height:480px" allownw></webview>
+
+</body>
+<!-- <script src="server.js"></script> -->
+<!-- <script src="index.js"></script> -->
+ <script>
+    let webview = document.getElementById('skyline');
+    webview.addEventListener('loadstop', () => {
+        webview.contentWindow.postMessage('set-source')
+    })
+    webview.addEventListener('crashed', () => {
+        console.info('crashed')
+        webview.reload()
+    })
+    window.addEventListener('message', (event) => {
+        console.info('msg from webview', event)
+        if (event.data === 'disconnected') {
+            console.info('disconnected, restart')
+            const wv = webview.cloneNode()
+            wv.addEventListener('loadstop', () => {
+                wv.contentWindow.postMessage('set-source')
+            })
+            wv.addEventListener('crashed', () => {
+                console.info('crashed')
+                wv.reload()
+            })
+            webview.remove()
+            webview = wv
+            document.body.appendChild(wv)
+        }
+    })
+ </script>
+
+</html>

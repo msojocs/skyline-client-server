@@ -51,7 +51,7 @@ jobs:
 
       - name: Build
         run: |
-          scripts/ci/linux.sh ${{ matrix.arch }} ${{ steps.tag.outputs.tag }}
+          scripts/ci/native-linux.sh ${{ matrix.arch }} ${{ steps.tag.outputs.tag }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

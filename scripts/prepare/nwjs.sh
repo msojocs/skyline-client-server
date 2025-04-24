@@ -12,7 +12,7 @@ mkdir -p "$PROJECT_ROOT/packages/native/thirds/nwjs"
 
 # Define the URL and download destination
 NODE_LIB_URL="https://dl.nwjs.io/v0.54.1/x64/node.lib"
-NODE_LIB_DEST="$PROJECT_ROOT/thirds/nwjs/node64.lib"
+NODE_LIB_DEST="$PROJECT_ROOT/packages/native/thirds/nwjs/node64.lib"
 
 echo "Downloading node.lib from $NODE_LIB_URL to $NODE_LIB_DEST..."
 

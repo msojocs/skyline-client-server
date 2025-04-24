@@ -53,7 +53,7 @@ jobs:
           
       - name: Build
         run: |
-          powershell scripts/ci/windows.ps1 ${{ matrix.arch }} ${{ steps.tag.outputs.tag }}
+          powershell scripts/ci/native-windows.ps1 ${{ matrix.arch }} ${{ steps.tag.outputs.tag }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

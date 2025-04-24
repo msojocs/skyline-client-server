@@ -1,6 +1,8 @@
 #!/bin/bash
 set -ex
 root_dir=$(cd `dirname $0`/../.. && pwd -P)
+arch=$1
+tag=$2
 
 # 下载Artifact之后打包
 
@@ -21,4 +23,4 @@ mv *.node "$root_dir/packages/nwjs/node_modules/skyline-server/skylineServer.nod
 
 #pack
 cd "$root_dir/packages"
-tar -zcf "$root_dir/tmp/upload/skyline-skylineServer-win32-x64.tar.gz" nwjs
+tar -zcf "$root_dir/tmp/upload/skyline-skylineServer-win32-$arch-$tag.tar.gz" nwjs

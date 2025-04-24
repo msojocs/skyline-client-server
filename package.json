@@ -5,8 +5,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "rollup -c --configPlugin @rollup/plugin-typescript -w",
-    "build": "rollup -c --configPlugin @rollup/plugin-typescript"
+    "prepare": "node scripts/prepare/nwjs.js"
   },
   "keywords": [],
   "author": "",

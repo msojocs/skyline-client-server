@@ -35,4 +35,5 @@ target_link_libraries(${SERVER_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${SERVER_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build
 set_target_properties(${SERVER_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../nwjs/node_modules/skyline-server)
+set_target_properties(${SERVER_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../nwjs/node_modules/skyline-server)
 set_target_properties(${SERVER_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

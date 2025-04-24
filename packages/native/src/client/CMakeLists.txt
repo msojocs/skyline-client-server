@@ -85,4 +85,5 @@ target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build
 set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
+set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set_target_properties(${CLIENT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

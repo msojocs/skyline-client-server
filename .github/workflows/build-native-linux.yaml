@@ -21,6 +21,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: latest
+          run_install: false
 
       - name: Generate TAG
         id: Tag

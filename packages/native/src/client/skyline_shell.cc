@@ -233,7 +233,7 @@ void SkylineShell::notifyAppLaunch(const Napi::CallbackInfo &info) {
   #ifdef _WIN32
   Sleep(500);
   #else
-  usleep(500);
+  usleep(500000);
   #endif
   sendToServerSync(info, __func__);
 }

@@ -178,8 +178,8 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
     if (!info[5].IsBoolean()) {
       throw Napi::Error::New(env, "参数5 hideWindow必须为Boolean类型");
     }
-    if (!info[6].IsString()) {
-      throw Napi::Error::New(env, "参数6 sharedMemoryKey必须为String类型");
+    if (!info[6].IsArrayBuffer()) {
+      throw Napi::Error::New(env, "参数6 sharedMemoryKey必须为ArrayBuffer类型");
     }
     if (!info[7].IsString()) {
       throw Napi::Error::New(env, "参数7 skylineAddonPath必须为String类型");
@@ -190,7 +190,15 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
     auto height = info[3].As<Napi::Number>().Int32Value();
     auto devicePixelRatio = info[4].As<Napi::Number>().Int32Value();
     auto hideWindow = info[5].As<Napi::Boolean>().Value();
-    auto sharedMemoryKey = info[6].As<Napi::String>().Utf8Value();
+    auto sharedMemory = info[6].As<Napi::ArrayBuffer>();
+    char * addr = (char *)sharedMemory.Data();
+    std::string sharedMemoryKey;
+    if (addr[0] == 'k' && addr[1] == 'e' && addr[2] == 'y' && addr[3] == ':') {
+      // 共享内存key
+      sharedMemoryKey = std::string(addr + 4);
+    } else {
+      throw Napi::Error::New(env, "共享内存key错误");
+    }
 
     // 获取Server端的skyline路径
     nlohmann::json data1;

@@ -61,6 +61,10 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
 
 SkylineShell::SkylineShell(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<SkylineShell>(info) {
+      auto env = info.Env();
+      if (!env.Global().Has("__sharedMemory")) {
+        throw Napi::Error::New(env, "共享内存模块未加载！");
+      }
   m_instanceId = sendConstructorToServerSync(info, __func__);
 }
 

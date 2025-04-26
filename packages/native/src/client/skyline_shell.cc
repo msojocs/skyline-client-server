@@ -260,6 +260,9 @@ void SkylineShell::dispatchWheelEvent(const Napi::CallbackInfo &info) {
 }
 Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &info) {
   auto env = info.Env();
+  if (!env.Global().Has("__sharedMemory")) {
+    throw Napi::Error::New(env, "共享内存模块未加载！");
+  }
   try {
     nlohmann::json args;
     args[0] = Convert::convertValue2Json(env, info[0]);
@@ -267,7 +270,6 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     args[2] = Convert::convertValue2Json(env, info[2]);
     args[3] = Convert::convertValue2Json(env, info[3]);
     // args[4] = Convert::convertValue2Json(env, info[4]);
-    
     auto sharedMemory = env.Global().Get("__sharedMemory").As<Napi::Object>();
     std::string key = "resource_" + std::to_string(info[0].As<Napi::Number>().Int32Value());
     args[4] = key;

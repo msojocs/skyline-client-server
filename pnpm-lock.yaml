@@ -23,6 +23,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
 
+  packages/nwjs: {}
+
   packages/typescript:
     dependencies:
       '@sapphire/snowflake':

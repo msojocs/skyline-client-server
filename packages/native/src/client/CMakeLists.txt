@@ -80,7 +80,6 @@ endif()
 # 添加_SKYLINE_CLIENT_标记
 target_compile_definitions(${CLIENT_NAME} PRIVATE _SKYLINE_CLIENT_)
 target_link_libraries(${CLIENT_NAME} PRIVATE spdlog::spdlog)
-target_link_libraries(${CLIENT_NAME} PRIVATE ixwebsocket::ixwebsocket)
 target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build

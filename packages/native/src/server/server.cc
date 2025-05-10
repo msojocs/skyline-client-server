@@ -1,16 +1,10 @@
 #include <napi.h>
 #include <sys/types.h>
 #include "websocket.hh"
-#include <ixwebsocket/IXWebSocketServer.h>
 #include "../common/logger.hh"
 using Logger::logger;
 
 static Napi::Object Init(Napi::Env env, Napi::Object exports) {
-
-  #ifdef _WIN32
-  // Required on Windows
-  ix::initNetSystem();
-  #endif
   
   Logger::Init();
   logger->info("initWebSocket end");

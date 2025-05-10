@@ -35,7 +35,16 @@ void sendMsg(const Napi::CallbackInfo &info) {
     throw Napi::Error::New(info.Env(), "No clients connected");
   }
   logger->info("send to client: {}", message);
-  clients.begin()->get()->send(message);
+  for (auto it = clients.begin(); it != clients.end(); ++it) {
+    if (it->get() == nullptr) {
+      continue;
+    }
+    if (it->get()->getReadyState() != ix::ReadyState::Open) {
+      continue;
+    }
+    it->get()->send(message);
+  }
+  
 }
 int startInner(std::string &host, int port) {
   server = std::make_shared<ix::WebSocketServer>(port, host);

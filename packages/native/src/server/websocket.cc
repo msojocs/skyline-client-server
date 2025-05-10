@@ -266,7 +266,7 @@ void handleClientMessages() {
         
         {
             // logger->info("Get clientSocketsMutex[loop] lock...");
-            std::lock_guard<std::mutex> lock(clientSocketsMutex);
+            // std::lock_guard<std::mutex> lock(clientSocketsMutex);
             // logger->info("Get clientSocketsMutex[loop] lock ok.");
             currentSockets = clientSockets;
         }
@@ -307,7 +307,7 @@ void handleClientMessages() {
                     // 清理客户端缓冲区
                     {
                         // logger->info("Get clientBuffersMutex lock...");
-                        std::lock_guard<std::mutex> lock(clientBuffersMutex);
+                        // std::lock_guard<std::mutex> lock(clientBuffersMutex);
                         // logger->info("Get clientBuffersMutex lock ok.");
                         clientBuffers.erase(clientSocket);
                     }
@@ -334,7 +334,7 @@ void handleClientMessages() {
                     // Remove client from list
                     {
                         // logger->info("Get clientSocketsMutex[disconnected] lock...");
-                        std::lock_guard<std::mutex> lock(clientSocketsMutex);
+                        // std::lock_guard<std::mutex> lock(clientSocketsMutex);
                         // logger->info("Get clientSocketsMutex[disconnected] lock ok.");
                         auto sockIt = std::find(clientSockets.begin(), clientSockets.end(), clientSocket);
                         if (sockIt != clientSockets.end()) {
@@ -351,7 +351,7 @@ void handleClientMessages() {
                     // 清理客户端缓冲区
                     {
                       // logger->info("Get clientBuffersMutex[clean] lock...");
-                        std::lock_guard<std::mutex> lock(clientBuffersMutex);
+                        // std::lock_guard<std::mutex> lock(clientBuffersMutex);
                         // logger->info("Get clientBuffersMutex[clean] lock ok.");
                         clientBuffers.erase(clientSocket);
                     }
@@ -359,7 +359,7 @@ void handleClientMessages() {
                     // Remove client from list
                     {
                       // logger->info("Get clientSocketsMutex[clean] lock...");
-                        std::lock_guard<std::mutex> lock(clientSocketsMutex);
+                        // std::lock_guard<std::mutex> lock(clientSocketsMutex);
                         // logger->info("Get clientSocketsMutex[clean] lock ok.");
                         auto sockIt = std::find(clientSockets.begin(), clientSockets.end(), clientSocket);
                         if (sockIt != clientSockets.end()) {
@@ -471,7 +471,7 @@ void stop(const Napi::CallbackInfo &info) {
     
     // Close all client sockets
     {
-        std::lock_guard<std::mutex> lock(clientSocketsMutex);
+        // std::lock_guard<std::mutex> lock(clientSocketsMutex);
         for (auto clientSocket : clientSockets) {
             closeSocket(clientSocket);
         }
@@ -543,7 +543,7 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
     
     // Check if any clients are connected
     {
-      std::lock_guard<std::mutex> lock(clientSocketsMutex);
+      // std::lock_guard<std::mutex> lock(clientSocketsMutex);
       
       if (clientSockets.empty()) {
           throw Napi::Error::New(info.Env(), "No clients connected");

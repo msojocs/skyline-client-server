@@ -101,7 +101,7 @@ namespace WebSocket {
                     auto it = wsRequest.find(id);
                     if (it != wsRequest.end()) {
                         it->second->set_value(completeMessage);
-                        std::lock_guard<std::mutex> lock(wsRequestMutex);
+                        // std::lock_guard<std::mutex> lock(wsRequestMutex);
                         wsRequest.erase(it);
                     } else {
                         logger->error("ID not found: {}", id.get<std::string>());
@@ -110,7 +110,7 @@ namespace WebSocket {
             } else if (json.contains("type")) {
                 bool isCurrentlyBlocked = false;
                 {
-                    std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                    // std::lock_guard<std::mutex> lock(callbackQueueMutex);
                     isCurrentlyBlocked = blocked;
                     
                     if (isCurrentlyBlocked) {
@@ -171,7 +171,7 @@ namespace WebSocket {
                                         std::string message(lengthPrefix, 4);
                                         message.append(callbackContent);
                                         
-                                        std::lock_guard<std::mutex> lock(socketMutex);
+                                        // std::lock_guard<std::mutex> lock(socketMutex);
                                         if (socketFd != INVALID_SOCKET) {
                                             int sendResult = send(socketFd, message.c_str(), message.length(), 0);
                                             if (sendResult == SOCKET_ERROR) {
@@ -227,7 +227,7 @@ namespace WebSocket {
                                         std::string message(lengthPrefix, 4);
                                         message.append(callbackContent);
                                         
-                                        std::lock_guard<std::mutex> lock(socketMutex);
+                                        // std::lock_guard<std::mutex> lock(socketMutex);
                                         if (socketFd != INVALID_SOCKET) {
                                             int sendResult = send(socketFd, message.c_str(), message.length(), 0);
                                             if (sendResult == SOCKET_ERROR) {
@@ -266,7 +266,7 @@ namespace WebSocket {
         while (shouldRun && isConnected) {
             SOCKET localSocketFd;
             {
-                std::lock_guard<std::mutex> lock(socketMutex);
+                // std::lock_guard<std::mutex> lock(socketMutex);
                 localSocketFd = socketFd;
             }
             
@@ -274,7 +274,7 @@ namespace WebSocket {
                 logger->error("Socket is invalid in receive thread");
                 
                 {
-                    std::lock_guard<std::mutex> lock(connectionMutex);
+                    // std::lock_guard<std::mutex> lock(connectionMutex);
                     isConnected = false;
                 }
                 
@@ -295,7 +295,7 @@ namespace WebSocket {
                     logger->info("Socket connection closed by server");
                     
                     {
-                        std::lock_guard<std::mutex> lock(connectionMutex);
+                        // std::lock_guard<std::mutex> lock(connectionMutex);
                         isConnected = false;
                     }
                     
@@ -309,7 +309,7 @@ namespace WebSocket {
 #endif
                     
                     {
-                        std::lock_guard<std::mutex> lock(connectionMutex);
+                        // std::lock_guard<std::mutex> lock(connectionMutex);
                         isConnected = false;
                     }
                     
@@ -340,7 +340,7 @@ namespace WebSocket {
                         logger->info("Socket connection closed by server");
                         
                         {
-                            std::lock_guard<std::mutex> lock(connectionMutex);
+                            // std::lock_guard<std::mutex> lock(connectionMutex);
                             isConnected = false;
                         }
                         
@@ -354,7 +354,7 @@ namespace WebSocket {
 #endif
                         
                         {
-                            std::lock_guard<std::mutex> lock(connectionMutex);
+                            // std::lock_guard<std::mutex> lock(connectionMutex);
                             isConnected = false;
                         }
                         
@@ -393,13 +393,13 @@ namespace WebSocket {
         
         // 关闭连接
         {
-            std::lock_guard<std::mutex> lock(connectionMutex);
+            // std::lock_guard<std::mutex> lock(connectionMutex);
             isConnected = false;
         }
         
         // 关闭套接字
         {
-            std::lock_guard<std::mutex> lock(socketMutex);
+            // std::lock_guard<std::mutex> lock(socketMutex);
             if (socketFd != INVALID_SOCKET) {
                 closeSocket(socketFd);
                 socketFd = INVALID_SOCKET;
@@ -413,7 +413,7 @@ namespace WebSocket {
         
         // 清理请求
         {
-            std::lock_guard<std::mutex> lock(wsRequestMutex);
+            // std::lock_guard<std::mutex> lock(wsRequestMutex);
             for (auto& request : wsRequest) {
                 try {
                     request.second->set_exception(std::make_exception_ptr(std::runtime_error("Connection closed")));
@@ -426,7 +426,7 @@ namespace WebSocket {
         
         // 清理回调队列
         {
-            std::lock_guard<std::mutex> lock(callbackQueueMutex);
+            // std::lock_guard<std::mutex> lock(callbackQueueMutex);
             while (!callbackQueue.empty()) {
                 callbackQueue.pop();
             }
@@ -450,7 +450,7 @@ namespace WebSocket {
         
         // Create socket
         {
-            std::lock_guard<std::mutex> lock(socketMutex);
+            // std::lock_guard<std::mutex> lock(socketMutex);
             socketFd = socket(AF_INET, SOCK_STREAM, 0);
             if (socketFd == INVALID_SOCKET) {
 #ifdef _WIN32
@@ -481,7 +481,7 @@ namespace WebSocket {
         
         // Connect to server
         {
-            std::lock_guard<std::mutex> lock(socketMutex);
+            // std::lock_guard<std::mutex> lock(socketMutex);
             if (connect(socketFd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
 #ifdef _WIN32
                 int error = WSAGetLastError();
@@ -499,7 +499,7 @@ namespace WebSocket {
         }
         
         {
-            std::lock_guard<std::mutex> lock(connectionMutex);
+            // std::lock_guard<std::mutex> lock(connectionMutex);
             isConnected = true;
         }
         
@@ -514,7 +514,7 @@ namespace WebSocket {
         
         bool isSocketConnected = false;
         {
-            std::lock_guard<std::mutex> lock(connectionMutex);
+            // std::lock_guard<std::mutex> lock(connectionMutex);
             isSocketConnected = isConnected;
         }
         
@@ -531,7 +531,7 @@ namespace WebSocket {
         // Sleep(1000);
         bool isSocketConnected = false;
         {
-            std::lock_guard<std::mutex> lock(connectionMutex);
+            // std::lock_guard<std::mutex> lock(connectionMutex);
             isSocketConnected = isConnected;
         }
         
@@ -540,7 +540,7 @@ namespace WebSocket {
         }
         
         {
-            std::lock_guard<std::mutex> lock(callbackQueueMutex);
+            // std::lock_guard<std::mutex> lock(callbackQueueMutex);
             blocked = true;
         }
         
@@ -561,16 +561,16 @@ namespace WebSocket {
         
         {
             int bytesSent;
-            std::lock_guard<std::mutex> lock(socketMutex);
+            // std::lock_guard<std::mutex> lock(socketMutex);
             if (socketFd == INVALID_SOCKET) {
-                std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                // std::lock_guard<std::mutex> lock(callbackQueueMutex);
                 blocked = false;
                 throw std::runtime_error("Socket is invalid");
             }
             bytesSent = send(socketFd, message.c_str(), message.length(), 0);
             logger->info("Send bytes {}, total length {}", bytesSent, message.length());
             if (bytesSent < 0) {
-                std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                // std::lock_guard<std::mutex> lock(callbackQueueMutex);
                 blocked = false;
     #ifdef _WIN32
                 throw std::runtime_error("Failed to send data to server: " + std::to_string(WSAGetLastError()));
@@ -584,7 +584,7 @@ namespace WebSocket {
         std::future<std::string> futureObj = promiseObj->get_future();
         
         {
-            std::lock_guard<std::mutex> lock(wsRequestMutex);
+            // std::lock_guard<std::mutex> lock(wsRequestMutex);
             logger->info("Adding request to wsRequest map with ID: {}", id);
             wsRequest.emplace(id, promiseObj);
             if (wsRequest.find(id) == wsRequest.end()) {
@@ -599,7 +599,7 @@ namespace WebSocket {
             bool hasQueuedItem = false;
             
             {
-                std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                // std::lock_guard<std::mutex> lock(callbackQueueMutex);
                 if (!callbackQueue.empty()) {
                     queuedJson = callbackQueue.front();
                     callbackQueue.pop();
@@ -713,7 +713,7 @@ namespace WebSocket {
                                 
                                 // Send the response within its own scope to ensure the lock is released
                                 {
-                                    std::lock_guard<std::mutex> lock(socketMutex);
+                                    // std::lock_guard<std::mutex> lock(socketMutex);
                                     if (socketFd != INVALID_SOCKET) {
                                         int sendResult = send(socketFd, messageCopy.c_str(), messageCopy.length(), 0);
                                         if (sendResult == SOCKET_ERROR) {
@@ -754,12 +754,12 @@ namespace WebSocket {
             auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
             if (delta_ms > 5000) {
                 {
-                    std::lock_guard<std::mutex> lock(wsRequestMutex);
+                    // std::lock_guard<std::mutex> lock(wsRequestMutex);
                     wsRequest.erase(id);
                 }
                 
                 {
-                    std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                    // std::lock_guard<std::mutex> lock(callbackQueueMutex);
                     blocked = false;
                 }
                 logger->error("Operation timed out after 5 seconds, request data:\n" + data.dump());
@@ -778,7 +778,7 @@ namespace WebSocket {
         std::string result = futureObj.get();
         
         {
-            std::lock_guard<std::mutex> lock(callbackQueueMutex);
+            // std::lock_guard<std::mutex> lock(callbackQueueMutex);
             blocked = false;
         }
         
@@ -803,7 +803,7 @@ namespace WebSocket {
         
         bool isSocketConnected = false;
         {
-            std::lock_guard<std::mutex> lock(connectionMutex);
+            // std::lock_guard<std::mutex> lock(connectionMutex);
             isSocketConnected = isConnected;
         }
         
@@ -827,7 +827,7 @@ namespace WebSocket {
         message.append(messageContent);
         
         std::thread t([message]() {
-            std::lock_guard<std::mutex> lock(socketMutex);
+            // std::lock_guard<std::mutex> lock(socketMutex);
             if (socketFd != INVALID_SOCKET) {
                 int ret = send(socketFd, message.c_str(), message.length(), 0);
                 if (ret == SOCKET_ERROR) {

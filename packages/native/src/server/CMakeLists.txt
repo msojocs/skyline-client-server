@@ -30,7 +30,6 @@ else()
 endif()
 
 target_link_libraries(${SERVER_NAME} PRIVATE spdlog::spdlog)
-target_link_libraries(${SERVER_NAME} PRIVATE ixwebsocket::ixwebsocket)
 target_link_libraries(${SERVER_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${SERVER_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build

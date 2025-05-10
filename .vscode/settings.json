@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "D:/github/skyline-client/packages/native",
+    "cmake.sourceDirectory": "D:/github/skyline-client-server/packages/native",
     "clangd.arguments": [
         // 让 Clangd 生成更详细的日志
         // "--log=verbose",

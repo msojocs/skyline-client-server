@@ -26,6 +26,117 @@ namespace WebSocket {
     std::queue<nlohmann::json> callbackQueue;
     bool blocked = false;
 
+    void processMessage(std::string &message) {
+
+        logger->info("received message: {}", message);
+        // Logger::log("received message: %s", msg->str.c_str());
+        if (message.length() == 0) {
+            logger->error("received message is empty!");
+            return;
+        }
+        nlohmann::json json = nlohmann::json::parse(message);
+        if (json["type"].empty() && json.contains("id"))
+        {
+            // type 为空, id不空，是回复
+            auto id = json["id"];
+            logger->info("received message: {}", json["id"].get<std::string>());
+            if (wsRequest.find(id) != wsRequest.end())
+            {
+                wsRequest[id]->set_value(message);
+                wsRequest.erase(id);
+            }
+            else {
+                logger->error("id not found: {}", id.get<std::string>());
+            }
+        }
+        else if(!json["type"].empty())
+        {
+            if (blocked) {
+                // 如果当前处于阻塞状态，直接放入队列中
+                logger->info("blocked, push to queue...");
+                callbackQueue.push(json);
+                return;
+            }
+            // 通知消息
+            std::string type = json["type"].get<std::string>();
+            if (type == "emitCallback") {
+                // 回调触发
+                std::string callbackId = json["callbackId"].get<std::string>();
+                // 触发回调函数
+                auto ptr = Convert::find_callback(callbackId);
+                if (ptr != nullptr) {
+                    logger->info("callbackId found: {}", callbackId);
+                    // 在正确的线程上调用回调
+                    logger->info("create ThreadSafeFunction success!");
+                    auto block = json["data"]["block"];
+                    if (block.is_boolean() && block.get<bool>() == false) {
+
+                        ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                            
+                            auto args = json["data"]["args"];
+                            std::string callbackId = json["callbackId"].get<std::string>();
+                            Napi::HandleScope scope(env);
+                            std::vector<Napi::Value> argsVec;
+                            
+                            for (auto& arg : args) {
+                                argsVec.push_back(Convert::convertJson2Value(env, arg));
+                            }
+                            logger->info("call callback function...");
+                            // auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+                            // consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
+                            auto resultValue = jsCallback.Call(argsVec);
+                            // consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
+                            logger->info("call callback function end...");
+                            // 发送回调结果
+                            auto resultJson = Convert::convertValue2Json(env, resultValue);
+                            if (json.contains("id")) {
+                                logger->info("reply callback...");
+                                nlohmann::json callbakcResult = {
+                                    {"id", json["id"].get<std::string>()},
+                                    {"type", "callbackReply"},
+                                    {"result", resultJson},
+                                };
+                                webSocket.send(callbakcResult.dump());
+                            }
+                        });
+                    }
+                    else {
+                        ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                            
+                            auto args = json["data"]["args"];
+                            std::string callbackId = json["callbackId"].get<std::string>();
+                            Napi::HandleScope scope(env);
+                            std::vector<Napi::Value> argsVec;
+                            
+                            for (auto& arg : args) {
+                                argsVec.push_back(Convert::convertJson2Value(env, arg));
+                            }
+                            logger->info("call callback function...");
+                            // auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+                            // consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
+                            auto resultValue = jsCallback.Call(argsVec);
+                            // consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
+                            logger->info("call callback function end...");
+                            // 发送回调结果
+                            auto resultJson = Convert::convertValue2Json(env, resultValue);
+                            if (json.contains("id")) {
+                                logger->info("reply callback...");
+                                nlohmann::json callbakcResult = {
+                                    {"id", json["id"].get<std::string>()},
+                                    {"type", "callbackReply"},
+                                    {"result", resultJson},
+                                };
+                                webSocket.send(callbakcResult.dump());
+                            }
+                        });
+                    }
+                }
+                else {
+                    logger->error("callbackId not found: {}", callbackId);
+                }
+            }
+        }
+    }
     void initWebSocket(Napi::Env &env) {
         ix::initNetSystem();
         serverCommunicationUuid.init(1, 1);
@@ -33,120 +144,14 @@ namespace WebSocket {
         // See https://machinezone.github.io/IXWebSocket/usage/#tls-support-and-configuration
         std::string url(serverUrl);
         webSocket.setUrl(url);
-         // Setup a callback to be fired (in a background thread, watch out for race conditions !)
+        // Setup a callback to be fired (in a background thread, watch out for race conditions !)
         // when a message or an event (open, close, error) is received
         webSocket.setOnMessageCallback([](const ix::WebSocketMessagePtr& msg)
             {
                 if (msg->type == ix::WebSocketMessageType::Message)
                 {
-                    logger->info("received message: {}", msg->str);
-                    // Logger::log("received message: %s", msg->str.c_str());
-                    if (msg->str.length() == 0) {
-                        logger->error("received message is empty!");
-                        return;
-                    }
-                    nlohmann::json json = nlohmann::json::parse(msg->str);
-                    if (json["type"].empty() && json.contains("id"))
-                    {
-                        // type 为空, id不空，是回复
-                        auto id = json["id"];
-                        logger->info("received message: {}", json["id"].get<std::string>());
-                        if (wsRequest.find(id) != wsRequest.end())
-                        {
-                            wsRequest[id]->set_value(msg->str);
-                            wsRequest.erase(id);
-                        }
-                        else {
-                            logger->error("id not found: {}", id.get<std::string>());
-                        }
-                    }
-                    else if(!json["type"].empty())
-                    {
-                        if (blocked) {
-                            // 如果当前处于阻塞状态，直接放入队列中
-                            logger->info("blocked, push to queue...");
-                            callbackQueue.push(json);
-                            return;
-                        }
-                        // 通知消息
-                        std::string type = json["type"].get<std::string>();
-                        if (type == "emitCallback") {
-                            // 回调触发
-                            std::string callbackId = json["callbackId"].get<std::string>();
-                            // 触发回调函数
-                            auto ptr = Convert::find_callback(callbackId);
-                            if (ptr != nullptr) {
-                                logger->info("callbackId found: {}", callbackId);
-                                // 在正确的线程上调用回调
-                                logger->info("create ThreadSafeFunction success!");
-                                auto block = json["data"]["block"];
-                                if (block.is_boolean() && block.get<bool>() == false) {
-
-                                    ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
-                                        
-                                        auto args = json["data"]["args"];
-                                        std::string callbackId = json["callbackId"].get<std::string>();
-                                        Napi::HandleScope scope(env);
-                                        std::vector<Napi::Value> argsVec;
-                                        
-                                        for (auto& arg : args) {
-                                            argsVec.push_back(Convert::convertJson2Value(env, arg));
-                                        }
-                                        logger->info("call callback function...");
-                                        // auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-                                        // consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
-                                        auto resultValue = jsCallback.Call(argsVec);
-                                        // consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
-                                        logger->info("call callback function end...");
-                                        // 发送回调结果
-                                        auto resultJson = Convert::convertValue2Json(env, resultValue);
-                                        if (json.contains("id")) {
-                                            logger->info("reply callback...");
-                                            nlohmann::json callbakcResult = {
-                                                {"id", json["id"].get<std::string>()},
-                                                {"type", "callbackReply"},
-                                                {"result", resultJson},
-                                            };
-                                            webSocket.send(callbakcResult.dump());
-                                        }
-                                    });
-                                }
-                                else {
-                                    ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
-                                        
-                                        auto args = json["data"]["args"];
-                                        std::string callbackId = json["callbackId"].get<std::string>();
-                                        Napi::HandleScope scope(env);
-                                        std::vector<Napi::Value> argsVec;
-                                        
-                                        for (auto& arg : args) {
-                                            argsVec.push_back(Convert::convertJson2Value(env, arg));
-                                        }
-                                        logger->info("call callback function...");
-                                        // auto consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-                                        // consoleLog.Call({Napi::String::New(env, "Callback function start..." + callbackId)});
-                                        auto resultValue = jsCallback.Call(argsVec);
-                                        // consoleLog.Call({Napi::String::New(env, "Callback function end!" + callbackId)});
-                                        logger->info("call callback function end...");
-                                        // 发送回调结果
-                                        auto resultJson = Convert::convertValue2Json(env, resultValue);
-                                        if (json.contains("id")) {
-                                            logger->info("reply callback...");
-                                            nlohmann::json callbakcResult = {
-                                                {"id", json["id"].get<std::string>()},
-                                                {"type", "callbackReply"},
-                                                {"result", resultJson},
-                                            };
-                                            webSocket.send(callbakcResult.dump());
-                                        }
-                                    });
-                                }
-                            }
-                            else {
-                                logger->error("callbackId not found: {}", callbackId);
-                            }
-                        }
-                    }
+                    std::string message = msg->str;
+                    processMessage(message);
                 }
                 else if (msg->type == ix::WebSocketMessageType::Open)
                 {

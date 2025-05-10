@@ -46,6 +46,57 @@ void sendMsg(const Napi::CallbackInfo &info) {
   }
   
 }
+void processMessage(std::string &message) {
+
+  try {
+
+    nlohmann::json json = nlohmann::json::parse(message);
+    if (!json["id"].empty()) {
+      auto id = json["id"];
+      logger->info("received message: {}", json["id"].get<std::string>());
+      if (wsRequest.find(id) != wsRequest.end())
+      {
+        logger->info("found id: {}", id.get<std::string>());
+        // server发出的消息的回复
+        wsRequest[id]->set_value(message);
+        wsRequest.erase(id);
+        return;
+      }
+      else {
+        logger->info("id not found: {}", id.get<std::string>());
+      }
+    }
+
+    if (isBlock) {
+      // 如果当前处于阻塞状态，直接放入队列中
+      logger->info("blocked, push to queue...");
+      blockQueue.push(message);
+      return;
+    }
+
+    // Client发来的消息
+    // Call the JavaScript callback through the thread-safe function
+    auto callback = [message](Napi::Env env, Napi::Function jsCallback) {
+      auto ws = Napi::Object::New(env);
+      ws.Set("send", Napi::Function::New(env, sendMsg));
+      try {
+        jsCallback.Call({ws, Napi::String::New(env, message)});
+      }catch (const std::exception &e) {
+        logger->error("Error in callback: {}", e.what());
+      } catch (...) {
+        logger->error("Unknown error occurred in callback");
+      }
+    };
+
+    websocketMessageHandleTsfn.BlockingCall(callback);
+  }
+  catch (const std::exception &e) {
+    logger->error("Error parsing JSON: {}", e.what());
+  }
+  catch (...) {
+    logger->error("Unknown error occurred");
+  }
+}
 int startInner(std::string &host, int port) {
   server = std::make_shared<ix::WebSocketServer>(port, host);
 
@@ -73,8 +124,6 @@ int startInner(std::string &host, int port) {
       }
       else if (msg->type == ix::WebSocketMessageType::Close) {
         logger->info("Connection closed: {}", msg->str);
-        message = "{\"action\": \"disconnected\"}";
-        needHandle = true;
       }
       else if (msg->type == ix::WebSocketMessageType::Error) {
         logger->error("Error: {}", msg->str);
@@ -83,55 +132,8 @@ int startInner(std::string &host, int port) {
       if (!needHandle) {
         return;
       }
-
-      try {
-
-        nlohmann::json json = nlohmann::json::parse(message);
-        if (!json["id"].empty()) {
-          auto id = json["id"];
-          logger->info("received message: {}", json["id"].get<std::string>());
-          if (wsRequest.find(id) != wsRequest.end())
-          {
-            logger->info("found id: {}", id.get<std::string>());
-            // server发出的消息的回复
-            wsRequest[id]->set_value(msg->str);
-            wsRequest.erase(id);
-            return;
-          }
-          else {
-            logger->info("id not found: {}", id.get<std::string>());
-          }
-        }
-
-        if (isBlock) {
-          // 如果当前处于阻塞状态，直接放入队列中
-          logger->info("blocked, push to queue...");
-          blockQueue.push(message);
-          return;
-        }
-
-        // Client发来的消息
-        // Call the JavaScript callback through the thread-safe function
-        auto callback = [message](Napi::Env env, Napi::Function jsCallback) {
-          auto ws = Napi::Object::New(env);
-          ws.Set("send", Napi::Function::New(env, sendMsg));
-          try {
-            jsCallback.Call({ws, Napi::String::New(env, message)});
-          }catch (const std::exception &e) {
-            logger->error("Error in callback: {}", e.what());
-          } catch (...) {
-            logger->error("Unknown error occurred in callback");
-          }
-        };
-
-        websocketMessageHandleTsfn.BlockingCall(callback);
-      }
-      catch (const std::exception &e) {
-        logger->error("Error parsing JSON: {}", e.what());
-      }
-      catch (...) {
-        logger->error("Unknown error occurred");
-      }
+      // Process the message
+      processMessage(message);
     });
   
   // Disable per message deflate for better performance on low power devices

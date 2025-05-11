@@ -23,8 +23,8 @@ namespace Logger {
     // 设置控制台回调函数
     void Init() {
         std::vector<spdlog::sink_ptr> sinks;
-        auto stdout_log = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        sinks.push_back(stdout_log);
+        // auto stdout_log = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        // sinks.push_back(stdout_log);
         // auto file_log = std::make_shared<spdlog::sinks::daily_file_sink_mt>(LOG_FILE, 0, 0);
         // sinks.push_back(file_log);
         

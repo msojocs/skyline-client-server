@@ -379,7 +379,7 @@ namespace WebSocket {
             }
             
             // Small sleep to avoid high CPU usage
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
@@ -595,20 +595,39 @@ namespace WebSocket {
         auto start = std::chrono::steady_clock::now();
         logger->info("Waiting for response and checking blockQueue...");
         while (true) {
-            nlohmann::json queuedJson;
-            bool hasQueuedItem = false;
-            
-            {
-                // std::lock_guard<std::mutex> lock(callbackQueueMutex);
-                if (!callbackQueue.empty()) {
-                    queuedJson = callbackQueue.front();
-                    callbackQueue.pop();
-                    hasQueuedItem = true;
+            logger->info("Checking loop for response...");
+            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            if (delta_ms > 5000) {
+                {
+                    // std::lock_guard<std::mutex> lock(wsRequestMutex);
+                    wsRequest.erase(id);
                 }
+                
+                {
+                    // std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                    blocked = false;
+                }
+                logger->error("Operation timed out after 5 seconds, request data:\n" + data.dump());
+                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
             }
             
-            if (hasQueuedItem) {
+            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                logger->info("Future object is ready");
+                break;
+            }
+            logger->info("Check queue...");
+            // if (callbackQueue.empty()) {
+            //     logger->info("Check sleep...");
+            //     // Small sleep to avoid high CPU usage
+            //     std::this_thread::sleep_for(std::chrono::microseconds(1));
+            //     logger->info("Check sleep end.");
+            // }
+            // else
+            if (!callbackQueue.empty())
+            {
                 try {
+                    nlohmann::json queuedJson = callbackQueue.front();
+                    callbackQueue.pop();
                     logger->info("Processing queued callback...");
                     
                     // Make a local copy of the JSON data to prevent any potential issues with the original being modified
@@ -717,11 +736,11 @@ namespace WebSocket {
                                     if (socketFd != INVALID_SOCKET) {
                                         int sendResult = send(socketFd, messageCopy.c_str(), messageCopy.length(), 0);
                                         if (sendResult == SOCKET_ERROR) {
-#ifdef _WIN32
+    #ifdef _WIN32
                                             logger->error("Error sending queued callback response: {}", WSAGetLastError());
-#else
+    #else
                                             logger->error("Error sending queued callback response: {}", errno);
-#endif
+    #endif
                                         } else {
                                             logger->info("Queued callback response sent successfully");
                                         }
@@ -750,29 +769,6 @@ namespace WebSocket {
                     logger->error("Unknown error processing queued callback");
                 }
             }
-
-            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
-            if (delta_ms > 5000) {
-                {
-                    // std::lock_guard<std::mutex> lock(wsRequestMutex);
-                    wsRequest.erase(id);
-                }
-                
-                {
-                    // std::lock_guard<std::mutex> lock(callbackQueueMutex);
-                    blocked = false;
-                }
-                logger->error("Operation timed out after 5 seconds, request data:\n" + data.dump());
-                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
-            }
-            
-            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                logger->info("Future object is ready");
-                break;
-            }
-            
-            // Small sleep to avoid high CPU usage
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         
         std::string result = futureObj.get();

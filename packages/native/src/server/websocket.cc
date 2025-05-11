@@ -618,7 +618,7 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
         }
         
         // Small sleep to avoid high CPU usage
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     logger->info("Check blockQueue end.");
     isBlock = false;

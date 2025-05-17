@@ -34,7 +34,7 @@ namespace SocketServer {
 
             nlohmann::json json = nlohmann::json::parse(message);
             if (!json["id"].empty()) {
-            auto id = json["id"];
+              auto id = json["id"];
               if (socketRequest.find(id) != socketRequest.end())
               {
                 logger->info("found id: {}", id.get<std::string>());
@@ -45,7 +45,7 @@ namespace SocketServer {
               }
             }
             if (isBlock) {
-                logger->info("blocked, push to queue...");
+                logger->info("blocked, push to queue... {}", message);
                 blockQueue.push(message);
                 return;
             }
@@ -86,10 +86,12 @@ namespace SocketServer {
     void handleClient(std::shared_ptr<tcp::socket> client) {
         try {
             boost::asio::streambuf buffer;
+            std::istream stream(&buffer);
+            std::string message;
+
             while (true) {
                 boost::asio::read_until(*client, buffer, '\n');
-                std::string message{std::istreambuf_iterator<char>(&buffer),
-                                  std::istreambuf_iterator<char>()};
+                std::getline(stream, message);  // This properly reads up to the delimiter
                 if (!message.empty()) {
                     processMessage(client, message);
                 }
@@ -217,24 +219,26 @@ namespace SocketServer {
       if (clients.size() == 0) {
         throw Napi::Error::New(info.Env(), "No clients connected");
       }
+      // 先存储，再发送
+      auto promiseObj = std::make_shared<std::promise<std::string>>();
+      std::future<std::string> futureObj = promiseObj->get_future();
+      socketRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]
       logger->info("send to client: {}", json.dump());
       for (auto& client : clients) {
           if (client && client->is_open()) {
               boost::asio::write(*client, boost::asio::buffer(json.dump() + "\n"));
           }
       }
-      auto promiseObj = std::make_shared<std::promise<std::string>>();
-      std::future<std::string> futureObj = promiseObj->get_future();
-      socketRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]
       // 3秒超时
       auto start = std::chrono::high_resolution_clock::now();
       while (true) {
-        if (blockQueue.size() > 0) {
+        if (!blockQueue.empty()) {
           auto msg = blockQueue.front();
           blockQueue.pop();
           try {
             // debug消息
             // Client发来的消息
+            logger->info("start to handle blocked message: {}", msg);
             // Call the JavaScript callback through the thread-safe function
             auto ws = Napi::Object::New(env);
             ws.Set("send", Napi::Function::New(env, [](const Napi::CallbackInfo &info) {

@@ -1,6 +1,6 @@
 #include "image.hh"
 #include "napi.h"
-#include "../../websocket.hh"
+#include "../../socket_client.hh"
 #include "../../../common/convert.hh"
 
 namespace Skyline {

@@ -1,6 +1,6 @@
 #include "runtime.hh"
 #include "../../common/convert.hh"
-#include "../websocket.hh"
+#include "../socket_client.hh"
 #include "napi.h"
 #include <cstdint>
 #include <memory>
@@ -25,7 +25,7 @@ namespace Runtime {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
     try {
-      auto result = WebSocket::callStaticSync("SkylineRuntime", methodName, args);
+      auto result = SocketClient::callStaticSync("SkylineRuntime", methodName, args);
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {

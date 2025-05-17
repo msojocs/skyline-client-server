@@ -2,7 +2,7 @@
 #include <napi.h>
 #include <sys/types.h>
 #include "skyline_shell.hh"
-#include "websocket.hh"
+#include "socket_client.hh"
 #include "skyline_debug_info.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
@@ -22,11 +22,9 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::info("Starting Skyline Client...");
     
-    Logger::Init();
-    logger->info("initWebSocket start");
-    WebSocket::initWebSocket(env);
-
-    logger->info("initWebSocket end");
+    Logger::Init();    logger->info("initSocket start");
+    SocketClient::initSocket(env);
+    logger->info("initSocket end");
     SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
     SkylineShell::SkylineShell::Init(env, exports);
     Convert::RegisteInstanceType(env);

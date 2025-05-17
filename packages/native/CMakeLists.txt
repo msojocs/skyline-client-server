@@ -39,7 +39,7 @@ message("LD_LIBRARY_PATH:" ${LD_LIBRARY_PATH})
 
 find_package(spdlog REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(ixwebsocket CONFIG REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system thread)
 find_program(PNPM_EXECUTABLE pnpm)
 if(NOT PNPM_EXECUTABLE)
     message(FATAL_ERROR "pnpm not found!")

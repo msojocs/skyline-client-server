@@ -1,6 +1,6 @@
 #include "scroll_view.hh"
 #include "../../../common/convert.hh"
-#include "../../websocket.hh"
+#include "../../socket_client.hh"
 
 namespace Skyline {
 Napi::FunctionReference *ScrollViewShadowNode::GetClazz(Napi::Env env) {

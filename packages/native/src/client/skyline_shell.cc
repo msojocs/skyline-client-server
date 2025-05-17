@@ -1,6 +1,6 @@
 #include "skyline_shell.hh"
 #include "napi.h"
-#include "websocket.hh"
+#include "socket_client.hh"
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -84,9 +84,8 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
 
     auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
       auto env = info.Env();
-      try {
-        nlohmann::json _t;
-        WebSocket::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
+      try {        nlohmann::json _t;
+        SocketClient::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
         //* 客户端初始化SkylineGlobal
         SkylineGlobal::Init(env);
         callbackPtr->Value().Call({});
@@ -98,10 +97,10 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
         throw Napi::Error::New(env, "Unknown error occurred");
       }
     });
-    // 发送消息到 WebSocket
+    // 发送消息到Socket
     nlohmann::json args;
     args[0] = Convert::convertValue2Json(env, func1);
-    WebSocket::callDynamicSync(m_instanceId, __func__, args);
+    SocketClient::callDynamicSync(m_instanceId, __func__, args);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -134,7 +133,7 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   //* 标记该回调使用同步方式调用
   func.Set(Napi::String::New(env, "__syncCallback"), Napi::Boolean::New(env, true));
 
-  // 发送消息到 WebSocket
+  // 发送消息到Socket
   sendToServerSync(info, __func__);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
@@ -210,7 +209,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
 
     // 获取Server端的skyline路径
     nlohmann::json data1;
-    auto resp = WebSocket::callCustomHandleSync("getSkylineAddonPath", data1);
+    auto resp = SocketClient::callCustomHandleSync("getSkylineAddonPath", data1);
     auto returnValue = resp["returnValue"];
     auto skylineAddonPath = returnValue.get<std::string>();
 
@@ -225,8 +224,8 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
       sharedMemoryKey,
       skylineAddonPath + "\\build\\skyline.node",
     };
-    // 发送消息到 WebSocket
-    WebSocket::callDynamicSync(m_instanceId, __func__, data);
+    // 发送消息到Socket
+    SocketClient::callDynamicSync(m_instanceId, __func__, data);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -291,7 +290,7 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     // 写入数据
     memcpy(typedArray.Data(), buffer.Data(), buffer.Length());
     
-    WebSocket::callDynamicSync(m_instanceId, __func__, args);
+    SocketClient::callDynamicSync(m_instanceId, __func__, args);
     return env.Undefined();
   } catch (const std::exception& e) {
     throw Napi::Error::New(env, e.what());

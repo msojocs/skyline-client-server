@@ -1,8 +1,8 @@
 set(CLIENT_NAME skylineClient)
 set(CLIENT_DIR_LIST
     client.cc
-    websocket.cc
-    websocket.hh
+    socket_client.cc
+    socket_client.hh
     skyline_debug_info.hh
     skyline_debug_info.cc
     skyline_shell.hh
@@ -80,7 +80,8 @@ endif()
 # 添加_SKYLINE_CLIENT_标记
 target_compile_definitions(${CLIENT_NAME} PRIVATE _SKYLINE_CLIENT_)
 target_link_libraries(${CLIENT_NAME} PRIVATE spdlog::spdlog)
-target_link_libraries(${CLIENT_NAME} PRIVATE ixwebsocket::ixwebsocket)
+find_package(Boost REQUIRED COMPONENTS asio thread)
+target_link_libraries(${CLIENT_NAME} PRIVATE Boost::asio Boost::thread)
 target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build

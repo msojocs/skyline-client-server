@@ -1,5 +1,5 @@
 #include "sticky_header.hh"
-#include "../../websocket.hh"
+#include "../../socket_client.hh"
 #include "../../../common/convert.hh"
 
 namespace Skyline {

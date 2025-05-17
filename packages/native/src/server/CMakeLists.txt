@@ -1,9 +1,8 @@
 
 set(SERVER_NAME skylineServer)
-set(SERVER_DIR_LIST
-    server.cc
-    websocket.cc
-    websocket.hh
+set(SERVER_DIR_LIST    server.cc
+    socket_server.cc
+    socket_server.hh
     ../common/convert.cc
     ../common/logger.cc
 )
@@ -30,7 +29,8 @@ else()
 endif()
 
 target_link_libraries(${SERVER_NAME} PRIVATE spdlog::spdlog)
-target_link_libraries(${SERVER_NAME} PRIVATE ixwebsocket::ixwebsocket)
+find_package(Boost REQUIRED COMPONENTS asio thread)
+target_link_libraries(${SERVER_NAME} PRIVATE Boost::asio Boost::thread)
 target_link_libraries(${SERVER_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${SERVER_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build

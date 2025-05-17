@@ -1,6 +1,6 @@
 #include "mutable_value.hh"
 #include "../../common/convert.hh"
-#include "../websocket.hh"
+#include "../socket_client.hh"
 #include "napi.h"
 
 

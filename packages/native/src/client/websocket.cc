@@ -595,27 +595,6 @@ namespace WebSocket {
         auto start = std::chrono::steady_clock::now();
         logger->info("Waiting for response and checking blockQueue...");
         while (true) {
-            logger->info("Checking loop for response...");
-            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
-            if (delta_ms > 5000) {
-                {
-                    // std::lock_guard<std::mutex> lock(wsRequestMutex);
-                    wsRequest.erase(id);
-                }
-                
-                {
-                    // std::lock_guard<std::mutex> lock(callbackQueueMutex);
-                    blocked = false;
-                }
-                logger->error("Operation timed out after 5 seconds, request data:\n" + data.dump());
-                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
-            }
-            
-            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                logger->info("Future object is ready");
-                break;
-            }
-            logger->info("Check queue...");
             // if (callbackQueue.empty()) {
             //     logger->info("Check sleep...");
             //     // Small sleep to avoid high CPU usage
@@ -769,14 +748,30 @@ namespace WebSocket {
                     logger->error("Unknown error processing queued callback");
                 }
             }
+            
+            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                logger->info("Future object is ready");
+                break;
+            }
+            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            if (delta_ms > 5000) {
+                {
+                    // std::lock_guard<std::mutex> lock(wsRequestMutex);
+                    wsRequest.erase(id);
+                }
+                
+                {
+                    // std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                    blocked = false;
+                }
+                logger->error("Operation timed out after 5 seconds, request data:\n" + data.dump());
+                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
+            }
         }
         
         std::string result = futureObj.get();
         
-        {
-            // std::lock_guard<std::mutex> lock(callbackQueueMutex);
-            blocked = false;
-        }
+        blocked = false;
         
         logger->info("Received result: {}", result);
         

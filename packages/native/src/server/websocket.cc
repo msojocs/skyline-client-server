@@ -605,16 +605,16 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         
+        if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+            logger->info("Future object is ready");
+            break;
+        }
+        
         if (elapsed.count() > 3) {
             logger->error("Request to client timeout, request data:\n" + json.dump());
             wsRequest.erase(json["id"]);
             isBlock = false;
             throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + json.dump());
-        }
-        
-        if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-            logger->info("Future object is ready");
-            break;
         }
         
         // Small sleep to avoid high CPU usage

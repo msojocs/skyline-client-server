@@ -42,12 +42,6 @@ jobs:
       - name: Inspect directory after downloading artifacts
         run: ls -alFR *artifact
 
-      - name: Pack
-        run: |
-          scripts/ci/pack-linux.sh
-      - name: Inspect directory after downloading artifacts
-        run: ls -alFR tmp/upload
-
       - name: Generate TAG
         id: Tag
         run: |
@@ -60,6 +54,12 @@ jobs:
           echo "tag result: $tag - $name"
           echo "::set-output name=tag::$tag"
           echo "::set-output name=name::$name"
+
+      - name: Pack
+        run: |
+          scripts/ci/pack-linux.sh x86_64 ${{ steps.tag.outputs.tag }}
+      - name: Inspect directory after downloading artifacts
+        run: ls -alFR tmp/upload
 
       - name: Create release and upload artifacts
         if: startsWith(github.ref, 'refs/heads/')

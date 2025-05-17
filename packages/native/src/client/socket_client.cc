@@ -16,6 +16,7 @@ using boost::asio::ip::tcp;
 namespace SocketClient {
     static boost::asio::io_context io_context;
     static std::shared_ptr<tcp::socket> socket;
+    static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
     static std::map<std::string, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<nlohmann::json> callbackQueue;
     static bool blocked = false;
@@ -44,7 +45,9 @@ namespace SocketClient {
         if (json["type"].empty() && json.contains("id")) {
             // Response message
             auto id = json["id"];
-            logger->info("received message: {}", json["id"].get<std::string>());
+            logger->info("received message id: {}", json["id"].get<std::string>());
+            
+            std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
             if (socketRequest.find(id) != socketRequest.end()) {
                 socketRequest[id]->set_value(message);
                 socketRequest.erase(id);
@@ -177,11 +180,22 @@ namespace SocketClient {
         blocked = true;
         // Add newline as message delimiter
         std::string message = data.dump() + "\n";
-        boost::asio::write(*socket, boost::asio::buffer(message));
 
         auto promiseObj = std::make_shared<std::promise<std::string>>();
         std::future<std::string> futureObj = promiseObj->get_future();
-        socketRequest.emplace(id, promiseObj);
+        
+        // Lock the mutex while manipulating the map
+        {
+            std::lock_guard<std::mutex> lock(socketRequestMutex);
+            auto insertResult = socketRequest.emplace(id, promiseObj);
+            if (!insertResult.second) {
+                logger->error("insert failed: {}", id);
+                throw std::runtime_error("id insert to request map failed: " + id);
+            }
+            logger->info("is exists: {}", socketRequest.find(id) != socketRequest.end());
+        }
+
+        boost::asio::write(*socket, boost::asio::buffer(message));
 
         auto start = std::chrono::steady_clock::now();
         while (true) {

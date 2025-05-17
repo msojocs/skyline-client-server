@@ -114,13 +114,12 @@ int startInner(std::string &host, int port) {
       // The ConnectionState object contains information about the connection
       logger->info("Remote ip: {}", connectionState->getRemoteIp());
 
-      std::string message;
-      bool needHandle = false;
       if (msg->type == ix::WebSocketMessageType::Message) {
         logger->info("Received: {}", msg->str);
         // Capture the message
-        message = msg->str;
-        needHandle = true;
+        std::string message = msg->str;
+        // Process the message
+        processMessage(message);
       }
       else if (msg->type == ix::WebSocketMessageType::Close) {
         logger->info("Connection closed: {}", msg->str);
@@ -128,12 +127,6 @@ int startInner(std::string &host, int port) {
       else if (msg->type == ix::WebSocketMessageType::Error) {
         logger->error("Error: {}", msg->str);
       }
-
-      if (!needHandle) {
-        return;
-      }
-      // Process the message
-      processMessage(message);
     });
   
   // Disable per message deflate for better performance on low power devices

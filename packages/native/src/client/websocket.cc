@@ -267,11 +267,7 @@ namespace WebSocket {
         {
             throw std::runtime_error("WebSocket is not open");
         }
-        std::thread t([data]() {
-            webSocket.send(data.dump());
-        });
-        t.detach();
-        // webSocket.send(data.dump());
+        webSocket.send(data.dump());
     }
     void callDynamicAsync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {

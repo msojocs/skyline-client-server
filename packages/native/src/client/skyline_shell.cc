@@ -92,6 +92,10 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
         callbackPtr->Value().Call({});
       } catch (const Napi::Error& e) {
         throw e;
+      } catch (const std::exception &e) {
+        throw Napi::Error::New(env, e.what());
+      } catch (...) {
+        throw Napi::Error::New(env, "Unknown error occurred");
       }
     });
     // 发送消息到 WebSocket

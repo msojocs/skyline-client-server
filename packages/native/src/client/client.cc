@@ -97,9 +97,22 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     }
     
     // 设置读写操作的超时
+    #ifdef _WIN32
     socket.set_option(boost::asio::detail::socket_option::integer<SOL_SOCKET, SO_RCVTIMEO>(10000));
     socket.set_option(boost::asio::detail::socket_option::integer<SOL_SOCKET, SO_SNDTIMEO>(10000));
-    
+    #else
+    struct timeval timeout;
+    timeout.tv_sec = 10;  // 10 seconds
+    timeout.tv_usec = 0;
+    socket.native_handle();  // Get the native socket handle
+    if (setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Failed to set receive timeout");
+    }
+    if (setsockopt(socket.native_handle(), SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Failed to set send timeout");
+    }
+    #endif
+
     std::string request = "GET /restart HTTP/1.1\r\n"
                         "Host: 127.0.0.1:8086\r\n"
                         "Connection: close\r\n\r\n";

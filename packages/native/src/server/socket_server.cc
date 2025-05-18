@@ -256,10 +256,12 @@ namespace SocketServer {
             messageHandleRef->Value().Call({ws, Napi::String::New(env, msg)});
           }
           catch (const std::exception &e) {
+            isBlock = false;
             logger->error("Error parsing JSON: {}", e.what());
             throw Napi::Error::New(info.Env(), e.what());
           }
           catch (...) {
+            isBlock = false;
             logger->error("Unknown error occurred");
             throw Napi::Error::New(info.Env(), "Unknown error occurred");
           }

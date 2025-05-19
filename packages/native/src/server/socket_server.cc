@@ -26,11 +26,6 @@ namespace SocketServer {
     void processMessage(std::shared_ptr<tcp::socket> client, const std::string &message) {
         try {
             logger->info("received message: {}", message);
-            
-            if (message.empty()) {
-                logger->error("received message is empty!");
-                return;
-            }
 
             nlohmann::json json = nlohmann::json::parse(message);
             if (!json["id"].empty()) {
@@ -67,7 +62,9 @@ namespace SocketServer {
                 }));
 
                 try {
+                    logger->info("Handle message in js start. {}", message);
                     jsCallback.Call({ws, Napi::String::New(env, message)});
+                    logger->info("Handle message in js end. {}", message);
                 } catch (const std::exception &e) {
                     logger->error("Error in callback: {}", e.what());
                 } catch (...) {
@@ -75,7 +72,9 @@ namespace SocketServer {
                 }
             };
 
+            logger->info("blocking call start: {}", message);
             messageHandleTsfn.BlockingCall(callback);
+            logger->info("blocking call end: {}", message);
         } catch (const std::exception &e) {
             logger->error("Error processing message: {}", e.what());
         } catch (...) {
@@ -214,7 +213,8 @@ namespace SocketServer {
       // 解析json字符串
       auto message = info[0].As<Napi::String>().Utf8Value();
       nlohmann::json json = nlohmann::json::parse(message);
-      json["id"] = std::to_string(communicationUuid.nextid());
+      auto id = std::to_string(communicationUuid.nextid());
+      json["id"] = id;
       
       if (clients.size() == 0) {
         throw Napi::Error::New(info.Env(), "No clients connected");
@@ -277,6 +277,7 @@ namespace SocketServer {
           break;
         }
       }
+      logger->info("futureObj wait end, id: {}", id);
       isBlock = false;
       std::string result = futureObj.get();
       auto resp = nlohmann::json::parse(result);

@@ -144,14 +144,15 @@ const hookArgumentItem = (action: string, arg: any) => {
 
 export const hookArgument = (action: string, args: any[]) => {
     args = hookArgumentItem(action, args)
+    const sharedMemoryFile = process.env.SHARED_MEMORY_FILE || 'sharedMemory/sharedMemory.node'
     if (action === 'createWindow') {
         // 创建窗口时，传入的bufferKey参数需要转换为ArrayBuffer
-        const sharedMemory = require('sharedMemory/sharedMemory.node')
+        const sharedMemory = require(sharedMemoryFile)
         args[6] = sharedMemory.getMemory(args[6])
     }
     else if (action === 'notifyHttpRequestComplete') {
         // http资源替换buffer
-        const sharedMemory = require('sharedMemory/sharedMemory.node')
+        const sharedMemory = require(sharedMemoryFile)
         log.info('notifyHttpRequestComplete', args[4])
         const buf = sharedMemory.getMemory(args[4]) as ArrayBuffer
         args[4] = new Uint8Array(buf)

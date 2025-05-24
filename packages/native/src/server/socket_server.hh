@@ -11,9 +11,10 @@
 
 namespace SocketServer {
     void setMessageCallback(const Napi::CallbackInfo &info);
-    Napi::Number start(const Napi::CallbackInfo &info);
+    Napi::Value start(const Napi::CallbackInfo &info);
     void stop(const Napi::CallbackInfo &info);
     Napi::Value sendMessageSync(const Napi::CallbackInfo &info);
+    Napi::Value sendMessageSingle(const Napi::CallbackInfo &info);
 
 }
 

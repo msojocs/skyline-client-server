@@ -27,6 +27,7 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("stop", Napi::Function::New(env, SocketServer::stop));
   exports.Set("setMessageCallback", Napi::Function::New(env, SocketServer::setMessageCallback));
   exports.Set("sendMessageSync", Napi::Function::New(env, SocketServer::sendMessageSync));
+  exports.Set("sendMessageSingle", Napi::Function::New(env, SocketServer::sendMessageSingle));
   logger->info("return result");
   return exports;
 }

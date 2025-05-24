@@ -46,7 +46,7 @@ namespace SocketClient {
             // Response message
             auto id = json["id"];
             logger->info("received message id: {}", json["id"].get<std::string>());
-            
+            // 没有lock的话，有概率会find失败
             std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
             if (socketRequest.find(id) != socketRequest.end()) {
                 socketRequest[id]->set_value(message);
@@ -192,13 +192,22 @@ namespace SocketClient {
                 logger->error("insert failed: {}", id);
                 throw std::runtime_error("id insert to request map failed: " + id);
             }
-            logger->info("is exists: {}", socketRequest.find(id) != socketRequest.end());
         }
 
         boost::asio::write(*socket, boost::asio::buffer(message));
 
         auto start = std::chrono::steady_clock::now();
         while (true) {
+            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>
+                (std::chrono::steady_clock::now() - start).count();
+            if (delta_ms > 5000) {
+                blocked = false;
+                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
+            }
+            
+            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                break;
+            }
             if (!callbackQueue.empty()) {
                 auto json = callbackQueue.front();
                 callbackQueue.pop();
@@ -236,16 +245,6 @@ namespace SocketClient {
                 }
             }
 
-            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>
-                (std::chrono::steady_clock::now() - start).count();
-            if (delta_ms > 5000) {
-                blocked = false;
-                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
-            }
-            
-            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                break;
-            }
         }
 
         std::string result = futureObj.get();

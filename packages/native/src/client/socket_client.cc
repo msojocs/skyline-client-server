@@ -33,7 +33,7 @@ namespace SocketClient {
                         std::istreambuf_iterator<char>()};
         return data;
     }
-
+    
     void processMessage(std::string &message) {
         logger->info("received message: {}", message);
         if (message.empty()) {
@@ -41,92 +41,106 @@ namespace SocketClient {
             return;
         }
 
-        nlohmann::json json = nlohmann::json::parse(message);
-        if (json["type"].empty() && json.contains("id")) {
-            // Response message
-            auto id = json["id"];
-            logger->info("received message id: {}", json["id"].get<std::string>());
-            // 没有lock的话，有概率会find失败
-            std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
-            if (socketRequest.find(id) != socketRequest.end()) {
-                socketRequest[id]->set_value(message);
-                socketRequest.erase(id);
-            } else {
-                logger->error("id not found: {}", id.get<std::string>());
-            }
-        } else if(!json["type"].empty()) {
-            if (blocked) {
-                logger->info("blocked, push to queue...");
-                callbackQueue.push(json);
-                return;
-            }
-
-            std::string type = json["type"].get<std::string>();
-            if (type == "emitCallback") {
-                std::string callbackId = json["callbackId"].get<std::string>();
-                auto ptr = Convert::find_callback(callbackId);
-                if (ptr != nullptr) {
-                    logger->info("callbackId found: {}", callbackId);
-                    auto block = json["data"]["block"];
-                    if (block.is_boolean() && block.get<bool>() == false) {
-                        ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
-                            auto args = json["data"]["args"];
-                            std::string callbackId = json["callbackId"].get<std::string>();
-                            Napi::HandleScope scope(env);
-                            std::vector<Napi::Value> argsVec;
-                            
-                            for (auto& arg : args) {
-                                argsVec.push_back(Convert::convertJson2Value(env, arg));
-                            }
-                            logger->info("call callback function...");
-                            auto resultValue = jsCallback.Call(argsVec);
-                            logger->info("call callback function end...");
-
-                            auto resultJson = Convert::convertValue2Json(env, resultValue);
-                            if (json.contains("id")) {
-                                logger->info("reply callback...");
-                                nlohmann::json callbackResult = {
-                                    {"id", json["id"].get<std::string>()},
-                                    {"type", "callbackReply"},
-                                    {"result", resultJson},
-                                };
-                                // Add newline as message delimiter
-                                std::string message = callbackResult.dump() + "\n";
-                                boost::asio::write(*socket, boost::asio::buffer(message));
-                            }
-                        });
+        try {
+            nlohmann::json json = nlohmann::json::parse(message);
+            
+            // 提前检查ID字段是否存在，优化逻辑分支
+            if (json.contains("id") && json["type"].empty()) {
+                // Response message
+                auto& id = json["id"];
+                logger->info("received message id: {}", id.get<std::string>());
+                
+                // 使用作用域锁减少锁持有时间
+                {
+                    std::lock_guard<std::mutex> lock(socketRequestMutex);
+                    auto it = socketRequest.find(id);
+                    if (it != socketRequest.end()) {
+                        it->second->set_value(message);
+                        socketRequest.erase(it);
                     } else {
-                        ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
-                            auto args = json["data"]["args"];
-                            std::string callbackId = json["callbackId"].get<std::string>();
-                            Napi::HandleScope scope(env);
-                            std::vector<Napi::Value> argsVec;
-                            
-                            for (auto& arg : args) {
-                                argsVec.push_back(Convert::convertJson2Value(env, arg));
-                            }
-                            logger->info("call callback function...");
-                            auto resultValue = jsCallback.Call(argsVec);
-                            logger->info("call callback function end...");
-
-                            auto resultJson = Convert::convertValue2Json(env, resultValue);
-                            if (json.contains("id")) {
-                                logger->info("reply callback...");
-                                nlohmann::json callbackResult = {
-                                    {"id", json["id"].get<std::string>()},
-                                    {"type", "callbackReply"},
-                                    {"result", resultJson},
-                                };
-                                // Add newline as message delimiter
-                                std::string message = callbackResult.dump() + "\n";
-                                boost::asio::write(*socket, boost::asio::buffer(message));
-                            }
-                        });
+                        logger->error("id not found: {}", id.get<std::string>());
                     }
-                } else {
-                    logger->error("callbackId not found: {}", callbackId);
+                }
+            } else if(!json["type"].empty()) {
+                if (blocked) {
+                    logger->info("blocked, push to queue...");
+                    callbackQueue.push(std::move(json));
+                    return;
+                }
+
+                std::string type = json["type"].get<std::string>();
+                if (type == "emitCallback") {
+                    // 处理剩余逻辑
+                    std::string callbackId = json["callbackId"].get<std::string>();
+                    auto ptr = Convert::find_callback(callbackId);
+                    if (ptr != nullptr) {
+                        // ...现有代码...
+                        logger->info("callbackId found: {}", callbackId);
+                        auto block = json["data"]["block"];
+                        if (block.is_boolean() && block.get<bool>() == false) {
+                            ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                                auto args = json["data"]["args"];
+                                std::string callbackId = json["callbackId"].get<std::string>();
+                                Napi::HandleScope scope(env);
+                                std::vector<Napi::Value> argsVec;
+                                
+                                for (auto& arg : args) {
+                                    argsVec.push_back(Convert::convertJson2Value(env, arg));
+                                }
+                                logger->info("call callback function...");
+                                auto resultValue = jsCallback.Call(argsVec);
+                                logger->info("call callback function end...");
+
+                                auto resultJson = Convert::convertValue2Json(env, resultValue);
+                                if (json.contains("id")) {
+                                    logger->info("reply callback...");
+                                    nlohmann::json callbackResult = {
+                                        {"id", json["id"].get<std::string>()},
+                                        {"type", "callbackReply"},
+                                        {"result", resultJson},
+                                    };
+                                    // Add newline as message delimiter
+                                    std::string message = callbackResult.dump() + "\n";
+                                    boost::asio::write(*socket, boost::asio::buffer(message));
+                                }
+                            });
+                        } else {
+                            ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                                auto args = json["data"]["args"];
+                                std::string callbackId = json["callbackId"].get<std::string>();
+                                Napi::HandleScope scope(env);
+                                std::vector<Napi::Value> argsVec;
+                                
+                                for (auto& arg : args) {
+                                    argsVec.push_back(Convert::convertJson2Value(env, arg));
+                                }
+                                logger->info("call callback function...");
+                                auto resultValue = jsCallback.Call(argsVec);
+                                logger->info("call callback function end...");
+
+                                auto resultJson = Convert::convertValue2Json(env, resultValue);
+                                if (json.contains("id")) {
+                                    logger->info("reply callback...");
+                                    nlohmann::json callbackResult = {
+                                        {"id", json["id"].get<std::string>()},
+                                        {"type", "callbackReply"},
+                                        {"result", resultJson},
+                                    };
+                                    // Add newline as message delimiter
+                                    std::string message = callbackResult.dump() + "\n";
+                                    boost::asio::write(*socket, boost::asio::buffer(message));
+                                }
+                            });
+                        }
+                    } else {
+                        logger->error("callbackId not found: {}", callbackId);
+                    }
                 }
             }
+        } catch (const nlohmann::json::exception& e) {
+            logger->error("JSON解析错误: {}", e.what());
+        } catch (const std::exception& e) {
+            logger->error("处理消息时发生错误: {}", e.what());
         }
     }
 

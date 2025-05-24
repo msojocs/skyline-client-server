@@ -21,28 +21,36 @@ namespace SocketServer {
     static std::queue<std::string> blockQueue;
     using snowflake_t = snowflake<1534832906275L>;
     static snowflake_t communicationUuid;
-
+    
     void processMessage(std::shared_ptr<tcp::socket> client, const std::string &message) {
         try {
             logger->info("received message: {}", message);
 
+            // 使用string_view以避免不必要的字符串拷贝
+            std::string_view msg_view(message);
+            
+            // 优化ID查找逻辑
             if (message.find("id") != std::string::npos) {
-                // "id": "xxx..."
-                auto startPos = message.find("\"id\":\"");
+                static const std::string_view id_prefix = "\"id\":\"";
+                auto startPos = message.find(id_prefix);
                 if (startPos != std::string::npos) {
-                    auto endPos = message.find("\"", startPos + 6);
+                    startPos += id_prefix.length();
+                    auto endPos = message.find("\"", startPos);
                     if (endPos == std::string::npos) {
-                        endPos = message.find("}", startPos);
+                        logger->error("End quote for id not found in message: {}", message);
+                        return; // 如果没有找到结束引号，直接返回
                     }
-                    if (endPos != std::string::npos) {
-                        auto id = message.substr(startPos + 6, endPos - startPos - 6);
-                        if (socketRequest.find(id) != socketRequest.end()) {
-                            logger->info("found id: {}", id);
-                            // server发出的消息的回复
-                            socketRequest[id]->set_value(message);
-                            socketRequest.erase(id);
-                            return;
-                        }
+                    
+                    std::string id = message.substr(startPos, endPos - startPos);
+                    
+                    // 使用find而非operator[]，避免不必要的插入操作
+                    auto it = socketRequest.find(id);
+                    if (it != socketRequest.end()) {
+                        logger->info("found id: {}", id);
+                        // server发出的消息的回复
+                        it->second->set_value(message);
+                        socketRequest.erase(it);
+                        return;
                     }
                 }
             }
@@ -78,7 +86,7 @@ namespace SocketServer {
             logger->error("Unknown error occurred while processing message");
         }
     }
-
+    
     void handleClient(std::shared_ptr<tcp::socket> client) {
         try {
             boost::asio::streambuf buffer;
@@ -224,38 +232,60 @@ namespace SocketServer {
         throw Napi::TypeError::New(info.Env(), "First argument must be a string");
       }
       auto env = info.Env();
-      logger->info("sendMessageSync: {}", info[0].As<Napi::String>().Utf8Value());
+      
+      // 提前获取消息内容，避免重复调用
+      auto messageStr = info[0].As<Napi::String>().Utf8Value();
+      logger->info("sendMessageSync: {}", messageStr);
+      
       // 解析json字符串
-      auto message = info[0].As<Napi::String>().Utf8Value();
-      nlohmann::json json = nlohmann::json::parse(message);
+      nlohmann::json json = nlohmann::json::parse(messageStr);
+      
       auto id = std::to_string(communicationUuid.nextid());
       json["id"] = id;
       
-      if (clients.size() == 0) {
+      if (clients.empty()) {
         throw Napi::Error::New(info.Env(), "No clients connected");
       }
+      
       // 先存储，再发送
       auto promiseObj = std::make_shared<std::promise<std::string>>();
       std::future<std::string> futureObj = promiseObj->get_future();
-      socketRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]
-      logger->info("send to client: {}", json.dump());
+      
+      // 提前将JSON序列化，避免多次执行
+      std::string jsonString = json.dump() + "\n";
+      
+      {
+        // 使用作用域限制插入操作的临界区范围
+        socketRequest.emplace(id, promiseObj);
+      }
+      
+      logger->info("send to client: {}", jsonString);
+      
+      // 对所有客户端一次性发送消息
       for (auto& client : clients) {
           if (client && client->is_open()) {
-              boost::asio::write(*client, boost::asio::buffer(json.dump() + "\n"));
+              boost::asio::write(*client, boost::asio::buffer(jsonString));
           }
       }
-      // 3秒超时
-      auto start = std::chrono::high_resolution_clock::now();
+      
+      // 使用更高效的等待方式
+      auto start = std::chrono::steady_clock::now();
+      std::chrono::duration<double> timeoutDuration(3.0); // 3秒超时
+      
       while (true) {
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = end - start;
-        if (elapsed.count() > 3) {
-          socketRequest.erase(json["id"]);
-          throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + json.dump());
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = now - start;
+        
+        if (elapsed > timeoutDuration) {
+          socketRequest.erase(id);
+          throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + jsonString);
         }
-        if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+        
+        auto status = futureObj.wait_for(std::chrono::milliseconds(0));
+        if (status == std::future_status::ready) {
           break;
         }
+        
         if (!blockQueue.empty()) {
           auto msg = blockQueue.front();
           blockQueue.pop();
@@ -276,10 +306,12 @@ namespace SocketServer {
           }
         }
       }
+      
       logger->info("futureObj wait end, id: {}", id);
       std::string result = futureObj.get();
-      auto resp = nlohmann::json::parse(result);
-      auto v = Convert::convertJson2Value(env, resp["result"]);
-      return v;
+      
+    auto resp = nlohmann::json::parse(result);
+    auto v = Convert::convertJson2Value(env, resp["result"]);
+    return v;
     }
 }

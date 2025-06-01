@@ -27,70 +27,13 @@ static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 
 // Forward declarations
 void processMessage(const skyline::Message &message);
-void startAsyncRead();
+skyline::Message readProtobufMessage();
 
 static std::atomic<bool> blocked{false};
 static std::string serverAddress = "127.0.0.1";
 static int serverPort = 3001;
 using snowflake_t = snowflake<1534832906275L>;
 static snowflake_t serverCommunicationUuid;
-
-// Async read state
-static std::array<char, 4> lengthBuffer;
-static std::string messageBuffer;
-
-// 异步读取长度前缀的回调函数
-void handleLengthRead(const boost::system::error_code& error, std::size_t bytes_transferred) {
-    if (error) {
-        logger->error("Error reading message length: {}", error.message());
-        is_connected = false;
-        return;
-    }
-    
-    // 解析消息长度
-    std::uint32_t messageLength = 0;
-    std::memcpy(&messageLength, lengthBuffer.data(), sizeof(messageLength));
-    
-    if (messageLength > 0 && messageLength < 1024 * 1024) { // 防止过大的消息
-        messageBuffer.resize(messageLength);
-        
-        // 异步读取消息体
-        boost::asio::async_read(*socket, 
-            boost::asio::buffer(messageBuffer),
-            [](const boost::system::error_code& error, std::size_t bytes_transferred) {
-                if (error) {
-                    logger->error("Error reading message body: {}", error.message());
-                    is_connected = false;
-                    return;
-                }
-                
-                // 解析并处理消息
-                skyline::Message pbMessage;
-                if (pbMessage.ParseFromString(messageBuffer)) {
-                    processMessage(pbMessage);
-                } else {
-                    logger->error("Failed to parse Protobuf message");
-                }
-                
-                // 继续读取下一个消息
-                if (is_connected) {
-                    startAsyncRead();
-                }
-            });
-    } else {
-        logger->error("Invalid message length: {}", messageLength);
-        is_connected = false;
-    }
-}
-
-// 开始异步读取
-void startAsyncRead() {
-    if (socket && socket->is_open() && is_connected) {
-        boost::asio::async_read(*socket,
-            boost::asio::buffer(lengthBuffer),
-            handleLengthRead);
-    }
-}
 
 void processMessage(const skyline::Message &message) {
     logger->info("received protobuf message, id: {}", message.id());
@@ -176,6 +119,43 @@ void processMessage(const skyline::Message &message) {
         logger->error("Error processing protobuf message: {}", e.what());
     }
 }
+
+skyline::Message readProtobufMessage() {
+    if (!socket || !socket->is_open() || !is_connected) {
+        throw std::runtime_error("Socket is not connected");
+    }
+
+    try {
+        // Read the 4-byte length prefix
+        std::array<char, 4> lengthBuffer;
+        boost::asio::read(*socket, boost::asio::buffer(lengthBuffer));
+
+        // Parse the message length
+        std::uint32_t messageLength = 0;
+        std::memcpy(&messageLength, lengthBuffer.data(), sizeof(messageLength));
+
+        if (messageLength == 0 || messageLength > 1024 * 1024) { // Prevent overly large messages
+            throw std::runtime_error("Invalid message length: " + std::to_string(messageLength));
+        }
+
+        // Read the message body
+        std::string messageBuffer(messageLength, '\0');
+        boost::asio::read(*socket, boost::asio::buffer(messageBuffer));
+
+        // Parse the Protobuf message
+        skyline::Message pbMessage;
+        if (!pbMessage.ParseFromString(messageBuffer)) {
+            throw std::runtime_error("Failed to parse Protobuf message");
+        }
+
+        return pbMessage;
+    } catch (const std::exception& e) {
+        logger->error("Error reading protobuf message: {}", e.what());
+        is_connected = false;
+        throw;
+    }
+}
+
 void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
@@ -185,9 +165,9 @@ void initSocket(Napi::Env &env) {
             resolver.resolve(serverAddress, std::to_string(serverPort));
 
         socket = std::make_shared<tcp::socket>(io_context);
-        boost::asio::connect(*socket, endpoints);
+        boost::asio::connect(*socket, endpoints);        is_connected = true;
 
-        is_connected = true;        // Start a thread for the io_context
+        // Start a thread for the io_context
         std::thread([&]() {
             try {
                 io_context.run();
@@ -197,8 +177,18 @@ void initSocket(Napi::Env &env) {
             }
         }).detach();
 
-        // 开始异步读取消息
-        startAsyncRead();
+        // Start synchronous message reading thread
+        std::thread([]() {
+            try {
+                while (is_connected) {
+                    skyline::Message message = readProtobufMessage();
+                    processMessage(message);
+                }
+            } catch (std::exception &e) {
+                logger->error("Message reading thread error: {}", e.what());
+                is_connected = false;
+            }
+        }).detach();
 
         logger->info("Socket connected to {}:{}", serverAddress, serverPort);
     } catch (std::exception &e) {
@@ -224,6 +214,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
     std::string fullMessage = lengthPrefix + serializedMessage;
     logger->info("Full message with length prefix, total size: {}", fullMessage.size());
+    logger->debug("id: {}, content: {}", message.id(), message.DebugString());
 
     auto promiseObj = std::make_shared<std::promise<skyline::Message>>();
     std::future<skyline::Message> futureObj = promiseObj->get_future();
@@ -250,7 +241,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     
     while (std::chrono::steady_clock::now() < timeout) {
         // 使用短暂等待替代立即轮询，减少 CPU 消耗
-        auto waitStatus = futureObj.wait_for(std::chrono::milliseconds(1));
+        auto waitStatus = futureObj.wait_for(std::chrono::milliseconds(0));
         
         if (waitStatus == std::future_status::ready) {
             break;

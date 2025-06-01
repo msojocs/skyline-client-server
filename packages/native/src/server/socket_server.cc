@@ -81,9 +81,9 @@ void processMessage(std::shared_ptr<tcp::socket> client, const skyline::Message 
                     
                 }
                 
-                logger->debug("Handle protobuf message in js start. {}", message.DebugString());
+                logger->debug("Handle protobuf message in js start. {}", message.id());
                 jsCallback.Call({Convert::convertProtobufToJs(env, message)});
-                logger->debug("Handle protobuf message in js end. {}", message.DebugString());
+                logger->debug("Handle protobuf message in js end. {}", message.id());
             } catch (const std::exception &e) {
                 logger->error("Error in protobuf callback: {}", e.what());
             } catch (...) {
@@ -325,7 +325,7 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
             try {
                 // debug消息
                 // Client发来的消息
-                logger->debug("start to handle blocked protobuf message: {}", queuedMsg.DebugString());
+                logger->debug("start to handle blocked protobuf message: {}", queuedMsg.id());
                 // Call the JavaScript callback through the thread-safe function
                 messageHandleRef->Value().Call({Convert::convertProtobufToJs(env, queuedMsg)});
             } catch (const std::exception &e) {

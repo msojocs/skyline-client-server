@@ -37,6 +37,8 @@ set(CLIENT_DIR_LIST
     skyline_global/shadow_node/hero.cc
     skyline_global/fragment_binding.hh
     skyline_global/fragment_binding.cc
+    ../common/protobuf_converter.cc
+    ../common/protobuf_converter.hh
 )
 
 # Set the HEADER_DEPENDENCY_CHECK property to force rebuilding when headers change
@@ -82,7 +84,7 @@ target_compile_definitions(${CLIENT_NAME} PRIVATE _SKYLINE_CLIENT_)
 target_link_libraries(${CLIENT_NAME} PRIVATE spdlog::spdlog)
 find_package(Boost REQUIRED COMPONENTS asio thread)
 target_link_libraries(${CLIENT_NAME} PRIVATE Boost::asio Boost::thread)
-target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(${CLIENT_NAME} PRIVATE skyline_protobuf)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build
 set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)

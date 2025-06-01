@@ -1,41 +1,46 @@
 #include "./skyline_debug_info.hh"
 #include <string>
 #include "socket_client.hh"
-#include <spdlog/spdlog.h>
+#include "../common/protobuf_converter.hh"
+#include "../common/logger.hh"
 
+using Logger::logger;
 namespace SkylineDebugInfo{
     void InitSkylineDebugInfo(Napi::Env env, Napi::Object exports) {
     
-    // 创建一个函数，每次调用时返回最新的时间戳
+    // Protobuf 版本的主函数
     Napi::Function func = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
         try {
-            spdlog::info("Call GetVersion sub...");
-            nlohmann::json reqData;
+            logger->info("Call GetVersion with Protobuf...");
+            std::vector<skyline::Value> reqData; // 使用空参数数组
             auto result = SocketClient::callStaticSync("global", "SkylineDebugInfo", reqData);
-            auto returnValue = result["returnValue"];
+            logger->info("Protobuf SkylineDebugInfo result: {}", result.DebugString());
+            // 转换 protobuf Value 到 Napi::Value
+            auto env = info.Env();
+            auto obj = ProtobufConverter::protobufValueToNapi(env, result);
             
-            auto gitRev = returnValue["skyline_git_rev"].get<std::string>();
-            auto flutterEngineRev = returnValue["flutter_engine_git_rev"].get<std::string>();
-            auto skylineVersion = returnValue["skyline_version"].get<std::string>();
-            auto obj = Napi::Object::New(info.Env());
-            obj.Set("skyline_git_rev", Napi::String::New(info.Env(), gitRev));
-            obj.Set("flutter_engine_git_rev", Napi::String::New(info.Env(), flutterEngineRev));
-            obj.Set("skyline_version", Napi::String::New(info.Env(), skylineVersion));
+            // 如果结果是对象，添加协议标识
+            if (obj.IsObject()) {
+                auto objRef = obj.As<Napi::Object>();
+                objRef.Set("protocol", Napi::String::New(env, "Protobuf"));
+            }
+            
             return obj;
         }
         catch (const std::exception& e) {
-            spdlog::error("Error: {}", e.what());
+            spdlog::error("Protobuf Error: {}", e.what());
             throw Napi::Error::New(info.Env(), e.what());
         } catch (...) {
-            spdlog::error("Unknown error occurred during SkylineDebugInfo.");
-            throw Napi::Error::New(info.Env(), "Unknown error occurred during SkylineDebugInfo.");
+            spdlog::error("Unknown error occurred during Protobuf SkylineDebugInfo.");
+            throw Napi::Error::New(info.Env(), "Unknown error occurred during Protobuf SkylineDebugInfo.");
         }
     });
-    // 使用Object.defineProperty为global对象添加一个getter
+    // 使用Object.defineProperty为global对象添加getter
     Napi::Object global = env.Global();
     Napi::Object object = global.Get("Object").As<Napi::Object>();
     Napi::Function defineProperty = object.Get("defineProperty").As<Napi::Function>();
     
+    // 设置主要的 Protobuf 版本为 SkylineDebugInfo
     Napi::Object descriptor = Napi::Object::New(env);
     descriptor.Set("get", func);
     descriptor.Set("enumerable", Napi::Boolean::New(env, true));

@@ -96,28 +96,28 @@ const hookArgumentItem = (action: string, arg: any) => {
                 hookCallbackArgument(args1)
                 log.info('callback emit', action, args1)
                 if (!syncCallback) {
-                    log.info('callback emit async', action, args1)
+                    // log.info('callback emit async', action, args1)
                     // 异步回调，多数
-                    g.send(JSON.stringify({
+                    g.send({
                         type: 'emitCallback',
-                        callbackId,
                         data: {
+                            callbackId,
                             args: args1,
                             block: false,
                         },
-                    }))
+                    })
                     return;
                 }
-                log.info('callback emit sync', action, args1)
+                // log.info('callback emit sync', action, args1)
                 // 同步回调，少数
-                const result = g.sendMessageSync(JSON.stringify({
+                const result = g.sendMessageSync({
                     type: 'emitCallback',
-                    callbackId,
                     data: {
+                        callbackId,
                         args: args1,
                         block: true,
                     },
-                }))
+                })
                 log.info('callback emit sync result:', result)
                 return hookResult(`${action}_syncResult`, result)
             }
@@ -169,9 +169,12 @@ export const hookArgument = (action: string, args: any[]) => {
     }
 }
 export const hookResult = (action: string, result: any) => {
-    log.info('result before:', result)
+    // log.info('result before:', result)
     if (action === 'setLoadResourceCallback_syncResult') {
-        return new Uint8Array(result);
+        log.info('result before:', result)
+        const t = new Uint8Array(result);
+        log.info('result after:', t)
+        return t
     }
     else if (typeof result === 'function') {
         const id = TwitterSnowflake.generate().toString()

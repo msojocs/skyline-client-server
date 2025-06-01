@@ -6,22 +6,20 @@
 #include "napi.h"
 #include "socket_client.hh"
 #include "../common/convert.hh"
+#include "../common/protobuf_converter.hh"
 
 namespace SkylineGlobal {
   void Init(Napi::Env env) {
     try {
-      auto skylineGlobal = Napi::Object::New(env);
-      {
-        nlohmann::json arg;
-        auto result = SocketClient::callStaticSync("SkylineGlobal", "userAgent", arg);
-        auto returnValue = result["returnValue"];
-        skylineGlobal.Set(Napi::String::New(env, "userAgent"), Napi::String::New(env, returnValue.get<std::string>()));
+      auto skylineGlobal = Napi::Object::New(env);      {
+        std::vector<skyline::Value> args;
+        auto result = SocketClient::callStaticSync("SkylineGlobal", "userAgent", args);
+        skylineGlobal.Set(Napi::String::New(env, "userAgent"), ProtobufConverter::protobufValueToNapi(env, result));
       }
       {
-        nlohmann::json arg;
-        auto result = SocketClient::callStaticSync("SkylineGlobal", "features", arg);
-        auto returnValue = result["returnValue"];
-        skylineGlobal.Set(Napi::String::New(env, "features"), Convert::convertJson2Value(env, returnValue));
+        std::vector<skyline::Value> args;
+        auto result = SocketClient::callStaticSync("SkylineGlobal", "features", args);
+        skylineGlobal.Set(Napi::String::New(env, "features"), ProtobufConverter::protobufValueToNapi(env, result));
       }
       {
         Skyline::PageContext::Init(env, skylineGlobal);

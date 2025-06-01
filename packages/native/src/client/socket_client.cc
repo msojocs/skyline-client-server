@@ -1,375 +1,453 @@
-#include <boost/asio.hpp>
-#include <thread>
-#include <mutex>
-#include <queue>
-#include <chrono>
-#include <memory>
-#include <future>
 #include "socket_client.hh"
+#include "../common/convert.hh"
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
-#include "../common/convert.hh"
+#include "../common/protobuf_converter.hh"
+#include <boost/asio.hpp>
+#include <chrono>
+#include <future>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <unordered_map>
 
-using Logger::logger;
+
 using boost::asio::ip::tcp;
+using Logger::logger;
 
 namespace SocketClient {
-    static boost::asio::io_context io_context;
-    static std::shared_ptr<tcp::socket> socket;
-    static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
-    static std::map<std::string, std::shared_ptr<std::promise<std::string>>> socketRequest;
-    static std::queue<nlohmann::json> callbackQueue;
-    static bool blocked = false;
-    static std::string serverAddress = "127.0.0.1";
-    static int serverPort = 3001;
-    using snowflake_t = snowflake<1534832906275L>;
-    static snowflake_t serverCommunicationUuid;
+static boost::asio::io_context io_context;
+static std::shared_ptr<tcp::socket> socket;
+static std::atomic<bool> is_connected{false};
+static std::mutex socketRequestMutex; // Add mutex for thread synchronization
+static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
+    socketRequest;
+static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 
-    // Helper function to read a complete message from the socket
-    std::string readMessage() {
-        boost::asio::streambuf buf;
-        boost::asio::read_until(*socket, buf, "\n");
-        std::string data{std::istreambuf_iterator<char>(&buf),
-                        std::istreambuf_iterator<char>()};
-        return data;
+// Forward declarations
+void processMessage(const skyline::Message &message);
+void startAsyncRead();
+
+static std::atomic<bool> blocked{false};
+static std::string serverAddress = "127.0.0.1";
+static int serverPort = 3001;
+using snowflake_t = snowflake<1534832906275L>;
+static snowflake_t serverCommunicationUuid;
+
+// Async read state
+static std::array<char, 4> lengthBuffer;
+static std::string messageBuffer;
+
+// 异步读取长度前缀的回调函数
+void handleLengthRead(const boost::system::error_code& error, std::size_t bytes_transferred) {
+    if (error) {
+        logger->error("Error reading message length: {}", error.message());
+        is_connected = false;
+        return;
     }
     
-    void processMessage(std::string &message) {
-        logger->info("received message: {}", message);
-        if (message.empty()) {
-            logger->error("received message is empty!");
+    // 解析消息长度
+    std::uint32_t messageLength = 0;
+    std::memcpy(&messageLength, lengthBuffer.data(), sizeof(messageLength));
+    
+    if (messageLength > 0 && messageLength < 1024 * 1024) { // 防止过大的消息
+        messageBuffer.resize(messageLength);
+        
+        // 异步读取消息体
+        boost::asio::async_read(*socket, 
+            boost::asio::buffer(messageBuffer),
+            [](const boost::system::error_code& error, std::size_t bytes_transferred) {
+                if (error) {
+                    logger->error("Error reading message body: {}", error.message());
+                    is_connected = false;
+                    return;
+                }
+                
+                // 解析并处理消息
+                skyline::Message pbMessage;
+                if (pbMessage.ParseFromString(messageBuffer)) {
+                    processMessage(pbMessage);
+                } else {
+                    logger->error("Failed to parse Protobuf message");
+                }
+                
+                // 继续读取下一个消息
+                if (is_connected) {
+                    startAsyncRead();
+                }
+            });
+    } else {
+        logger->error("Invalid message length: {}", messageLength);
+        is_connected = false;
+    }
+}
+
+// 开始异步读取
+void startAsyncRead() {
+    if (socket && socket->is_open() && is_connected) {
+        boost::asio::async_read(*socket,
+            boost::asio::buffer(lengthBuffer),
+            handleLengthRead);
+    }
+}
+
+void processMessage(const skyline::Message &message) {
+    logger->info("received protobuf message, id: {}", message.id());
+
+    try {
+        // Check if it's a response to a request
+        if (!message.id().empty()) {
+            std::lock_guard<std::mutex> lock(socketRequestMutex);
+            auto it = socketRequest.find(message.id());
+            if (it != socketRequest.end()) {
+                it->second->set_value(message);
+                socketRequest.erase(it);
+                return;
+            }
+        }
+
+        // Handle callback messages
+        if (blocked) {
+            logger->info("blocked, push protobuf message to queue...");
+            callbackQueue.push(std::make_shared<skyline::Message>(message));
             return;
         }
 
-        try {
-            nlohmann::json json = nlohmann::json::parse(message);
-            
-            // 提前检查ID字段是否存在，优化逻辑分支
-            if (json.contains("id") && json["type"].empty()) {
-                // Response message
-                auto& id = json["id"];
-                logger->info("received message id: {}", id.get<std::string>());
-                
-                // 使用作用域锁减少锁持有时间
-                {
-                    std::lock_guard<std::mutex> lock(socketRequestMutex);
-                    auto it = socketRequest.find(id);
-                    if (it != socketRequest.end()) {
-                        it->second->set_value(message);
-                        socketRequest.erase(it);
-                    } else {
-                        logger->error("id not found: {}", id.get<std::string>());
-                    }
-                }
-            } else if(!json["type"].empty()) {
-                if (blocked) {
-                    logger->info("blocked, push to queue...");
-                    callbackQueue.push(std::move(json));
-                    return;
-                }
-
-                std::string type = json["type"].get<std::string>();
-                if (type == "emitCallback") {
-                    // 处理剩余逻辑
-                    std::string callbackId = json["callbackId"].get<std::string>();
-                    auto ptr = Convert::find_callback(callbackId);
-                    if (ptr != nullptr) {
-                        // ...现有代码...
-                        logger->info("callbackId found: {}", callbackId);
-                        auto block = json["data"]["block"];
-                        if (block.is_boolean() && block.get<bool>() == false) {
-                            ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
-                                auto args = json["data"]["args"];
-                                std::string callbackId = json["callbackId"].get<std::string>();
-                                Napi::HandleScope scope(env);
-                                std::vector<Napi::Value> argsVec;
-                                
-                                for (auto& arg : args) {
-                                    argsVec.push_back(Convert::convertJson2Value(env, arg));
-                                }
-                                logger->info("call callback function...");
-                                auto resultValue = jsCallback.Call(argsVec);
-                                logger->info("call callback function end...");
-
-                                auto resultJson = Convert::convertValue2Json(env, resultValue);
-                                if (json.contains("id")) {
-                                    logger->info("reply callback...");
-                                    nlohmann::json callbackResult = {
-                                        {"id", json["id"].get<std::string>()},
-                                        {"type", "callbackReply"},
-                                        {"result", resultJson},
-                                    };
-                                    // Add newline as message delimiter
-                                    std::string message = callbackResult.dump() + "\n";
-                                    boost::asio::write(*socket, boost::asio::buffer(message));
-                                }
-                            });
-                        } else {
-                            ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
-                                auto args = json["data"]["args"];
-                                std::string callbackId = json["callbackId"].get<std::string>();
-                                Napi::HandleScope scope(env);
-                                std::vector<Napi::Value> argsVec;
-                                
-                                for (auto& arg : args) {
-                                    argsVec.push_back(Convert::convertJson2Value(env, arg));
-                                }
-                                logger->info("call callback function...");
-                                auto resultValue = jsCallback.Call(argsVec);
-                                logger->info("call callback function end...");
-
-                                auto resultJson = Convert::convertValue2Json(env, resultValue);
-                                if (json.contains("id")) {
-                                    logger->info("reply callback...");
-                                    nlohmann::json callbackResult = {
-                                        {"id", json["id"].get<std::string>()},
-                                        {"type", "callbackReply"},
-                                        {"result", resultJson},
-                                    };
-                                    // Add newline as message delimiter
-                                    std::string message = callbackResult.dump() + "\n";
-                                    boost::asio::write(*socket, boost::asio::buffer(message));
-                                }
-                            });
-                        }
-                    } else {
-                        logger->error("callbackId not found: {}", callbackId);
-                    }
-                }
-            }
-        } catch (const nlohmann::json::exception& e) {
-            logger->error("JSON解析错误: {}", e.what());
-        } catch (const std::exception& e) {
-            logger->error("处理消息时发生错误: {}", e.what());
-        }
-    }
-
-    void initSocket(Napi::Env &env) {
-        try {
-            serverCommunicationUuid.init(1, 1);
-
-            tcp::resolver resolver(io_context);
-            auto endpoints = resolver.resolve(serverAddress, std::to_string(serverPort));
-
-            socket = std::make_shared<tcp::socket>(io_context);
-            boost::asio::connect(*socket, endpoints);
-
-            // Start a thread for the io_context
-            std::thread([&]() {
-                try {
-                    io_context.run();
-                } catch (std::exception& e) {
-                    logger->error("IO context error: {}", e.what());
-                }
-            }).detach();
-
-            // Start a thread for reading messages
-            std::thread([&]() {
-                try {
-                    while (true) {
-                        std::string message = readMessage();
-                        processMessage(message);
-                    }
-                } catch (std::exception& e) {
-                    logger->error("Read message error: {}", e.what());
-                }
-            }).detach();
-
-            logger->info("Socket connected to {}:{}", serverAddress, serverPort);
-        } catch (std::exception& e) {
-            logger->error("Connection error: {}", e.what());
-            throw Napi::Error::New(env, std::string("Socket connection failed: ") + e.what());
-        }
-    }
-
-    nlohmann::json sendMessageSync(nlohmann::json& data) {
-        std::string id = std::to_string(serverCommunicationUuid.nextid());
-        data["id"] = id;
-        logger->info("send to server {}", data.dump());
-        
-        if (!socket->is_open()) {
-            throw std::runtime_error("Socket is not open");
-        }
-
-        blocked = true;
-        // Add newline as message delimiter
-        std::string message = data.dump() + "\n";
-
-        auto promiseObj = std::make_shared<std::promise<std::string>>();
-        std::future<std::string> futureObj = promiseObj->get_future();
-        
-        // Lock the mutex while manipulating the map
-        {
-            std::lock_guard<std::mutex> lock(socketRequestMutex);
-            auto insertResult = socketRequest.emplace(id, promiseObj);
-            if (!insertResult.second) {
-                logger->error("insert failed: {}", id);
-                throw std::runtime_error("id insert to request map failed: " + id);
-            }
-        }
-
-        boost::asio::write(*socket, boost::asio::buffer(message));
-
-        auto start = std::chrono::steady_clock::now();
-        while (true) {
-            auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>
-                (std::chrono::steady_clock::now() - start).count();
-            if (delta_ms > 5000) {
-                blocked = false;
-                throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
-            }
-            
-            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                break;
-            }
-            if (!callbackQueue.empty()) {
-                auto json = callbackQueue.front();
-                callbackQueue.pop();
-                logger->info("start to handle callback.");
-                std::string callbackId = json["callbackId"].get<std::string>();
+        // Handle different message types
+        switch (message.type()) {
+            case skyline::EMIT_CALLBACK: {
+                // Handle Protobuf callback
+                const auto& callbackData = message.callback_data();
+                std::string callbackId = callbackData.callback_id();
                 auto ptr = Convert::find_callback(callbackId);
+                
                 if (ptr != nullptr) {
                     logger->info("callbackId found: {}", callbackId);
-                    auto env = ptr->funcRef->Env();
-                    auto args = json["data"]["args"];
-                    std::string callbackId = json["callbackId"].get<std::string>();
-                    Napi::HandleScope scope(env);
-                    std::vector<Napi::Value> argsVec;
+                    bool isBlocking = callbackData.block();
                     
-                    for (auto& arg : args) {
-                        argsVec.push_back(Convert::convertJson2Value(env, arg));
-                    }
-                    std::shared_ptr<Napi::FunctionReference> funcRef = ptr->funcRef;
-                    auto resultValue = funcRef->Value().Call(argsVec);
-
-                    auto resultJson = Convert::convertValue2Json(env, resultValue);
-                    if (json.contains("id")) {
-                        logger->info("reply callback...");
-                        nlohmann::json callbackResult = {
-                            {"id", json["id"].get<std::string>()},
-                            {"type", "callbackReply"},
-                            {"result", resultJson},
-                        };
-                        // Add newline as message delimiter
-                        std::string message = callbackResult.dump() + "\n";
-                        boost::asio::write(*socket, boost::asio::buffer(message));
+                    auto callbackFunction = [message, callbackData](Napi::Env env, Napi::Function jsCallback) {
+                        Napi::HandleScope scope(env);
+                        std::vector<Napi::Value> argsVec;                        // Convert Protobuf values to Napi values
+                        for (const auto &arg : callbackData.args()) {
+                            argsVec.push_back(ProtobufConverter::protobufValueToNapi(env, arg));
+                        }
+                        
+                        logger->info("call callback function...");
+                        auto resultValue = jsCallback.Call(argsVec);
+                        logger->info("call callback function end...");                        // If callback expects a reply, send it back
+                        if (!message.id().empty()) {
+                            logger->info("reply callback...");
+                            skyline::Value resultProtobuf = ProtobufConverter::napiToProtobufValue(env, resultValue);
+                            
+                            skyline::Message callbackResult;
+                            callbackResult.set_id(message.id());
+                            callbackResult.set_type(skyline::CALLBACK_REPLY);
+                            
+                            auto* responseData = callbackResult.mutable_response_data();
+                            *responseData->mutable_return_value() = resultProtobuf;
+                            
+                            // Send reply using Protobuf
+                            if (socket && socket->is_open() && is_connected) {
+                                std::string serializedMessage = ProtobufConverter::serializeMessage(callbackResult);
+                                uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
+                                std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
+                                std::string fullMessage = lengthPrefix + serializedMessage;
+                                boost::asio::write(*socket, boost::asio::buffer(fullMessage));
+                            }
+                        }
+                    };
+                    
+                    if (isBlocking) {
+                        ptr->tsfn.BlockingCall(callbackFunction);
+                    } else {
+                        ptr->tsfn.NonBlockingCall(callbackFunction);
                     }
                 } else {
                     logger->error("callbackId not found: {}", callbackId);
                 }
+                break;
             }
-
+            default:
+                logger->warn("Unhandled protobuf message type: {}, content: {}", static_cast<int>(message.type()), message.DebugString());
+                break;
         }
-
-        std::string result = futureObj.get();
-        blocked = false;
-        logger->info("result: {}", result);
-
-        if (result.empty()) {
-            throw std::runtime_error("Server response is empty");
-        }
-
-        auto resp = nlohmann::json::parse(result);
-        if (resp.contains("error")) {
-            throw std::runtime_error("Server response error: " + resp["error"].get<std::string>());
-        }
-
-        return resp["result"];
-    }
-
-    void sendMessageAsync(nlohmann::json& data) {
-        std::string id = std::to_string(serverCommunicationUuid.nextid());
-        data["id"] = id;
-        logger->info("send to server {}", data.dump());
-
-        if (!socket->is_open()) {
-            throw std::runtime_error("Socket is not open");
-        }
-
-        // Add newline as message delimiter
-        std::string message = data.dump() + "\n";
-        boost::asio::write(*socket, boost::asio::buffer(message));
-    }
-
-    void callDynamicAsync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
-        nlohmann::json json {
-            {"type", "dynamic"},
-            {"action", action},
-            {"data", {
-                {"instanceId", instanceId},
-                {"params", args}
-            }}
-        };
-        
-        sendMessageAsync(json);
-    }
-
-    nlohmann::json callConstructorSync(const std::string& clazz, nlohmann::json& args) {
-        nlohmann::json json {
-            {"type", "constructor"},
-            {"clazz", clazz},
-            {"data", {
-                {"params", args}
-            }}
-        };
-        
-        return sendMessageSync(json);
-    }
-
-    nlohmann::json callDynamicSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
-        nlohmann::json json {
-            {"type", "dynamic"},
-            {"action", action},
-            {"data", {
-                {"instanceId", instanceId},
-                {"params", args}
-            }}
-        };
-        
-        return sendMessageSync(json);
-    }
-
-    nlohmann::json callDynamicPropertySetSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
-        nlohmann::json json {
-            {"type", "dynamicProperty"},
-            {"action", action},
-            {"data", {
-                {"instanceId", instanceId},
-                {"params", args},
-                {"propertyAction", "set"},
-            }}
-        };
-        
-        return sendMessageSync(json);
-    }
-
-    nlohmann::json callDynamicPropertyGetSync(const std::string& instanceId, const std::string& action) {
-        nlohmann::json json {
-            {"type", "dynamicProperty"},
-            {"action", action},
-            {"data", {
-                {"instanceId", instanceId},
-                {"propertyAction", "get"},
-            }}
-        };
-        
-        return sendMessageSync(json);
-    }
-
-    nlohmann::json callStaticSync(const std::string& clazz, const std::string& action, nlohmann::json& args) {
-        nlohmann::json json {
-            {"type", "static"},
-            {"clazz", clazz},
-            {"action", action},
-            {"data", {
-                {"params", args}
-            }}
-        };
-        
-        return sendMessageSync(json);
-    }
-
-    nlohmann::json callCustomHandleSync(const std::string& action, nlohmann::json& args) {
-        return callStaticSync("customHandle", action, args);
+    } catch (const std::exception &e) {
+        logger->error("Error processing protobuf message: {}", e.what());
     }
 }
+void initSocket(Napi::Env &env) {
+    try {
+        serverCommunicationUuid.init(1, 1);
+
+        tcp::resolver resolver(io_context);
+        auto endpoints =
+            resolver.resolve(serverAddress, std::to_string(serverPort));
+
+        socket = std::make_shared<tcp::socket>(io_context);
+        boost::asio::connect(*socket, endpoints);
+
+        is_connected = true;        // Start a thread for the io_context
+        std::thread([&]() {
+            try {
+                io_context.run();
+            } catch (std::exception &e) {
+                logger->error("IO context error: {}", e.what());
+                is_connected = false;
+            }
+        }).detach();
+
+        // 开始异步读取消息
+        startAsyncRead();
+
+        logger->info("Socket connected to {}:{}", serverAddress, serverPort);
+    } catch (std::exception &e) {
+        logger->error("Connection error: {}", e.what());
+        throw Napi::Error::New(env, std::string("Socket connection failed: ") +
+                                        e.what());
+    }
+}
+
+skyline::Message sendMessageSync(const skyline::Message &message) {
+    if (!socket || !socket->is_open() || !is_connected) {
+        throw std::runtime_error("Socket is not connected");
+    }
+
+    blocked = true;
+    
+    // 序列化Protobuf消息
+    std::string serializedMessage = ProtobufConverter::serializeMessage(message);
+    logger->info("Protobuf message serialized, size: {}, id: {}", serializedMessage.size(), message.id());
+    
+    // 添加长度前缀（4字节）和消息体
+    uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
+    std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
+    std::string fullMessage = lengthPrefix + serializedMessage;
+    logger->info("Full message with length prefix, total size: {}", fullMessage.size());
+
+    auto promiseObj = std::make_shared<std::promise<skyline::Message>>();
+    std::future<skyline::Message> futureObj = promiseObj->get_future();
+
+    // Lock the mutex while manipulating the map
+    {
+        std::lock_guard<std::mutex> lock(socketRequestMutex);
+        auto insertResult = socketRequest.emplace(message.id(), promiseObj);
+        if (!insertResult.second) {
+            blocked = false;
+            throw std::runtime_error("id insert to request map failed: " + message.id());
+        }
+    }
+
+    // Send message with socket protection
+    if (socket && socket->is_open() && is_connected) {
+        boost::asio::write(*socket, boost::asio::buffer(fullMessage));
+    } else {
+        socketRequest.erase(message.id());
+        blocked = false;
+        throw std::runtime_error("Socket disconnected while sending");
+    }    // Wait for response with timeout
+    auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    
+    while (std::chrono::steady_clock::now() < timeout) {
+        // 使用短暂等待替代立即轮询，减少 CPU 消耗
+        auto waitStatus = futureObj.wait_for(std::chrono::milliseconds(1));
+        
+        if (waitStatus == std::future_status::ready) {
+            break;
+        }
+          // Handle callback queue during wait
+        if (!callbackQueue.empty()) {
+            auto pbMessage = callbackQueue.front();
+            callbackQueue.pop();
+            logger->info("start to handle callback.");
+            
+            if (pbMessage->type() == skyline::EMIT_CALLBACK) {
+                const auto& callbackData = pbMessage->callback_data();
+                std::string callbackId = callbackData.callback_id();
+                auto ptr = Convert::find_callback(callbackId);
+                
+                if (ptr != nullptr) {
+                    logger->info("callbackId found: {}", callbackId);
+                    auto env = ptr->funcRef->Env();
+                    Napi::HandleScope scope(env);
+                    std::vector<Napi::Value> argsVec;                    for (const auto &arg : callbackData.args()) {
+                        argsVec.push_back(ProtobufConverter::protobufValueToNapi(env, arg));
+                    }
+                    std::shared_ptr<Napi::FunctionReference> funcRef = ptr->funcRef;
+                    auto resultValue = funcRef->Value().Call(argsVec);
+
+                    // If callback expects a reply, send it back
+                    if (!pbMessage->id().empty()) {
+                        logger->info("reply callback...");
+                        skyline::Value resultProtobuf = ProtobufConverter::napiToProtobufValue(env, resultValue);
+                        
+                        skyline::Message callbackResult;
+                        callbackResult.set_id(pbMessage->id());
+                        callbackResult.set_type(skyline::CALLBACK_REPLY);
+                        
+                        auto* responseData = callbackResult.mutable_response_data();
+                        *responseData->mutable_return_value() = resultProtobuf;
+                        
+                        // Send reply using Protobuf
+                        if (socket && socket->is_open() && is_connected) {
+                            std::string serializedMessage = ProtobufConverter::serializeMessage(callbackResult);
+                            uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
+                            std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
+                            std::string fullMessage = lengthPrefix + serializedMessage;
+                            boost::asio::write(*socket, boost::asio::buffer(fullMessage));
+                        }
+                    }
+                } else {
+                    logger->error("callbackId not found: {}", callbackId);
+                }            }
+        }
+    }
+
+    // 检查是否超时
+    if (std::chrono::steady_clock::now() >= timeout) {
+        blocked = false;
+        socketRequest.erase(message.id());
+        throw std::runtime_error("Operation timed out after 5 seconds");
+    }
+
+    skyline::Message result = futureObj.get();
+    blocked = false;
+    
+    logger->debug("Recevied message: {}", result.DebugString());
+    // Check for errors in response
+    if (result.type() == skyline::MessageType::RESPONSE) {
+        const auto& responseData = result.response_data();
+        if (!responseData.error().empty()) {
+            throw std::runtime_error("Server response error: " + responseData.error());
+        }
+    }
+    
+    return result;
+}
+
+void sendMessageAsync(const skyline::Message &message) {
+    if (!socket || !socket->is_open() || !is_connected) {
+        throw std::runtime_error("Socket is not connected");
+    }
+
+    // 序列化Protobuf消息
+    std::string serializedMessage = ProtobufConverter::serializeMessage(message);
+    
+    // 添加长度前缀（4字节）和消息体
+    uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
+    std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
+    std::string fullMessage = lengthPrefix + serializedMessage;
+    
+    if (socket && socket->is_open() && is_connected) {
+        boost::asio::write(*socket, boost::asio::buffer(fullMessage));
+    } else {
+        throw std::runtime_error("Socket disconnected while sending");
+    }
+}
+
+void callDynamicAsync(const std::string &instanceId, const std::string &action,
+                      const std::vector<skyline::Value> &params) {
+    std::string id = std::to_string(serverCommunicationUuid.nextid());
+    skyline::Message message = ProtobufConverter::createDynamicMessage(id, instanceId, action, params);
+    sendMessageAsync(message);
+}
+
+skyline::Value callConstructorSync(const std::string &clazz,
+                                   const std::vector<skyline::Value> &params) {
+    std::string id = std::to_string(serverCommunicationUuid.nextid());
+    skyline::Message message = ProtobufConverter::createConstructorMessage(id, clazz, params);
+    skyline::Message response = sendMessageSync(message);
+    
+    if (response.type() == skyline::MessageType::RESPONSE) {
+        const auto& responseData = response.response_data();
+        if (!responseData.error().empty()) {
+            throw std::runtime_error("Server response error: " + responseData.error());
+        }
+        if (!responseData.instance_id().empty()) {
+            skyline::Value result;
+            result.set_string_value(responseData.instance_id());
+            return result;
+        }
+        return responseData.return_value();
+    }
+    
+    throw std::runtime_error("Invalid response type");
+}
+
+skyline::Value callDynamicSync(const std::string &instanceId,
+                               const std::string &action,
+                               const std::vector<skyline::Value> &params) {
+    std::string id = std::to_string(serverCommunicationUuid.nextid());
+    skyline::Message message = ProtobufConverter::createDynamicMessage(id, instanceId, action, params);
+    skyline::Message response = sendMessageSync(message);
+    
+    if (response.type() == skyline::MessageType::RESPONSE) {
+        const auto& responseData = response.response_data();
+        if (!responseData.error().empty()) {
+            throw std::runtime_error("Server response error: " + responseData.error());
+        }
+        return responseData.return_value();
+    }
+    
+    throw std::runtime_error("Invalid response type");
+}
+
+skyline::Value callDynamicPropertySetSync(const std::string &instanceId,
+                                          const std::string &action,
+                                          const std::vector<skyline::Value> &params) {
+    std::string id = std::to_string(serverCommunicationUuid.nextid());
+    skyline::Message message = ProtobufConverter::createDynamicPropertyMessage(id, instanceId, action, skyline::PropertyAction::SET, params);
+    skyline::Message response = sendMessageSync(message);
+    
+    if (response.type() == skyline::MessageType::RESPONSE) {
+        const auto& responseData = response.response_data();
+        if (!responseData.error().empty()) {
+            throw std::runtime_error("Server response error: " + responseData.error());
+        }
+        return responseData.return_value();
+    }
+    
+    throw std::runtime_error("Invalid response type");
+}
+
+skyline::Value callDynamicPropertyGetSync(const std::string &instanceId,
+                                          const std::string &action) {
+    std::string id = std::to_string(serverCommunicationUuid.nextid());
+    std::vector<skyline::Value> emptyParams;
+    skyline::Message message = ProtobufConverter::createDynamicPropertyMessage(id, instanceId, action, skyline::PropertyAction::GET, emptyParams);
+    skyline::Message response = sendMessageSync(message);
+    
+    if (response.type() == skyline::MessageType::RESPONSE) {
+        const auto& responseData = response.response_data();
+        if (!responseData.error().empty()) {
+            throw std::runtime_error("Server response error: " + responseData.error());
+        }
+        return responseData.return_value();
+    }
+    
+    throw std::runtime_error("Invalid response type");
+}
+
+skyline::Value callStaticSync(const std::string &clazz,
+                              const std::string &action, const std::vector<skyline::Value> &params) {
+    std::string id = std::to_string(serverCommunicationUuid.nextid());
+    skyline::Message message = ProtobufConverter::createStaticMessage(id, clazz, action, params);
+    skyline::Message response = sendMessageSync(message);
+    // logger->debug("callStaticSync response: {}", response.DebugString());
+    if (response.type() == skyline::MessageType::RESPONSE) {
+        const auto& responseData = response.response_data();
+        if (!responseData.error().empty()) {
+            throw std::runtime_error("Server response error: " + responseData.error());
+        }
+        return responseData.return_value();
+    }
+    
+    throw std::runtime_error("Invalid response type");
+}
+
+skyline::Value callCustomHandleSync(const std::string &action,
+                                    const std::vector<skyline::Value> &params) {
+    return callStaticSync("customHandle", action, params);
+}
+
+} // namespace SocketClient

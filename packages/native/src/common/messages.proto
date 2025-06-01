@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package skyline;
+
+// 基础消息类型
+enum MessageType {
+  CONSTRUCTOR = 0;
+  STATIC = 1;
+  DYNAMIC = 2;
+  DYNAMIC_PROPERTY = 3;
+  EMIT_CALLBACK = 4;
+  CALLBACK_REPLY = 5;
+  RESPONSE = 6;
+}
+
+// 属性操作类型
+enum PropertyAction {
+  GET = 0;
+  SET = 1;
+}
+
+// 通用参数值
+message Value {
+  oneof value {
+    string string_value = 1;
+    int64 int_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+    bytes bytes_value = 5;
+    ValueArray array_value = 6;
+    ValueObject object_value = 7;
+  }
+}
+
+message ValueArray {
+  repeated Value values = 1;
+}
+
+message ValueObject {
+  map<string, Value> fields = 1;
+}
+
+// 构造函数请求数据
+message ConstructorData {
+  string clazz = 1;
+  repeated Value params = 2;
+}
+
+// 静态方法调用数据
+message StaticData {
+  string clazz = 1;
+  string action = 2;
+  repeated Value params = 3;
+}
+
+// 动态方法调用数据
+message DynamicData {
+  string instance_id = 1;
+  string action = 2;
+  repeated Value params = 3;
+}
+
+// 动态属性操作数据
+message DynamicPropertyData {
+  string instance_id = 1;
+  string action = 2;
+  PropertyAction property_action = 3;
+  repeated Value params = 4;
+}
+
+// 回调函数调用数据
+message CallbackData {
+  string callback_id = 1;
+  repeated Value args = 2;
+  bool block = 3;
+}
+
+// 响应数据
+message ResponseData {
+  Value return_value = 1;
+  string instance_id = 2;
+  string error = 3;
+}
+
+// 主消息结构
+message Message {
+  string id = 1;
+  MessageType type = 2;
+  
+  oneof data {
+    ConstructorData constructor_data = 3;
+    StaticData static_data = 4;
+    DynamicData dynamic_data = 5;
+    DynamicPropertyData dynamic_property_data = 6;
+    CallbackData callback_data = 7;
+    ResponseData response_data = 8;
+  }
+}

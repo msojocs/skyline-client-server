@@ -2,218 +2,488 @@
 #include "../client/skyline_global/async_style_sheets.hh"
 #include "../client/skyline_global/fragment_binding.hh"
 #include "../client/skyline_global/mutable_value.hh"
-#include "../client/skyline_global/shadow_node/list_view.hh"
 #include "../client/skyline_global/shadow_node/grid_view.hh"
+#include "../client/skyline_global/shadow_node/hero.hh"
+#include "../client/skyline_global/shadow_node/image.hh"
+#include "../client/skyline_global/shadow_node/input.hh"
+#include "../client/skyline_global/shadow_node/list_view.hh"
 #include "../client/skyline_global/shadow_node/scroll_view.hh"
 #include "../client/skyline_global/shadow_node/sticky_header.hh"
 #include "../client/skyline_global/shadow_node/sticky_section.hh"
-#include "../client/skyline_global/shadow_node/text.hh"
-#include "../client/skyline_global/shadow_node/image.hh"
 #include "../client/skyline_global/shadow_node/swiper.hh"
 #include "../client/skyline_global/shadow_node/swiper_item.hh"
+#include "../client/skyline_global/shadow_node/text.hh"
 #include "../client/skyline_global/shadow_node/view.hh"
-#include "../client/skyline_global/shadow_node/hero.hh"
-#include "../client/skyline_global/shadow_node/input.hh"
 #include "../client/socket_client.hh"
 #include "../common/snowflake.hh"
 #include "napi.h"
+#include "protobuf_converter.hh"
 #include <memory>
-#include <nlohmann/json_fwd.hpp>
 #include <string>
+
 
 namespace Convert {
 
 static std::map<std::string, CallbackData> callback;
-static std::map<std::string, std::shared_ptr<Napi::ObjectReference>> instanceCache;
+static std::map<std::string, std::shared_ptr<Napi::ObjectReference>>
+    instanceCache;
 using snowflake_t = snowflake<1534832906275L>;
 static snowflake_t callbackUuid;
 static snowflake_t sharedMemoryUuid;
 
 static std::map<std::string, Napi::FunctionReference *> clazzMap;
 
-#ifdef _SKYLINE_CLIENT_
-
-CallbackData * find_callback(const std::string &callbackId)
-{
-  auto it = callback.find(callbackId);
-  if (it != callback.end()) {
-    return &it->second;
-  }
-  return nullptr;
-}
-void RegisteInstanceType(Napi::Env &env) {
-  callbackUuid.init(2, 1);
-  sharedMemoryUuid.init(4, 1);
-  // 注册实例类型和对应的构造函数
-  clazzMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
-  clazzMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
-  clazzMap["InputShadowNode"] = Skyline::InputShadowNode::GetClazz(env);
-  clazzMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
-  clazzMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
-  // SwiperItemShadoNode就是少了一个w
-  clazzMap["SwiperItemShadoNode"] = Skyline::SwiperItemShadowNode::GetClazz(env);
-  clazzMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
-  clazzMap["GridViewShadowNode"] = Skyline::GridViewShadowNode::GetClazz(env);
-  clazzMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
-  clazzMap["ListViewShadowNode"] = Skyline::ListViewShadowNode::GetClazz(env);
-  clazzMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);
-  clazzMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
-  clazzMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
-  clazzMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
-  clazzMap["HeroShadowNode"] = Skyline::HeroShadowNode::GetClazz(env);
-}
-#endif
-
-nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value) {
-  Napi::Object obj = value.As<Napi::Object>();
-  if (obj.Get("instanceId").IsString()) {
-    nlohmann::json jsonObj;
-    jsonObj["instanceId"] =
-        obj.Get("instanceId").As<Napi::String>().Utf8Value();
-    return jsonObj;
-  }
-  nlohmann::json jsonObj = nlohmann::json::object();
-  Napi::Array propertyNames = obj.GetPropertyNames();
-  for (uint32_t i = 0; i < propertyNames.Length(); i++) {
-    Napi::String key = propertyNames.Get(i).As<Napi::String>();
-    Napi::Value val = obj.Get(key);
-    auto k = key.Utf8Value();
-    if (k.length() == 0) {
-      continue;
+// Core callback functions available for both client and server
+CallbackData *find_callback(const std::string &callbackId) {
+    auto it = callback.find(callbackId);
+    if (it != callback.end()) {
+        return &it->second;
     }
-    jsonObj[k] = convertValue2Json(env, val);
-  }
-  return jsonObj;
-}
-nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
-  if (value.IsString()) {
-    return value.As<Napi::String>().Utf8Value();
-  } else if (value.IsNumber()) {
-    return value.As<Napi::Number>().DoubleValue();
-  } else if (value.IsBoolean()) {
-    return value.As<Napi::Boolean>().Value();
-  } else if (value.IsFunction()) {
-    Napi::Function func = value.As<Napi::Function>();
-    nlohmann::json jsonObj;
-    // 生成callbackId，把Function和callbackId绑定在一起
-    std::string callbackId = std::to_string(callbackUuid.nextid());
-    bool isSync = func.Get(Napi::String::New(env, "__syncCallback")).IsBoolean();
-    if (isSync) {
-      isSync = func.Get(Napi::String::New(env, "__syncCallback")).As<Napi::Boolean>().Value();
-    }
-    isSync = true;
-    jsonObj["callbackId"] = callbackId;
-    jsonObj["syncCallback"] = isSync;
-
-    callback[callbackId] = {
-        std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),
-        Napi::ThreadSafeFunction::New(env, func, "Callback", 0, 1)};
-    if (func.Get("__worklet").IsBoolean()) {
-      jsonObj["asString"] = func.Get("asString").As<Napi::String>().Utf8Value();
-      jsonObj["__workletHash"] = func.Get("__workletHash").As<Napi::Number>().Int64Value();
-      jsonObj["__location"] = func.Get("__location").As<Napi::String>().Utf8Value();
-      jsonObj["__worklet"] = func.Get("__worklet").As<Napi::Boolean>().Value();
-      jsonObj["_closure"] = convertValue2Json(env, func.Get("_closure"));
-    }
-    return jsonObj;
-  } else if (value.IsBuffer()) {
-    Napi::Buffer<uint8_t> buffer = value.As<Napi::Buffer<uint8_t>>();
-    size_t byteLength = buffer.Length();
-    nlohmann::json jsonArr;
-    for (uint32_t i = 0; i < byteLength; i++) {
-      jsonArr[i] = buffer.Data()[i];
-    }
-    return jsonArr;
-  } else if (value.IsArrayBuffer()) {
-    Napi::ArrayBuffer arrayBuffer = value.As<Napi::ArrayBuffer>();
-    size_t byteLength = arrayBuffer.ByteLength();
-    nlohmann::json jsonArr;
-    for (uint32_t i = 0; i < byteLength; i++) {
-      jsonArr[i] = static_cast<uint8_t *>(arrayBuffer.Data())[i];
-    }
-    return jsonArr;
-  } else if (value.IsArray()) {
-    Napi::Array arr = value.As<Napi::Array>();
-    nlohmann::json jsonArr = nlohmann::json::array();
-    for (uint32_t i = 0; i < arr.Length(); i++) {
-      jsonArr[i] = convertValue2Json(env, arr.Get(i));
-    }
-    return jsonArr;
-  } else if (value.IsObject()) {
-    return convertObject2Json(env, value);
-  }
-  return nlohmann::json();
+    return nullptr;
 }
 
-Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
-  if (data.is_null()) {
-    return env.Undefined();
-  }
-  if (data.is_string()) {
-    return Napi::String::New(env, data.get<std::string>());
-  } else if (data.is_number()) {
-    return Napi::Number::New(env, data.get<double>());
-  } else if (data.is_boolean()) {
-    return Napi::Boolean::New(env, data.get<bool>());
-  } else if (data.is_array()) {
-    Napi::Array arr = Napi::Array::New(env, data.size());
-    for (size_t i = 0; i < data.size(); i++) {
-      arr[i] = convertJson2Value(env, data[i]);
+snowflake_t& getCallbackUuid() {
+    // Ensure the UUID generator is initialized
+    static bool initialized = false;
+    if (!initialized) {
+        callbackUuid.init(2, 1);
+        initialized = true;
     }
-    return arr;
-  } else if (data.is_object()) {
+    return callbackUuid;
+}
+
+void storeCallback(const std::string& callbackId, const CallbackData& data) {
+    callback[callbackId] = data;
+}
 
 #ifdef _SKYLINE_CLIENT_
-    if (data.contains("instanceId") && data.contains("instanceType") &&
-        data["instanceType"].get<std::string>() == "function") {
-      // 返回值是个函数，如makeShareable
-      return Napi::Function::New(env, [data](const Napi::CallbackInfo &info) {
-        auto env = info.Env();
-        nlohmann::json args = nlohmann::json::array();
-        for (int i = 0; i < info.Length(); i++) {
-          args[i] = convertValue2Json(env, info[i]);
-        }
-        auto result = SocketClient::callStaticSync("functionData", data["instanceId"].get<std::string>(), args);
-        auto returnValue = result["returnValue"];
+Napi::Value createInstanceFromProtobuf(Napi::Env& env, const std::string& instanceId, const std::string& instanceType) {
+    if (instanceType == "function") {
+        // 返回值是个函数，如makeShareable
+        return Napi::Function::New(
+            env, [instanceId](const Napi::CallbackInfo &info) {
+                auto env = info.Env();
+                std::vector<skyline::Value> args;
+                for (int i = 0; i < info.Length(); i++) {
+                    args.push_back(ProtobufConverter::napiToProtobufValue(
+                        env, info[i]));
+                }
+                auto result = SocketClient::callStaticSync(
+                    "functionData", instanceId, args);
 
-        return Convert::convertJson2Value(env, returnValue);
-      });
+                return ProtobufConverter::protobufValueToNapi(env, result);
+            });
     }
-#endif
 
-    if (data.contains("instanceId") && data.contains("instanceType")) {
-      auto it = clazzMap.find(data["instanceType"].get<std::string>());
-      if (it != clazzMap.end()) {
+    auto it = clazzMap.find(instanceType);
+    if (it != clazzMap.end()) {
         try {
-          Napi::FunctionReference *func = it->second;
-          // 创建实例
-          // 先到cache找
-          auto instanceId = data["instanceId"].get<std::string>();
-          if (instanceCache.find(instanceId) != instanceCache.end()) {
-            return instanceCache[instanceId]->Value();
-          }
-          // cache找不到
-          auto result = func->New(
-              {Napi::String::New(env, data["instanceId"].get<std::string>())});
-          auto ref = Napi::Persistent(result);
-          instanceCache.emplace(instanceId, std::make_shared<Napi::ObjectReference>(std::move(ref)) );
-          return result;
+            Napi::FunctionReference *func = it->second;
+            // 创建实例
+            // 先到cache找
+            if (instanceCache.find(instanceId) != instanceCache.end()) {
+                return instanceCache[instanceId]->Value();
+            }
+            // cache找不到
+            auto result = func->New({Napi::String::New(env, instanceId)});
+            auto ref = Napi::Persistent(result);
+            instanceCache.emplace(
+                instanceId, std::make_shared<Napi::ObjectReference>(
+                                std::move(ref)));
+            return result;
         } catch (const std::exception &e) {
-          Napi::Error::New(env,
-                           std::string("Error creating instance: ") + e.what())
-              .ThrowAsJavaScriptException();
-          return env.Undefined();
+            Napi::Error::New(env,
+                             std::string("Error creating instance: ") +
+                                 e.what())
+                .ThrowAsJavaScriptException();
+            return env.Undefined();
         }
-      }
-      return env.Undefined();
     }
-    Napi::Object obj = Napi::Object::New(env);
-    for (auto it = data.begin(); it != data.end(); ++it) {
-      obj.Set(it.key(), convertJson2Value(env, it.value()));
-    }
-    return obj;
-  }
-  // undefined
-  return env.Undefined();
+    return env.Undefined();
 }
+
+void RegisteInstanceType(Napi::Env &env) {
+    // callbackUuid is now initialized in getCallbackUuid() on first access
+    sharedMemoryUuid.init(4, 1);
+    // 注册实例类型和对应的构造函数
+    clazzMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
+    clazzMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
+    clazzMap["InputShadowNode"] = Skyline::InputShadowNode::GetClazz(env);
+    clazzMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
+    clazzMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
+    // SwiperItemShadoNode就是少了一个w
+    clazzMap["SwiperItemShadoNode"] =
+        Skyline::SwiperItemShadowNode::GetClazz(env);
+    clazzMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
+    clazzMap["GridViewShadowNode"] = Skyline::GridViewShadowNode::GetClazz(env);
+    clazzMap["ScrollViewShadowNode"] =
+        Skyline::ScrollViewShadowNode::GetClazz(env);
+    clazzMap["ListViewShadowNode"] = Skyline::ListViewShadowNode::GetClazz(env);
+    clazzMap["StickySectionShadowNode"] =
+        Skyline::StickySectionShadowNode::GetClazz(env);
+    clazzMap["StickyHeaderShadowNode"] =
+        Skyline::StickyHeaderShadowNode::GetClazz(env);
+    clazzMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
+    clazzMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
+    clazzMap["HeroShadowNode"] = Skyline::HeroShadowNode::GetClazz(env);
+}
+#endif
+
+// Protobuf conversion functions
+skyline::MessageType stringToMessageType(const std::string &typeStr) {
+    if (typeStr == "constructor")
+        return skyline::CONSTRUCTOR;
+    if (typeStr == "static")
+        return skyline::STATIC;
+    if (typeStr == "dynamic")
+        return skyline::DYNAMIC;
+    if (typeStr == "dynamicProperty")
+        return skyline::DYNAMIC_PROPERTY;
+    if (typeStr == "emitCallback")
+        return skyline::EMIT_CALLBACK;
+    if (typeStr == "callbackReply")
+        return skyline::CALLBACK_REPLY;
+    if (typeStr == "response")
+        return skyline::RESPONSE;
+    return skyline::CONSTRUCTOR; // default fallback
+}
+
+std::string messageTypeToString(skyline::MessageType type) {
+    switch (type) {
+    case skyline::CONSTRUCTOR:
+        return "constructor";
+    case skyline::STATIC:
+        return "static";
+    case skyline::DYNAMIC:
+        return "dynamic";
+    case skyline::DYNAMIC_PROPERTY:
+        return "dynamicProperty";
+    case skyline::EMIT_CALLBACK:
+        return "emitCallback";
+    case skyline::CALLBACK_REPLY:
+        return "callbackReply";
+    case skyline::RESPONSE:
+        return "response";
+    default:
+        return "constructor";
+    }
+}
+
+Napi::Object convertProtobufToJs(Napi::Env &env,
+                                 const skyline::Message &message) {
+    Napi::Object obj = Napi::Object::New(env);
+
+    obj.Set("id", Napi::String::New(env, message.id()));
+    obj.Set("type",
+            Napi::String::New(env, messageTypeToString(message.type())));
+    // Convert the specific data based on message type
+    switch (message.type()) {
+    case skyline::CONSTRUCTOR:
+        if (message.has_constructor_data()) {
+            Napi::Object constructorObj = Napi::Object::New(env);
+            constructorObj.Set(
+                "clazz",
+                Napi::String::New(env, message.constructor_data().clazz()));
+            // Convert parameters array
+            Napi::Array params = Napi::Array::New(env);
+            for (int i = 0; i < message.constructor_data().params_size(); i++) {
+                // Convert protobuf Value to Napi::Value using ProtobufConverter
+                params[i] = ProtobufConverter::protobufValueToNapi(
+                    env, message.constructor_data().params(i));
+            }
+            constructorObj.Set("params", params);
+            obj.Set("data", constructorObj);
+        }
+        break;
+    case skyline::STATIC:
+        if (message.has_static_data()) {
+            Napi::Object staticObj = Napi::Object::New(env);
+            staticObj.Set(
+                "clazz", Napi::String::New(env, message.static_data().clazz()));
+            staticObj.Set("action", Napi::String::New(
+                                        env, message.static_data().action()));
+            Napi::Array params = Napi::Array::New(env);
+            for (int i = 0; i < message.static_data().params_size(); i++) {
+                params[i] = ProtobufConverter::protobufValueToNapi(
+                    env, message.static_data().params(i));
+            }
+            staticObj.Set("params", params);
+            obj.Set("data", staticObj);
+        }
+        break;
+    case skyline::DYNAMIC:
+        if (message.has_dynamic_data()) {
+            Napi::Object dynamicObj = Napi::Object::New(env);
+            dynamicObj.Set(
+                "instanceId",
+                Napi::String::New(env, message.dynamic_data().instance_id()));
+            dynamicObj.Set("action", Napi::String::New(
+                                         env, message.dynamic_data().action()));
+            Napi::Array params = Napi::Array::New(env);
+            for (int i = 0; i < message.dynamic_data().params_size(); i++) {
+                params[i] = ProtobufConverter::protobufValueToNapi(
+                    env, message.dynamic_data().params(i));
+            }
+            dynamicObj.Set("params", params);
+            obj.Set("data", dynamicObj);        }
+        break;
+    case skyline::DYNAMIC_PROPERTY:
+        if (message.has_dynamic_property_data()) {
+            Napi::Object dynamicPropertyObj = Napi::Object::New(env);
+            dynamicPropertyObj.Set(
+                "instanceId",
+                Napi::String::New(env, message.dynamic_property_data().instance_id()));
+            dynamicPropertyObj.Set("action", Napi::String::New(
+                                         env, message.dynamic_property_data().action()));
+            
+            // Convert property action enum to string
+            std::string propertyActionStr = 
+                (message.dynamic_property_data().property_action() == skyline::GET) ? "get" : "set";
+            dynamicPropertyObj.Set("propertyAction", Napi::String::New(env, propertyActionStr));
+            
+            Napi::Array params = Napi::Array::New(env);
+            for (int i = 0; i < message.dynamic_property_data().params_size(); i++) {
+                params[i] = ProtobufConverter::protobufValueToNapi(
+                    env, message.dynamic_property_data().params(i));
+            }
+            dynamicPropertyObj.Set("params", params);
+            obj.Set("data", dynamicPropertyObj);        }
+        break;
+    case skyline::EMIT_CALLBACK:
+        if (message.has_callback_data()) {
+            Napi::Object callbackObj = Napi::Object::New(env);
+            callbackObj.Set(
+                "callbackId",
+                Napi::String::New(env, message.callback_data().callback_id()));
+            callbackObj.Set("block", 
+                           Napi::Boolean::New(env, message.callback_data().block()));
+            
+            Napi::Array args = Napi::Array::New(env);
+            for (int i = 0; i < message.callback_data().args_size(); i++) {
+                args[i] = ProtobufConverter::protobufValueToNapi(
+                    env, message.callback_data().args(i));
+            }
+            callbackObj.Set("args", args);
+            obj.Set("data", callbackObj);
+        }
+        break;
+    case skyline::CALLBACK_REPLY:
+    case skyline::RESPONSE:
+        if (message.has_response_data()) {
+            const auto &responseData = message.response_data();
+            Napi::Object responseObj = Napi::Object::New(env);            // Handle error field
+            if (!responseData.error().empty()) {
+                responseObj.Set("error",
+                                Napi::String::New(env, responseData.error()));
+            }
+
+            // Handle result fields
+            bool hasReturnValue = responseData.has_return_value();
+            bool hasInstanceId = !responseData.instance_id().empty();
+
+            if (hasReturnValue || hasInstanceId) {
+                Napi::Object resultObj = Napi::Object::New(env);
+
+                if (hasReturnValue) {
+                    resultObj.Set("returnValue",
+                                  ProtobufConverter::protobufValueToNapi(
+                                      env, responseData.return_value()));
+                }
+
+                if (hasInstanceId) {
+                    resultObj.Set(
+                        "instanceId",
+                        Napi::String::New(env, responseData.instance_id()));
+                }
+
+                responseObj.Set("result", resultObj);
+            }
+
+            obj.Set("data", responseObj);
+        }
+        break;
+    default:
+        // Handle other message types as needed
+        break;
+    }
+
+    return obj;
+}
+
+skyline::Message convertJsToProtobuf(Napi::Env &env, const Napi::Object &obj) {
+    skyline::Message message;
+
+    // Set basic fields
+    if (obj.Has("id")) {
+        message.set_id(obj.Get("id").As<Napi::String>().Utf8Value());
+    }
+
+    if (obj.Has("type")) {
+        std::string typeStr = obj.Get("type").As<Napi::String>().Utf8Value();
+        message.set_type(stringToMessageType(typeStr));
+    }
+    // Handle data field based on message type
+    if (obj.Has("data") && obj.Get("data").IsObject()) {
+        Napi::Object data = obj.Get("data").As<Napi::Object>();
+
+        switch (message.type()) {
+        case skyline::CONSTRUCTOR: {
+            skyline::ConstructorData *constructorData =
+                message.mutable_constructor_data();
+            if (data.Has("clazz")) {
+                constructorData->set_clazz(
+                    data.Get("clazz").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("params") && data.Get("params").IsArray()) {
+                Napi::Array params = data.Get("params").As<Napi::Array>();
+                for (uint32_t i = 0; i < params.Length(); i++) {
+                    skyline::Value *param = constructorData->add_params();
+                    *param =
+                        ProtobufConverter::napiToProtobufValue(env, params[i]);
+                }
+            }
+            break;
+        }
+        case skyline::STATIC: {
+            skyline::StaticData *staticData = message.mutable_static_data();
+            if (data.Has("clazz")) {
+                staticData->set_clazz(
+                    data.Get("clazz").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("action")) {
+                staticData->set_action(
+                    data.Get("action").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("params") && data.Get("params").IsArray()) {
+                Napi::Array params = data.Get("params").As<Napi::Array>();
+                for (uint32_t i = 0; i < params.Length(); i++) {
+                    skyline::Value *param = staticData->add_params();
+                    *param =
+                        ProtobufConverter::napiToProtobufValue(env, params[i]);
+                }
+            }
+            break;
+        }
+        case skyline::DYNAMIC: {
+            skyline::DynamicData *dynamicData = message.mutable_dynamic_data();
+            if (data.Has("instanceId")) {
+                dynamicData->set_instance_id(
+                    data.Get("instanceId").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("action")) {
+                dynamicData->set_action(
+                    data.Get("action").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("params") && data.Get("params").IsArray()) {
+                Napi::Array params = data.Get("params").As<Napi::Array>();
+                for (uint32_t i = 0; i < params.Length(); i++) {
+                    skyline::Value *param = dynamicData->add_params();
+                    *param =
+                        ProtobufConverter::napiToProtobufValue(env, params[i]);
+                }
+            }
+            break;
+        }
+        case skyline::DYNAMIC_PROPERTY: {
+            skyline::DynamicPropertyData *dynamicPropertyData =
+                message.mutable_dynamic_property_data();
+            if (data.Has("instanceId")) {
+                dynamicPropertyData->set_instance_id(
+                    data.Get("instanceId").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("action")) {
+                dynamicPropertyData->set_action(
+                    data.Get("action").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("propertyAction")) {
+                std::string propertyActionStr =
+                    data.Get("propertyAction").As<Napi::String>().Utf8Value();
+                if (propertyActionStr == "get") {
+                    dynamicPropertyData->set_property_action(skyline::GET);
+                } else if (propertyActionStr == "set") {
+                    dynamicPropertyData->set_property_action(skyline::SET);
+                }
+            }
+            if (data.Has("params") && data.Get("params").IsArray()) {
+                Napi::Array params = data.Get("params").As<Napi::Array>();
+                for (uint32_t i = 0; i < params.Length(); i++) {
+                    skyline::Value *param = dynamicPropertyData->add_params();
+                    *param =
+                        ProtobufConverter::napiToProtobufValue(env, params[i]);
+                }
+            }
+            break;
+        }
+        case skyline::EMIT_CALLBACK: {
+            skyline::CallbackData *callbackData =
+                message.mutable_callback_data();
+            if (data.Has("callbackId")) {
+                callbackData->set_callback_id(
+                    data.Get("callbackId").As<Napi::String>().Utf8Value());
+            }
+            if (data.Has("block")) {
+                callbackData->set_block(
+                    data.Get("block").As<Napi::Boolean>().Value());
+            }
+            if (data.Has("args") && data.Get("args").IsArray()) {
+                Napi::Array args = data.Get("args").As<Napi::Array>();
+                for (uint32_t i = 0; i < args.Length(); i++) {
+                    skyline::Value *arg = callbackData->add_args();
+                    *arg = ProtobufConverter::napiToProtobufValue(env, args[i]);
+                }
+            }
+            break;
+        }
+        case skyline::CALLBACK_REPLY:
+        case skyline::RESPONSE: {
+            skyline::ResponseData *responseData =
+                message.mutable_response_data();
+
+            // Handle error field first
+            if (data.Has("error")) {
+                responseData->set_error(
+                    data.Get("error").As<Napi::String>().Utf8Value());
+            }
+
+            // Handle result field - can now have both returnValue and
+            // instanceId
+            if (data.Has("result") && data.Get("result").IsObject()) {
+                Napi::Object result = data.Get("result").As<Napi::Object>();                // Set returnValue if present
+                if (result.Has("returnValue")) {
+                    skyline::Value *returnValue =
+                        responseData->mutable_return_value();
+                    *returnValue = ProtobufConverter::napiToProtobufValue(
+                        env, result.Get("returnValue"));
+                }
+
+                // Set instanceId if present (can coexist with returnValue now)
+                if (result.Has("instanceId")) {
+                    responseData->set_instance_id(result.Get("instanceId")
+                                                      .As<Napi::String>()
+                                                      .Utf8Value());
+                }
+            }            // Handle direct fields for backward compatibility
+            if (data.Has("returnValue")) {
+                skyline::Value *returnValue =
+                    responseData->mutable_return_value();
+                *returnValue = ProtobufConverter::napiToProtobufValue(
+                    env, data.Get("returnValue"));
+            }
+
+            if (data.Has("instanceId")) {
+                responseData->set_instance_id(
+                    data.Get("instanceId").As<Napi::String>().Utf8Value());
+            }
+
+            break;
+        }
+        default:
+            // Handle other message types as needed
+            break;
+        }
+    }
+
+    return message;
+}
+
 } // namespace Convert

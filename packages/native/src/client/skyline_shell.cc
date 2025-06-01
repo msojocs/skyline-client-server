@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <cstring>
 #include <exception>
-#include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include "skyline_global.hh"
-#include "../common/convert.hh"
+#include "../common/protobuf_converter.hh"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -83,8 +82,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     *callbackPtr = Napi::Persistent(info[0].As<Napi::Function>());
 
     auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
-      auto env = info.Env();
-      try {        nlohmann::json _t;
+      auto env = info.Env();      try {        std::vector<skyline::Value> _t;
         SocketClient::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
         //* 客户端初始化SkylineGlobal
         SkylineGlobal::Init(env);
@@ -96,10 +94,9 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
       } catch (...) {
         throw Napi::Error::New(env, "Unknown error occurred");
       }
-    });
-    // 发送消息到Socket
-    nlohmann::json args;
-    args[0] = Convert::convertValue2Json(env, func1);
+    });    // 发送消息到Socket
+    std::vector<skyline::Value> args;
+    args.push_back(ProtobufConverter::napiToProtobufValue(env, func1));
     SocketClient::callDynamicSync(m_instanceId, __func__, args);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
@@ -205,25 +202,51 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
       sharedMemoryKey = std::string(addr + 4);
     } else {
       throw Napi::Error::New(env, "共享内存key错误");
-    }
-
-    // 获取Server端的skyline路径
-    nlohmann::json data1;
+    }    // 获取Server端的skyline路径
+    std::vector<skyline::Value> data1;
     auto resp = SocketClient::callCustomHandleSync("getSkylineAddonPath", data1);
-    auto returnValue = resp["returnValue"];
-    auto skylineAddonPath = returnValue.get<std::string>();
-
-    // 两个path要替换为server端路径
-    nlohmann::json data{
-      windowId,
-      skylineAddonPath + "\\bundle",
-      width,
-      height,
-      devicePixelRatio,
-      hideWindow,
-      sharedMemoryKey,
-      skylineAddonPath + "\\build\\skyline.node",
-    };
+    
+    // Extract string value from the protobuf response
+    std::string skylineAddonPath;
+    if (resp.has_string_value()) {
+        skylineAddonPath = resp.string_value();
+    } else {
+        throw Napi::Error::New(env, "Failed to get skyline addon path");
+    }// 两个path要替换为server端路径
+    std::vector<skyline::Value> data;
+      // Convert each parameter to skyline::Value
+    skyline::Value windowIdValue;
+    windowIdValue.set_int_value(windowId);
+    data.push_back(windowIdValue);
+    
+    skyline::Value bundlePathValue;
+    bundlePathValue.set_string_value(skylineAddonPath + "\\bundle");
+    data.push_back(bundlePathValue);
+    
+    skyline::Value widthValue;
+    widthValue.set_int_value(width);
+    data.push_back(widthValue);
+    
+    skyline::Value heightValue;
+    heightValue.set_int_value(height);
+    data.push_back(heightValue);
+    
+    skyline::Value devicePixelRatioValue;
+    devicePixelRatioValue.set_double_value(devicePixelRatio);
+    data.push_back(devicePixelRatioValue);
+    
+    skyline::Value hideWindowValue;
+    hideWindowValue.set_bool_value(hideWindow);
+    data.push_back(hideWindowValue);
+    
+    skyline::Value sharedMemoryKeyValue;
+    sharedMemoryKeyValue.set_string_value(sharedMemoryKey);
+    data.push_back(sharedMemoryKeyValue);
+    
+    skyline::Value nodePathValue;
+    nodePathValue.set_string_value(skylineAddonPath + "\\build\\skyline.node");
+    data.push_back(nodePathValue);
+    
     // 发送消息到Socket
     SocketClient::callDynamicSync(m_instanceId, __func__, data);
   } catch (const std::exception &e) {
@@ -271,15 +294,21 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     throw Napi::Error::New(env, "共享内存模块未加载！");
   }
   try {
-    nlohmann::json args;
-    args[0] = Convert::convertValue2Json(env, info[0]);
-    args[1] = Convert::convertValue2Json(env, info[1]);
-    args[2] = Convert::convertValue2Json(env, info[2]);
-    args[3] = Convert::convertValue2Json(env, info[3]);
-    // args[4] = Convert::convertValue2Json(env, info[4]);
+    std::vector<skyline::Value> args;
+    
+    // Convert first 4 parameters to skyline::Value
+    for (int i = 0; i < 4; i++) {
+      args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
+    }
+    
     auto sharedMemory = env.Global().Get("__sharedMemory").As<Napi::Object>();
     std::string key = "resource_" + std::to_string(info[0].As<Napi::Number>().Int32Value());
-    args[4] = key;
+    
+    // Add the key as 5th parameter
+    skyline::Value keyValue;
+    keyValue.set_string_value(key);
+    args.push_back(keyValue);
+    
     auto buffer = info[4].As<Napi::Buffer<uint8_t>>();
     auto mem = sharedMemory.Get("setMemory").As<Napi::Function>().Call({
       Napi::String::New(env, key),

@@ -1,22 +1,19 @@
 
 #include "gesture_handler_module.hh"
-#include <nlohmann/json.hpp>
-#include "../../common/convert.hh"
+#include "../../common/protobuf_converter.hh"
 #include "../socket_client.hh"
 
 namespace Skyline {
 namespace GestureHandlerModule {
-  
-  Napi::Value sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
+    Napi::Value sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
     auto env = info.Env();
-    nlohmann::json args;
+    std::vector<skyline::Value> args;
     for (int i = 0; i < info.Length(); i++) {
-      args[i] = Convert::convertValue2Json(env, info[i]);
+      args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
       auto result = SocketClient::callStaticSync("SkylineGestureModule", methodName, args);
-      auto returnValue = result["returnValue"];
-      return Convert::convertJson2Value(env, returnValue);
+      return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());
     }

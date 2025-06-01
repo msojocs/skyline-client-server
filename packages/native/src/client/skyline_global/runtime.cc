@@ -1,10 +1,9 @@
 #include "runtime.hh"
-#include "../../common/convert.hh"
+#include "../../common/protobuf_converter.hh"
 #include "../socket_client.hh"
 #include "napi.h"
 #include <cstdint>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <unordered_map>
 
 namespace Skyline {
@@ -17,17 +16,15 @@ namespace Runtime {
  * "registerNavigateBackInterceptCallback", "registerJsValue",
  * "unRegisterJsValue", "getJsValueById", "registerFontFaceCallback",
  * "setFeatureFlags", "updateMapCustomCallout", "preloadAssets"
- */
-  Napi::Value sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
+ */  Napi::Value sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
     auto env = info.Env();
-    nlohmann::json args;
+    std::vector<skyline::Value> args;
     for (int i = 0; i < info.Length(); i++) {
-      args[i] = Convert::convertValue2Json(env, info[i]);
+      args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
       auto result = SocketClient::callStaticSync("SkylineRuntime", methodName, args);
-      auto returnValue = result["returnValue"];
-      return Convert::convertJson2Value(env, returnValue);
+      return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());
     }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0091 NEW)
 cmake_policy(SET CMP0042 NEW)
-# cmake_policy(SET CMP0167 NEW)
+cmake_policy(SET CMP0167 NEW)
 
 project("module_skyline")
 
@@ -52,8 +52,29 @@ include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 message("LD_LIBRARY_PATH:" ${LD_LIBRARY_PATH})
 
 find_package(spdlog REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(Protobuf REQUIRED)
+find_package(absl REQUIRED)
+
+# Generate protobuf files
+set(PROTO_FILES src/common/messages.proto)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
+
+# Create a protobuf library that can be linked by both client and server
+add_library(skyline_protobuf STATIC ${PROTO_SRCS} ${PROTO_HDRS})
+target_link_libraries(skyline_protobuf 
+    protobuf::libprotoc
+    protobuf::libprotobuf
+)
+target_include_directories(skyline_protobuf PUBLIC 
+    ${Protobuf_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Include protobuf headers
+include_directories(${Protobuf_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 find_program(PNPM_EXECUTABLE pnpm)
 if(NOT PNPM_EXECUTABLE)
     message(FATAL_ERROR "pnpm not found!")

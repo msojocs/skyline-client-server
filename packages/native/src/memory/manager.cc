@@ -1,5 +1,6 @@
 #include "manager.hh"
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <string.h>
 #include <sys/stat.h>
@@ -12,7 +13,8 @@
 #include <errno.h>    // 用于错误处理
 #include <sys/mman.h>
 #endif
-
+#include "../common/logger.hh"
+using Logger::logger;
 namespace SharedMemory {
 
 
@@ -90,12 +92,12 @@ namespace SharedMemory {
             // 确保目录存在
             create_directory(shared_memory_dir);
         }
-        
+        logger->debug("CreateMutexA");
         // 创建或打开互斥锁
         mutex_ = CreateMutexA(NULL, FALSE, mutex_name.c_str());
         if (!mutex_) {
             DWORD error = GetLastError();
-            // log("Failed to create mutex, error code: %lu", error);
+            logger->error("Failed to create mutex, error code: %lu", error);
             throw std::runtime_error("Failed to create mutex");
         }
         

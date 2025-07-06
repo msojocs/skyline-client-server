@@ -10,13 +10,13 @@
 #include <queue>
 #include <thread>
 #include <unordered_map>
-#include "../memory/memory.hh"
+#include "../memory/skyline_memory.hh"
 
 using Logger::logger;
 
 namespace SocketClient {
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"));
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"));
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromServer;
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToServer;
 static std::atomic<bool> is_connected{false};
 static std::mutex socketRequestMutex; // Add mutex for thread synchronization
 static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
@@ -119,13 +119,21 @@ void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
 
-        std::string name = "skyline_socket_client";
+        msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), true);
+        logger->info("Shared memory for server to client initialized");
+        msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), true);
+        logger->info("Shared memory for client to server initialized");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready
         // Start synchronous message reading thread
         std::thread([]() {
             try {
+                long i = 0;
                 while (true) {
                     if (!msgFromServer->hasMessages()) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        i++;
+                        if ((i & 0x0FFFFFFFFF) == 0) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        }
                         continue;
                     }
                     skyline::Message pbMessage;
@@ -143,6 +151,10 @@ void initSocket(Napi::Env &env) {
         logger->error("Connection error: {}", e.what());
         throw Napi::Error::New(env, std::string("Socket connection failed: ") +
                                         e.what());
+    }
+    catch(...) {
+        logger->error("Unknown error occurred during socket initialization");
+        throw Napi::Error::New(env, "Unknown error occurred during socket initialization");
     }
 }
 
@@ -176,6 +188,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
 
     // Send message with socket protection
     msgToServer->sendMessage(serializedMessage);
+    logger->debug("send end.");
     
     // Wait for response with timeout
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);

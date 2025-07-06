@@ -8,13 +8,13 @@
 #include <thread>
 #include <chrono>
 #include <mutex>
-#include "../memory/memory.hh"
+#include "../memory/skyline_memory.hh"
 
 using Logger::logger;
 
 namespace SocketServer {
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"));
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"));
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToClient;
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromClient;
 static std::atomic<bool> client_connected{false};
 static Napi::ThreadSafeFunction messageHandleTsfn;
 static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
@@ -94,21 +94,36 @@ void processMessage(const skyline::Message &message) {
 }
 int startInner(const Napi::Env &env, std::string &host, int port) {
     try {
-
+        msgToClient =  std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), false);
+        msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), false);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
+            long i = 0;
             while (true) {
-                if (!msgFromClient->hasMessages()) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                    continue;
-                }       // Handle client in a separate thread
-                auto msg = msgFromClient->receiveMessage();
-                skyline::Message pbMessage;
-                if (!pbMessage.ParseFromString(msg)) {
-                    logger->error("Failed to parse Protobuf message from shared memory");
-                    continue;
+                try{
+                    if (!msgFromClient->hasMessages()) {
+                        i++;
+                        if ((i & 0x0FFFFFFFFF) == 0) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        }
+                        continue;
+                    }
+                    // Handle client in a separate thread
+                    logger->info("start to getMessage!");
+                    auto msg = msgFromClient->receiveMessage();
+                    skyline::Message pbMessage;
+                    if (!pbMessage.ParseFromString(msg)) {
+                        logger->error("Failed to parse Protobuf message from shared memory");
+                        continue;
+                    }
+                    processMessage(pbMessage);
+                }catch (const std::exception &e) {
+                    logger->error("Error in message processing thread: {}", e.what());
+                    break;
+                } catch (...) {
+                    logger->error("Unknown error occurred in message processing thread");
+                    break;
                 }
-                processMessage(pbMessage);
             }
         }).detach();
 

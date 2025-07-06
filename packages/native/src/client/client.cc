@@ -34,6 +34,7 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::info("Starting Skyline Client...");
     Logger::Init();
     
+    SocketClient::initSocket(env);
     // 发送HTTP请求检查重启状态
     auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
     log.Call({Napi::String::New(env, "正在检查Skyline服务器状态...")});
@@ -167,7 +168,6 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     }
 
     logger->info("initSocket start");
-    SocketClient::initSocket(env);
     logger->info("initSocket end");
     SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
     SkylineShell::SkylineShell::Init(env, exports);

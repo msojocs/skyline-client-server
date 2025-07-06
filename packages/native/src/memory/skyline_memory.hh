@@ -1,16 +1,15 @@
-#ifndef MEMORY_HH
-#define MEMORY_HH
+#ifndef __SKYLINE_MEMORY_HH__
+#define __SKYLINE_MEMORY_HH__
 #include "manager.hh"
+#include <memory>
 #include <string>
 
 namespace SkylineMemory {
 class SharedMemoryCommunication {
 public:
-    SharedMemoryCommunication(const std::string &name);
+    SharedMemoryCommunication(const std::string &name, bool create);
 
     ~SharedMemoryCommunication();
-    // Initialize the shared memory communication
-    void init();
 
     // Send a message to the shared memory
     void sendMessage(const std::string &message);
@@ -24,7 +23,7 @@ private:
     // Internal data structures for managing shared memory
     // This could include a queue, mutexes, etc.
     // For simplicity, we will use a string as a placeholder
-    SharedMemory::SharedMemoryManager * shared_memory;
+    std::shared_ptr<SharedMemory::SharedMemoryManager> shared_memory;
 };
 }
 

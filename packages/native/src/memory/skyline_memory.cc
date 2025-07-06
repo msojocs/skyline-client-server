@@ -1,20 +1,27 @@
-#include "memory.hh"
+#include "skyline_memory.hh"
 #include "manager.hh"
+#include <cstdio>
+#include <memory>
+#include <stdexcept>
 #include <thread>
+#include "../common/logger.hh"
 
+using Logger::logger;
 namespace SkylineMemory {
-SharedMemoryCommunication::SharedMemoryCommunication(const std::string &name) {
+SharedMemoryCommunication::SharedMemoryCommunication(const std::string &name, bool create) {
+    logger->debug("Initializing shared memory communication with name: {}", name);
+    
     int size = 1024 * 1024;
     // Initialize the shared memory manager with the given name
-    this->shared_memory = new SharedMemory::SharedMemoryManager(name, true, size);
+    this->shared_memory = std::make_shared<SharedMemory::SharedMemoryManager>(name, create, size);
     SharedMemory::SharedMemoryHeader *header = static_cast<SharedMemory::SharedMemoryHeader *>(this->shared_memory->get_address());
     if (!header) {
         throw std::runtime_error("Failed to get shared memory address");
     }
+    logger->debug("Initialized.");
 }
 SharedMemoryCommunication::~SharedMemoryCommunication() {
     // Clean up the shared memory manager
-    delete this->shared_memory;
 }
 
 /**
@@ -23,12 +30,17 @@ SharedMemoryCommunication::~SharedMemoryCommunication() {
  * 向循环内存区域写入数据
  */
 void SharedMemoryCommunication::sendMessage(const std::string &message) {
+    logger->debug("sendMessage");
+    logger->debug("mem status: {}", !!this->shared_memory);
     if (!this->shared_memory || !this->shared_memory->get_address()) {
+        logger->error("Shared memory not initialized or address is null");
         throw std::runtime_error("Shared memory not initialized or address is null");
     }
+    logger->debug("Calculate start.");
     calculate:
     // 获取共享内存数据区的大小
     size_t memSize = this->shared_memory->get_size();
+    logger->debug("Data memory size: {}", memSize);
     auto header = static_cast<SharedMemory::SharedMemoryHeader *>(this->shared_memory->get_address());
     int remainMemSize = header->data_end_offset - header->data_start_offset;
     int usedMemSize = 0;
@@ -64,7 +76,7 @@ void SharedMemoryCommunication::sendMessage(const std::string &message) {
     (*(int *)mem) = message.size();
     mem += sizeof(int); // 移动到消息内容位置
     // 写入消息内容
-    if (header->data_end_offset + message.size() > memSize) {
+    if (header->data_end_offset + message.size() + sizeof(int) > memSize) {
         // 如果当前结束地址加上消息长度超过了内存大小，则需要分段写入
         size_t firstPartSize = memSize - header->data_end_offset - sizeof(int);
         std::memcpy(mem, message.data(), firstPartSize);
@@ -76,6 +88,8 @@ void SharedMemoryCommunication::sendMessage(const std::string &message) {
     }
     // 更新当前结束偏移
     header->data_end_offset = (header->data_end_offset + message.size() + sizeof(int)) % memSize;
+    logger->debug("Message sent, size: {}, start offset: {}, end offset: {}, total size: {}", 
+                  message.size(), header->data_start_offset, header->data_end_offset, memSize);
 }
 bool SharedMemoryCommunication::hasMessages() const {
     if (!this->shared_memory || !this->shared_memory->get_address()) {
@@ -104,15 +118,22 @@ std::string SharedMemoryCommunication::receiveMessage() {
     mem += sizeof(int); // 移动到消息内容位置
     
     if (messageSize <= 0 || messageSize > this->shared_memory->get_size() - sizeof(SharedMemory::SharedMemoryHeader)) {
-        throw std::runtime_error("Invalid message size");
+        logger->error("Invalid message size, size: {}", messageSize);
+        logger->error("Invalid message size, start offset: {}, end offset: {}, total size: {}", 
+                      header->data_start_offset, header->data_end_offset, this->shared_memory->get_size());
+        throw std::runtime_error("Invalid message size, size: " + std::to_string(messageSize));
     }
     
     std::string message;
     message.resize(messageSize);
     
-    if (header->data_start_offset + messageSize > this->shared_memory->get_size()) {
+    if (header->data_start_offset + messageSize + sizeof(int) > this->shared_memory->get_size()) {
+        logger->debug("Message size exceeds shared memory size, need to read in parts.");
+        logger->debug("msg size: {}, start offset: {}, end offset: {}, total size: {}", 
+                      messageSize, header->data_start_offset, header->data_end_offset, this->shared_memory->get_size());
         // 如果当前起始地址加上消息长度超过了内存大小，则需要分段读取
         size_t firstPartSize = this->shared_memory->get_size() - header->data_start_offset - sizeof(int);
+        logger->debug("First part size: {}", firstPartSize);
         std::memcpy(&message[0], mem, firstPartSize);
         // 读取剩余部分到起始位置
         std::memcpy(&message[firstPartSize], dataMem, messageSize - firstPartSize);
@@ -123,7 +144,13 @@ std::string SharedMemoryCommunication::receiveMessage() {
     
     // 更新当前起始偏移
     header->data_start_offset = (header->data_start_offset + messageSize + sizeof(int)) % this->shared_memory->get_size();
-    
+    if (header->data_start_offset + sizeof(int) > this->shared_memory->get_size()) {
+        // 如果当前起始地址加上int大小超过了内存大小，则重置到起始位置
+        if (header->data_start_offset == header->data_end_offset) {
+            header->data_end_offset = 0; // 如果起始和结束相同，重置结束偏移
+        }
+        header->data_start_offset = 0;
+    }
     return message;
 }
 }

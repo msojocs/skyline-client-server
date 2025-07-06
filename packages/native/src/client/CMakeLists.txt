@@ -39,8 +39,10 @@ set(CLIENT_DIR_LIST
     skyline_global/fragment_binding.cc
     ../common/protobuf_converter.cc
     ../common/protobuf_converter.hh
+    ../memory/manager.hh
     ../memory/manager.cc
-    ../memory/memory.cc
+    ../memory/skyline_memory.hh
+    ../memory/skyline_memory.cc
 )
 
 # Set the HEADER_DEPENDENCY_CHECK property to force rebuilding when headers change
@@ -67,7 +69,7 @@ set_target_properties(${CLIENT_NAME} PROPERTIES UNITY_BUILD OFF)
 # Enable header dependency checking
 set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
 
-set(IS_RUNNING_NODE true)
+set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
         execute_process(COMMAND
@@ -80,12 +82,12 @@ if (WIN32)
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
             COMMAND_ERROR_IS_FATAL ANY
         )
-        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api64.lib)
+        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
     else()
         message("整合 node64.lib")
         target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
     endif()
-    target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
+    # target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
 
 else()
     # Linux specific libraries

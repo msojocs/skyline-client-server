@@ -1,7 +1,6 @@
 #ifndef SHARED_MEMORY_MANAGER_HH
 #define SHARED_MEMORY_MANAGER_HH
 
-#include "napi.h"
 #include <memory>
 #include <string>
 
@@ -35,7 +34,7 @@ namespace SharedMemory {
         // 获取共享内存地址
         void* get_address() const { return address_; }
         
-        // 获取共享内存数据区大小
+        // 获取共享内存数据区大小，不含头部
         size_t get_size() const { return size_; }
         
         // 获取文件路径

@@ -3,7 +3,6 @@
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
 #include "../common/protobuf_converter.hh"
-#include <boost/asio.hpp>
 #include <chrono>
 #include <future>
 #include <memory>
@@ -11,14 +10,13 @@
 #include <queue>
 #include <thread>
 #include <unordered_map>
+#include "../memory/memory.hh"
 
-
-using boost::asio::ip::tcp;
 using Logger::logger;
 
 namespace SocketClient {
-static boost::asio::io_context io_context;
-static std::shared_ptr<tcp::socket> socket;
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"));
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"));
 static std::atomic<bool> is_connected{false};
 static std::mutex socketRequestMutex; // Add mutex for thread synchronization
 static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
@@ -27,11 +25,8 @@ static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 
 // Forward declarations
 void processMessage(const skyline::Message &message);
-skyline::Message readProtobufMessage();
 
 static std::atomic<bool> blocked{false};
-static std::string serverAddress = "127.0.0.1";
-static int serverPort = 3001;
 using snowflake_t = snowflake<1534832906275L>;
 static snowflake_t serverCommunicationUuid;
 
@@ -91,12 +86,12 @@ void processMessage(const skyline::Message &message) {
                             *responseData->mutable_return_value() = resultProtobuf;
                             
                             // Send reply using Protobuf
-                            if (socket && socket->is_open() && is_connected) {
+                            {
                                 std::string serializedMessage = ProtobufConverter::serializeMessage(callbackResult);
-                                uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
-                                std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
-                                std::string fullMessage = lengthPrefix + serializedMessage;
-                                boost::asio::write(*socket, boost::asio::buffer(fullMessage));
+                                // uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
+                                // std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
+                                // std::string fullMessage = lengthPrefix + serializedMessage;
+                                msgToServer->sendMessage(serializedMessage);
                             }
                         }
                     };
@@ -120,77 +115,30 @@ void processMessage(const skyline::Message &message) {
     }
 }
 
-skyline::Message readProtobufMessage() {
-    if (!socket || !socket->is_open() || !is_connected) {
-        throw std::runtime_error("Socket is not connected");
-    }
-
-    try {
-        // Read the 4-byte length prefix
-        std::array<char, 4> lengthBuffer;
-        boost::asio::read(*socket, boost::asio::buffer(lengthBuffer));
-
-        // Parse the message length
-        std::uint32_t messageLength = 0;
-        std::memcpy(&messageLength, lengthBuffer.data(), sizeof(messageLength));
-
-        if (messageLength == 0 || messageLength > 1024 * 1024) { // Prevent overly large messages
-            throw std::runtime_error("Invalid message length: " + std::to_string(messageLength));
-        }
-
-        // Read the message body
-        std::string messageBuffer(messageLength, '\0');
-        boost::asio::read(*socket, boost::asio::buffer(messageBuffer));
-
-        // Parse the Protobuf message
-        skyline::Message pbMessage;
-        if (!pbMessage.ParseFromString(messageBuffer)) {
-            throw std::runtime_error("Failed to parse Protobuf message");
-        }
-
-        return pbMessage;
-    } catch (const std::exception& e) {
-        logger->error("Error reading protobuf message: {}", e.what());
-        is_connected = false;
-        throw;
-    }
-}
-
 void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
 
-        tcp::resolver resolver(io_context);
-        auto endpoints =
-            resolver.resolve(serverAddress, std::to_string(serverPort));
-
-        socket = std::make_shared<tcp::socket>(io_context);
-        boost::asio::connect(*socket, endpoints);        is_connected = true;
-
-        // Start a thread for the io_context
-        std::thread([&]() {
-            try {
-                io_context.run();
-            } catch (std::exception &e) {
-                logger->error("IO context error: {}", e.what());
-                is_connected = false;
-            }
-        }).detach();
-
+        std::string name = "skyline_socket_client";
         // Start synchronous message reading thread
         std::thread([]() {
             try {
-                while (is_connected) {
-                    skyline::Message message = readProtobufMessage();
-                    processMessage(message);
+                while (true) {
+                    if (!msgFromServer->hasMessages()) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        continue;
+                    }
+                    skyline::Message pbMessage;
+                    if (!pbMessage.ParseFromString(msgFromServer->receiveMessage())) {
+                        logger->error("Failed to parse Protobuf message from shared memory");
+                        continue;
+                    }
+                    processMessage(pbMessage);
                 }
             } catch (std::exception &e) {
                 logger->error("Message reading thread error: {}", e.what());
-                is_connected = false;
             }
         }).detach();
-
-        logger->info("Socket connected to {}:{}", serverAddress, serverPort);
     } catch (std::exception &e) {
         logger->error("Connection error: {}", e.what());
         throw Napi::Error::New(env, std::string("Socket connection failed: ") +
@@ -199,9 +147,6 @@ void initSocket(Napi::Env &env) {
 }
 
 skyline::Message sendMessageSync(const skyline::Message &message) {
-    if (!socket || !socket->is_open() || !is_connected) {
-        throw std::runtime_error("Socket is not connected");
-    }
 
     blocked = true;
     
@@ -210,10 +155,10 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     logger->info("Protobuf message serialized, size: {}, id: {}", serializedMessage.size(), message.id());
     
     // 添加长度前缀（4字节）和消息体
-    uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
-    std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
-    std::string fullMessage = lengthPrefix + serializedMessage;
-    logger->info("Full message with length prefix, total size: {}", fullMessage.size());
+    // uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
+    // std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
+    // std::string fullMessage = lengthPrefix + serializedMessage;
+    // logger->info("Full message with length prefix, total size: {}", fullMessage.size());
     logger->debug("id: {}, content: {}", message.id(), message.DebugString());
 
     auto promiseObj = std::make_shared<std::promise<skyline::Message>>();
@@ -230,13 +175,9 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     }
 
     // Send message with socket protection
-    if (socket && socket->is_open() && is_connected) {
-        boost::asio::write(*socket, boost::asio::buffer(fullMessage));
-    } else {
-        socketRequest.erase(message.id());
-        blocked = false;
-        throw std::runtime_error("Socket disconnected while sending");
-    }    // Wait for response with timeout
+    msgToServer->sendMessage(serializedMessage);
+    
+    // Wait for response with timeout
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     
     while (std::chrono::steady_clock::now() < timeout) {
@@ -280,12 +221,9 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
                         *responseData->mutable_return_value() = resultProtobuf;
                         
                         // Send reply using Protobuf
-                        if (socket && socket->is_open() && is_connected) {
+                        {
                             std::string serializedMessage = ProtobufConverter::serializeMessage(callbackResult);
-                            uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
-                            std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
-                            std::string fullMessage = lengthPrefix + serializedMessage;
-                            boost::asio::write(*socket, boost::asio::buffer(fullMessage));
+                            msgToServer->sendMessage(serializedMessage);
                         }
                     }
                 } else {
@@ -317,23 +255,11 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
 }
 
 void sendMessageAsync(const skyline::Message &message) {
-    if (!socket || !socket->is_open() || !is_connected) {
-        throw std::runtime_error("Socket is not connected");
-    }
 
     // 序列化Protobuf消息
     std::string serializedMessage = ProtobufConverter::serializeMessage(message);
     
-    // 添加长度前缀（4字节）和消息体
-    uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
-    std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
-    std::string fullMessage = lengthPrefix + serializedMessage;
-    
-    if (socket && socket->is_open() && is_connected) {
-        boost::asio::write(*socket, boost::asio::buffer(fullMessage));
-    } else {
-        throw std::runtime_error("Socket disconnected while sending");
-    }
+    msgToServer->sendMessage(serializedMessage);
 }
 
 void callDynamicAsync(const std::string &instanceId, const std::string &action,

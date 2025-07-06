@@ -3,36 +3,28 @@
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
 #include "napi.h"
-#include <boost/asio.hpp>
+#include <exception>
 #include <memory>
 #include <thread>
 #include <chrono>
 #include <mutex>
+#include "../memory/memory.hh"
 
-
-using boost::asio::ip::tcp;
 using Logger::logger;
 
 namespace SocketServer {
-static boost::asio::io_context io_context;
-static std::shared_ptr<tcp::acceptor> acceptor;
-static std::shared_ptr<tcp::socket>
-    client; // Single client for 1-to-1 connection
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"));
+static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"));
 static std::atomic<bool> client_connected{false};
 static Napi::ThreadSafeFunction messageHandleTsfn;
 static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
-static std::map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
-    socketRequest;
+static std::map<std::string, std::shared_ptr<std::promise<skyline::Message>>> socketRequest;
 static std::queue<skyline::Message> blockQueue;
 static std::mutex blockQueueMutex; // 保护 blockQueue 的互斥锁
 using snowflake_t = snowflake<1534832906275L>;
 static snowflake_t communicationUuid;
 
-// Forward declarations
-void startHeartbeat();
-std::string readLengthPrefixedMessage(std::shared_ptr<tcp::socket> socket_ptr);
-
-void processMessage(std::shared_ptr<tcp::socket> client, const skyline::Message &message) {
+void processMessage(const skyline::Message &message) {
     try {
         logger->info("received protobuf message");
 
@@ -100,56 +92,25 @@ void processMessage(std::shared_ptr<tcp::socket> client, const skyline::Message 
         logger->error("Unknown error occurred while processing protobuf message");
     }
 }
-void handleClient(std::shared_ptr<tcp::socket> socket_ptr) {
-    try {
-        client = socket_ptr;
-        client_connected = true;
-
-        while (true) {
-            // Read a length-prefixed message
-            std::string message = readLengthPrefixedMessage(socket_ptr);
-
-            if (!message.empty()) {
-                skyline::Message msg;
-                if (msg.ParseFromString(message)) {
-                    processMessage(socket_ptr, msg);
-                } else {
-                    logger->error("Failed to parse protobuf message");
-                }
-            }
-        }
-    } catch (boost::system::system_error &e) {
-        logger->error("Client disconnected: {}", e.what());
-        client.reset();
-        client_connected = false;
-    }
-}
 int startInner(const Napi::Env &env, std::string &host, int port) {
     try {
-        acceptor = std::make_shared<tcp::acceptor>(
-            io_context, tcp::endpoint(tcp::v4(), port));
 
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
             while (true) {
-                auto new_client = std::make_shared<tcp::socket>(io_context);
-                acceptor->accept(*new_client);
-
-                // Check if we already have a client connected
-                if (client_connected) {
-                    logger->warn("New client attempting to connect, but "
-                                    "one is already connected. Rejecting.");
-                    new_client->close();
+                if (!msgFromClient->hasMessages()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     continue;
-                }                // Handle client in a separate thread
-                std::thread([new_client]() {
-                    handleClient(new_client);
-                }).detach();
+                }       // Handle client in a separate thread
+                auto msg = msgFromClient->receiveMessage();
+                skyline::Message pbMessage;
+                if (!pbMessage.ParseFromString(msg)) {
+                    logger->error("Failed to parse Protobuf message from shared memory");
+                    continue;
+                }
+                processMessage(pbMessage);
             }
         }).detach();
-
-        // Start the io_context in a separate thread
-        std::thread([&]() { io_context.run(); }).detach();
 
         logger->info("Socket server listening on {}:{}", host, port);
         return 0;
@@ -177,27 +138,10 @@ Napi::Value start(const Napi::CallbackInfo &info) {
     communicationUuid.init(3, 1);
     startInner(env, host, port);
     
-    // Start heartbeat monitoring
-    startHeartbeat();
-    
     return env.Undefined();
 }
 void stop(const Napi::CallbackInfo &info) {
-    if (acceptor) {
-        if (messageHandleTsfn) {
-            messageHandleTsfn.Release();
-        }
-
-        if (client && client->is_open()) {
-            client->close();
-        }
-        client.reset();
-        client_connected = false;
-
-        acceptor->close();
-        io_context.stop();
-        logger->info("Socket server stopped");
-    }
+    logger->info("Socket server stopped");
 }
 
 void setMessageCallback(const Napi::CallbackInfo &info) {
@@ -231,15 +175,10 @@ Napi::Value sendMessageSingle(const Napi::CallbackInfo &info) {
     logger->info("send protobuf message to client, id: {}", message.id());
 
     logger->debug("Send msg to client: {}", message.DebugString());
-    if (client && client->is_open()) {
-        // Serialize the message and send it
-        std::string serializedMessage = message.SerializeAsString();
-        std::uint32_t messageLength = static_cast<std::uint32_t>(serializedMessage.size());
-        boost::asio::write(*client, boost::asio::buffer(&messageLength, sizeof(messageLength)));
-        boost::asio::write(*client, boost::asio::buffer(serializedMessage));
-    } else {
-        logger->warn("No client connected or client is not open");
-    }
+    // Serialize the message and send it
+    std::string serializedMessage = message.SerializeAsString();
+    std::uint32_t messageLength = static_cast<std::uint32_t>(serializedMessage.size());
+    msgToClient->sendMessage(serializedMessage);
     return info.Env().Undefined();
 }
 /**
@@ -263,9 +202,6 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
 
     auto id = std::to_string(communicationUuid.nextid());
     message.set_id(id);
-    if (!client || !client->is_open()) {
-        throw Napi::Error::New(info.Env(), "No client connected");
-    }
 
     // 先存储，再发送
     auto promiseObj = std::make_shared<std::promise<skyline::Message>>();
@@ -280,17 +216,9 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
     logger->debug("id: {}, content: {}", id, message.DebugString());
 
     // 发送消息给单一客户端
-    if (client && client->is_open()) {
-        // Serialize the message and send it
-        std::string serializedMessage = message.SerializeAsString();
-        std::uint32_t messageLength = static_cast<std::uint32_t>(serializedMessage.size());
-        boost::asio::write(*client, boost::asio::buffer(&messageLength, sizeof(messageLength)));
-        boost::asio::write(*client, boost::asio::buffer(serializedMessage));
-    } else {
-        socketRequest.erase(id);
-        throw Napi::Error::New(info.Env(),
-                                "Client disconnected while sending");
-    }
+    // Serialize the message and send it
+    std::string serializedMessage = message.SerializeAsString();
+    msgToClient->sendMessage(serializedMessage);
 
     // 使用更高效的等待方式
     auto start = std::chrono::steady_clock::now();
@@ -348,69 +276,6 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
     return resultObj.Get("data").As<Napi::Object>()
     .Get("result").As<Napi::Object>()
     .Get("returnValue");
-}
-
-std::string readLengthPrefixedMessage(std::shared_ptr<tcp::socket> socket_ptr) {
-    boost::asio::streambuf buffer;
-    std::istream stream(&buffer);
-    std::string message;
-
-    // Read the length prefix (4 bytes)
-    char lengthPrefix[4];
-    boost::asio::read(*socket_ptr, boost::asio::buffer(lengthPrefix, 4));
-    logger->info("Read length prefix from client");
-
-    // Convert the length prefix to an integer
-    std::uint32_t messageLength = 0;
-    std::memcpy(&messageLength, lengthPrefix, sizeof(messageLength));
-    // Note: Using native byte order since client sends in native format
-    logger->info("Message length: {}", messageLength);
-
-    // Read the message body
-    message.resize(messageLength);
-    boost::asio::read(*socket_ptr, boost::asio::buffer(message));
-    logger->info("Read message body, actual size: {}", message.size());    return message;
-}
-
-// Add heartbeat functionality for connection monitoring using Protobuf
-void startHeartbeat() {
-    std::thread([]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(30)); // 30 second heartbeat
-            
-            if (client && client->is_open() && client_connected) {                try {
-                    // Create a Protobuf heartbeat message using STATIC type
-                    skyline::Message heartbeat;
-                    heartbeat.set_type(skyline::MessageType::STATIC);
-                    heartbeat.set_id(std::to_string(communicationUuid.nextid()));
-                    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now().time_since_epoch()).count();
-                    
-                    // Use static data for heartbeat
-                    auto* staticData = heartbeat.mutable_static_data();
-                    staticData->set_clazz("heartbeat");
-                    staticData->set_action("ping");
-                    
-                    // Create a value for timestamp
-                    auto* timestampValue = staticData->add_params();
-                    timestampValue->set_double_value(static_cast<double>(timestamp));
-
-                    // Send the protobuf heartbeat
-                    std::string serializedMessage = heartbeat.SerializeAsString();
-                    std::uint32_t messageLength = static_cast<std::uint32_t>(serializedMessage.size());
-                    boost::asio::write(*client, boost::asio::buffer(&messageLength, sizeof(messageLength)));
-                    boost::asio::write(*client, boost::asio::buffer(serializedMessage));
-                } catch (const std::exception& e) {
-                    logger->warn("Heartbeat failed, client may be disconnected: {}", e.what());
-                    client.reset();
-                    client_connected = false;
-                }
-            } else {
-                // No client connected, sleep longer
-                std::this_thread::sleep_for(std::chrono::seconds(30));
-            }
-        }
-    }).detach();
 }
 
 } // namespace SocketServer

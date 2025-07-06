@@ -39,6 +39,8 @@ set(CLIENT_DIR_LIST
     skyline_global/fragment_binding.cc
     ../common/protobuf_converter.cc
     ../common/protobuf_converter.hh
+    ../memory/manager.cc
+    ../memory/memory.cc
 )
 
 # Set the HEADER_DEPENDENCY_CHECK property to force rebuilding when headers change
@@ -53,6 +55,7 @@ add_library(${CLIENT_NAME}
     ${CLIENT_DIR_LIST}
     ${CMAKE_JS_SRC}
     )
+    
 target_include_directories(${CLIENT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node>
@@ -64,10 +67,20 @@ set_target_properties(${CLIENT_NAME} PROPERTIES UNITY_BUILD OFF)
 # Enable header dependency checking
 set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
 
-set(IS_RUNNING_NODE false)
+set(IS_RUNNING_NODE true)
 if (WIN32)
     if(IS_RUNNING_NODE)
-        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        execute_process(COMMAND
+            ${CMAKE_AR} /def:node_api.def /out:node_api.lib /machine:x86 ${CMAKE_STATIC_LINKER_FLAGS}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
+            COMMAND_ERROR_IS_FATAL ANY
+        )
+        execute_process(COMMAND
+            ${CMAKE_AR} /def:node_api.def /out:node_api64.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
+            COMMAND_ERROR_IS_FATAL ANY
+        )
+        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api64.lib)
     else()
         message("整合 node64.lib")
         target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)

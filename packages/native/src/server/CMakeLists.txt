@@ -7,6 +7,8 @@ set(SERVER_DIR_LIST    server.cc
     ../common/logger.cc
     ../common/protobuf_converter.cc
     ../common/protobuf_converter.hh
+    ../memory/manager.cc
+    ../memory/memory.cc
 )
 
 add_library(${SERVER_NAME}

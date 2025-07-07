@@ -126,7 +126,7 @@ namespace SharedMemory {
                 
                 if (file_handle == INVALID_HANDLE_VALUE) {
                     DWORD error = GetLastError();
-                    // log("Failed to create file, error code: %lu", error);
+                    logger->error("Failed to create file, error code: {}", error);
                     ReleaseMutex(mutex_);
                     CloseHandle(mutex_);
                     mutex_ = nullptr;

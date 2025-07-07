@@ -33,8 +33,11 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::info("Starting Skyline Client...");
     Logger::Init();
+
+    logger->info("initSocket start");
     
     SocketClient::initSocket(env);
+    logger->info("initSocket end");
     // 发送HTTP请求检查重启状态
     auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
     log.Call({Napi::String::New(env, "正在检查Skyline服务器状态...")});
@@ -166,9 +169,6 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
       logger->warn("无效的HTTP响应格式");
       throw std::runtime_error("无效的HTTP响应格式");
     }
-
-    logger->info("initSocket start");
-    logger->info("initSocket end");
     SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
     SkylineShell::SkylineShell::Init(env, exports);
     Convert::RegisteInstanceType(env);

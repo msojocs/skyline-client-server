@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <synchapi.h>
 #include <thread>
+#include <winbase.h>
 #include "../common/logger.hh"
 
 using Logger::logger;
@@ -113,7 +114,7 @@ std::string SharedMemoryCommunication::receiveMessage(const std::string & name) 
     // 检查是否有消息
     if (header->data_start_offset == header->data_end_offset) {
         logger->warn("No messages available in shared memory, wait...");
-        auto notify = OpenEventA(EVENT_ALL_ACCESS, FALSE, name.c_str());
+        auto notify = OpenSemaphoreA(EVENT_ALL_ACCESS, FALSE, name.c_str());
         auto waitResult = WaitForSingleObject(notify, INFINITE);
     }
     if (header->data_start_offset == header->data_end_offset) {

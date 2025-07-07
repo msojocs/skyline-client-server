@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <memory>
 #include <stdexcept>
+#include <synchapi.h>
 #include <thread>
 #include "../common/logger.hh"
 
@@ -10,7 +11,6 @@ using Logger::logger;
 namespace SkylineMemory {
 SharedMemoryCommunication::SharedMemoryCommunication(const std::string &name, bool create) {
     logger->debug("Initializing shared memory communication with name: {}", name);
-    
     int size = 1024 * 1024;
     // Initialize the shared memory manager with the given name
     this->shared_memory = std::make_shared<SharedMemory::SharedMemoryManager>(name, create, size);
@@ -90,6 +90,12 @@ void SharedMemoryCommunication::sendMessage(const std::string &message) {
     header->data_end_offset = (header->data_end_offset + message.size() + sizeof(int)) % memSize;
     logger->debug("Message sent, size: {}, start offset: {}, end offset: {}, total size: {}", 
                   message.size(), header->data_start_offset, header->data_end_offset, memSize);
+    // 通知等待的线程
+    if (this->file_notify == nullptr) {
+        logger->error("File notify handle is null, cannot signal event");
+        throw std::runtime_error("File notify handle is null, cannot signal event");
+    }
+    ReleaseSemaphore(this->file_notify, 1, nullptr);
 }
 bool SharedMemoryCommunication::hasMessages() const {
     if (!this->shared_memory || !this->shared_memory->get_address()) {
@@ -99,14 +105,19 @@ bool SharedMemoryCommunication::hasMessages() const {
     // 检查是否有消息
     return header->data_start_offset != header->data_end_offset;
 }
-std::string SharedMemoryCommunication::receiveMessage() {
+std::string SharedMemoryCommunication::receiveMessage(const std::string & name) {
     if (!this->shared_memory || !this->shared_memory->get_address()) {
         throw std::runtime_error("Shared memory not initialized or address is null");
     }
     auto header = static_cast<SharedMemory::SharedMemoryHeader *>(this->shared_memory->get_address());
     // 检查是否有消息
     if (header->data_start_offset == header->data_end_offset) {
-        return ""; // 没有消息可读
+        logger->warn("No messages available in shared memory, wait...");
+        auto notify = OpenEventA(EVENT_ALL_ACCESS, FALSE, name.c_str());
+        auto waitResult = WaitForSingleObject(notify, INFINITE);
+    }
+    if (header->data_start_offset == header->data_end_offset) {
+        return "";
     }
     
     // 获取数据区起始地址

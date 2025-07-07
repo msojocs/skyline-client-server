@@ -122,22 +122,19 @@ void initSocket(Napi::Env &env) {
         msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), true);
         logger->info("Shared memory for server to client initialized");
         msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), true);
+        msgToServer->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_client2server_notify");
         logger->info("Shared memory for client to server initialized");
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready
         // Start synchronous message reading thread
         std::thread([]() {
             try {
-                long i = 0;
                 while (true) {
-                    if (!msgFromServer->hasMessages()) {
-                        i++;
-                        if ((i & 0x0FFFFFFFFF) == 0) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                        }
+                    std::string msg = msgFromServer->receiveMessage("Global\\skyline_server2client_notify");
+                    if (msg.empty()) {
                         continue;
                     }
                     skyline::Message pbMessage;
-                    if (!pbMessage.ParseFromString(msgFromServer->receiveMessage())) {
+                    if (!pbMessage.ParseFromString(msg)) {
                         logger->error("Failed to parse Protobuf message from shared memory");
                         continue;
                     }

@@ -5,6 +5,7 @@
 #include "napi.h"
 #include <exception>
 #include <memory>
+#include <windows.h>
 #include <thread>
 #include <chrono>
 #include <mutex>
@@ -95,22 +96,18 @@ void processMessage(const skyline::Message &message) {
 int startInner(const Napi::Env &env, std::string &host, int port) {
     try {
         msgToClient =  std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), false);
+        msgToClient->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_server2client_notify");
         msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), false);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
-            long i = 0;
             while (true) {
                 try{
-                    if (!msgFromClient->hasMessages()) {
-                        i++;
-                        if ((i & 0x0FFFFFFFFF) == 0) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                        }
-                        continue;
-                    }
                     // Handle client in a separate thread
                     logger->info("start to getMessage!");
-                    auto msg = msgFromClient->receiveMessage();
+                    auto msg = msgFromClient->receiveMessage("Global\\skyline_client2server_notify");
+                    if (msg.empty()) {
+                        continue;
+                    }
                     skyline::Message pbMessage;
                     if (!pbMessage.ParseFromString(msg)) {
                         logger->error("Failed to parse Protobuf message from shared memory");

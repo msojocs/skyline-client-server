@@ -1,5 +1,4 @@
 #include "manager.hh"
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string.h>

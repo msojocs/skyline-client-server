@@ -15,10 +15,12 @@ public:
     void sendMessage(const std::string &message);
 
     // Receive a message from the shared memory
-    std::string receiveMessage();
+    std::string receiveMessage(const std::string &name);
 
     // Check if there are messages in the queue
     bool hasMessages() const;
+    // 用于发送消息后通知的句柄
+    HANDLE file_notify = nullptr;
 private:
     // Internal data structures for managing shared memory
     // This could include a queue, mutexes, etc.

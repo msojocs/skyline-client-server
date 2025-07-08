@@ -131,6 +131,7 @@ void initSocket(Napi::Env &env) {
                 while (true) {
                     std::string msg = msgFromServer->receiveMessage("Global\\skyline_server2client_notify");
                     if (msg.empty()) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         continue;
                     }
                     skyline::Message pbMessage;

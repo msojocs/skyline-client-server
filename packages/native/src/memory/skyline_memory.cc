@@ -19,6 +19,10 @@ SharedMemoryCommunication::SharedMemoryCommunication(const std::string &name, bo
     if (!header) {
         throw std::runtime_error("Failed to get shared memory address");
     }
+    if (create) {
+        header->data_start_offset = 0; // Initialize start offset
+        header->data_end_offset = 0; // Initialize end offset
+    }
     logger->debug("Initialized.");
 }
 SharedMemoryCommunication::~SharedMemoryCommunication() {
@@ -115,6 +119,10 @@ std::string SharedMemoryCommunication::receiveMessage(const std::string & name) 
     if (header->data_start_offset == header->data_end_offset) {
         logger->warn("No messages available in shared memory, wait...");
         auto notify = OpenSemaphoreA(EVENT_ALL_ACCESS, FALSE, name.c_str());
+        if (notify == INVALID_HANDLE_VALUE) {
+            logger->error("Failed to open semaphore: {}", GetLastError());
+            return "";
+        }
         auto waitResult = WaitForSingleObject(notify, INFINITE);
     }
     if (header->data_start_offset == header->data_end_offset) {

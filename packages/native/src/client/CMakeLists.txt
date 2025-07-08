@@ -3,6 +3,8 @@ set(CLIENT_DIR_LIST
     client.cc
     socket_client.cc
     socket_client.hh
+    http_client.cc
+    http_client.hh
     skyline_debug_info.hh
     skyline_debug_info.cc
     skyline_shell.hh

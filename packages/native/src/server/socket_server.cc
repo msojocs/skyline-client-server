@@ -106,6 +106,7 @@ int startInner(const Napi::Env &env, std::string &host, int port) {
                     logger->info("start to getMessage!");
                     auto msg = msgFromClient->receiveMessage("Global\\skyline_client2server_notify");
                     if (msg.empty()) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         continue;
                     }
                     skyline::Message pbMessage;

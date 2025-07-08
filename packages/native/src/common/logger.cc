@@ -25,13 +25,13 @@ namespace Logger {
         std::vector<spdlog::sink_ptr> sinks;
         // auto stdout_log = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         // sinks.push_back(stdout_log);
-        auto file_log = std::make_shared<spdlog::sinks::daily_file_sink_mt>(LOG_FILE, 0, 0);
-        sinks.push_back(file_log);
+        // auto file_log = std::make_shared<spdlog::sinks::daily_file_sink_mt>(LOG_FILE, 0, 0);
+        // sinks.push_back(file_log);
         
         logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
         logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
         logger->set_level(spdlog::level::debug);
-        logger->flush_on(spdlog::level::err);
+        logger->flush_on(spdlog::level::debug);
         spdlog::register_logger(logger);
         logger->info("Logger initialized successfully.");
     }

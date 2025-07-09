@@ -129,14 +129,18 @@ std::string SharedMemoryCommunication::receiveMessage(const std::string & name) 
         #ifdef _WIN32
         // 在Windows上使用信号量等待通知
         auto notify = OpenSemaphoreA(EVENT_ALL_ACCESS, FALSE, name.c_str());
-        #elif __linux__
-        // 在Linux上使用信号量等待通知
-        sem_t *notify = sem_open(name.c_str(), 0);
-        #endif
         if (notify == INVALID_HANDLE_VALUE) {
             logger->error("Failed to open semaphore: {}", GetLastError());
             return "";
         }
+        #elif __linux__
+        // 在Linux上使用信号量等待通知
+        sem_t *notify = sem_open(name.c_str(), 0);
+        if (notify == SEM_FAILED) {
+            logger->error("Failed to open semaphore: {}", strerror(errno));
+            return "";
+        }
+        #endif
         // 等待通知
         #ifdef _WIN32
         auto waitResult = WaitForSingleObject(notify, INFINITE);

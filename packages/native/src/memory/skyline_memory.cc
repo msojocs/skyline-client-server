@@ -3,10 +3,14 @@
 #include <cstdio>
 #include <memory>
 #include <stdexcept>
-#include <synchapi.h>
 #include <thread>
-#include <winbase.h>
 #include "../common/logger.hh"
+#ifdef _WIN32
+#include <synchapi.h>
+#include <winbase.h>
+#else
+#include <semaphore.h>
+#endif
 
 using Logger::logger;
 namespace SkylineMemory {
@@ -100,7 +104,11 @@ void SharedMemoryCommunication::sendMessage(const std::string &message) {
         logger->error("File notify handle is null, cannot signal event");
         throw std::runtime_error("File notify handle is null, cannot signal event");
     }
+    #ifdef _WIN32
     ReleaseSemaphore(this->file_notify, 1, nullptr);
+    #elif __linux__
+    sem_post(this->file_notify);
+    #endif
 }
 bool SharedMemoryCommunication::hasMessages() const {
     if (!this->shared_memory || !this->shared_memory->get_address()) {
@@ -118,12 +126,23 @@ std::string SharedMemoryCommunication::receiveMessage(const std::string & name) 
     // 检查是否有消息
     if (header->data_start_offset == header->data_end_offset) {
         logger->warn("No messages available in shared memory, wait...");
+        #ifdef _WIN32
+        // 在Windows上使用信号量等待通知
         auto notify = OpenSemaphoreA(EVENT_ALL_ACCESS, FALSE, name.c_str());
+        #elif __linux__
+        // 在Linux上使用信号量等待通知
+        sem_t *notify = sem_open(name.c_str(), 0);
+        #endif
         if (notify == INVALID_HANDLE_VALUE) {
             logger->error("Failed to open semaphore: {}", GetLastError());
             return "";
         }
+        // 等待通知
+        #ifdef _WIN32
         auto waitResult = WaitForSingleObject(notify, INFINITE);
+        #elif __linux__
+        sem_wait(notify);
+        #endif
     }
     if (header->data_start_offset == header->data_end_offset) {
         return "";

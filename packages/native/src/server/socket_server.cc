@@ -96,7 +96,11 @@ void processMessage(const skyline::Message &message) {
 int startInner(const Napi::Env &env, std::string &host, int port) {
     try {
         msgToClient =  std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), false);
+        #ifdef _WIN32
         msgToClient->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_server2client_notify");
+        #elif __linux__
+        msgToClient->file_notify = sem_open("skyline_server2client_notify", O_CREAT, 0644, 0);
+        #endif
         msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), false);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
@@ -104,7 +108,13 @@ int startInner(const Napi::Env &env, std::string &host, int port) {
                 try{
                     // Handle client in a separate thread
                     logger->info("start to getMessage!");
-                    auto msg = msgFromClient->receiveMessage("Global\\skyline_client2server_notify");
+                    auto msg = msgFromClient->receiveMessage(
+                        #ifdef _WIN32
+                        "Global\\skyline_client2server_notify"
+                        #elif __linux__
+                        "skyline_client2server_notify"
+                        #endif
+                    );
                     if (msg.empty()) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         continue;

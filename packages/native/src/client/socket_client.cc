@@ -122,14 +122,24 @@ void initSocket(Napi::Env &env) {
         msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), true);
         logger->info("Shared memory for server to client initialized");
         msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), true);
+        #ifdef _WIN32
         msgToServer->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_client2server_notify");
+        #elif __linux__
+        msgToServer->file_notify = sem_open("skyline_client2server_notify", O_CREAT, 0644, 0);
+        #endif
         logger->info("Shared memory for client to server initialized");
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready
         // Start synchronous message reading thread
         std::thread([]() {
             try {
                 while (true) {
-                    std::string msg = msgFromServer->receiveMessage("Global\\skyline_server2client_notify");
+                    std::string msg = msgFromServer->receiveMessage(
+                        #ifdef _WIN32
+                        "Global\\skyline_server2client_notify"
+                        #else
+                        "skyline_server2client_notify"
+                        #endif
+                    );
                     if (msg.empty()) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         continue;

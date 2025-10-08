@@ -73,6 +73,21 @@
                 webview.remove()
                 webview = wv2
                 document.body.appendChild(wv2)
+            } else if (cmd === 'destroy') {
+                const wv2 = webview.cloneNode()
+                initWebview(wv2)
+                webview.remove()
+                webview = wv2
+                
+                response.end('ok');
+            } else if (cmd === 'start') {
+                commandData.restart = {
+                    httpResp: response,
+                    timeout: setTimeout(() => {
+                        response.end('timeout')
+                    }, 10000)
+                }
+                document.body.appendChild(webview)
             } else {
                 console.info('req', request, response)
                 // 发送响应数据 "Hello World"

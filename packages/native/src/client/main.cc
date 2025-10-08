@@ -2,7 +2,7 @@
 #include <napi.h>
 #include <sys/types.h>
 #include "skyline_shell.hh"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "skyline_debug_info.hh"
 #include "http_client.hh"
 #include "../common/logger.hh"
@@ -29,8 +29,9 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::info("Starting Skyline Client...");
     Logger::Init();
 
-    // 检查服务器状态并执行重启流程
     auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+
+    // 检查服务器状态并执行重启流程
     // 执行destroy操作
     log.Call({Napi::String::New(env, "正在停止Skyline服务器...")});
     std::string destroy_result = HttpClient::sendHttpRequest("/destroy", "destroy");
@@ -43,9 +44,9 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
         throw std::runtime_error("Skyline服务器停止失败: " + destroy_result);
     }
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    logger->info("initSocket start");
-    SocketClient::initSocket(env);
-    logger->info("initSocket end");
+    logger->info("initClient start");
+    ClientAction::initSocket(env);
+    logger->info("initClient end");
 
     // 执行start操作
     log.Call({Napi::String::New(env, "正在启动Skyline服务器...")});

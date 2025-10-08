@@ -4,7 +4,7 @@
 #include "skyline_global/worklet_module.hh"
 #include "skyline_global/gesture_handler_module.hh"
 #include "napi.h"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "../common/convert.hh"
 #include "../common/protobuf_converter.hh"
 
@@ -13,12 +13,12 @@ namespace SkylineGlobal {
     try {
       auto skylineGlobal = Napi::Object::New(env);      {
         std::vector<skyline::Value> args;
-        auto result = SocketClient::callStaticSync("SkylineGlobal", "userAgent", args);
+        auto result = ClientAction::callStaticSync("SkylineGlobal", "userAgent", args);
         skylineGlobal.Set(Napi::String::New(env, "userAgent"), ProtobufConverter::protobufValueToNapi(env, result));
       }
       {
         std::vector<skyline::Value> args;
-        auto result = SocketClient::callStaticSync("SkylineGlobal", "features", args);
+        auto result = ClientAction::callStaticSync("SkylineGlobal", "features", args);
         skylineGlobal.Set(Napi::String::New(env, "features"), ProtobufConverter::protobufValueToNapi(env, result));
       }
       {

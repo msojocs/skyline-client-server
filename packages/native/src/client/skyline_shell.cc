@@ -1,6 +1,6 @@
 #include "skyline_shell.hh"
 #include "napi.h"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -83,7 +83,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
 
     auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
       auto env = info.Env();      try {        std::vector<skyline::Value> _t;
-        SocketClient::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
+        ClientAction::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
         //* 客户端初始化SkylineGlobal
         SkylineGlobal::Init(env);
         callbackPtr->Value().Call({});
@@ -97,7 +97,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     });    // 发送消息到Socket
     std::vector<skyline::Value> args;
     args.push_back(ProtobufConverter::napiToProtobufValue(env, func1));
-    SocketClient::callDynamicSync(m_instanceId, __func__, args);
+    ClientAction::callDynamicSync(m_instanceId, __func__, args);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -204,7 +204,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
       throw Napi::Error::New(env, "共享内存key错误");
     }    // 获取Server端的skyline路径
     std::vector<skyline::Value> data1;
-    auto resp = SocketClient::callCustomHandleSync("getSkylineAddonPath", data1);
+    auto resp = ClientAction::callCustomHandleSync("getSkylineAddonPath", data1);
     
     // Extract string value from the protobuf response
     std::string skylineAddonPath;
@@ -248,7 +248,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
     data.push_back(nodePathValue);
     
     // 发送消息到Socket
-    SocketClient::callDynamicSync(m_instanceId, __func__, data);
+    ClientAction::callDynamicSync(m_instanceId, __func__, data);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -319,7 +319,7 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     // 写入数据
     memcpy(typedArray.Data(), buffer.Data(), buffer.Length());
     
-    SocketClient::callDynamicSync(m_instanceId, __func__, args);
+    ClientAction::callDynamicSync(m_instanceId, __func__, args);
     return env.Undefined();
   } catch (const std::exception& e) {
     throw Napi::Error::New(env, e.what());

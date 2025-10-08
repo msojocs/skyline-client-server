@@ -1,10 +1,10 @@
-#ifndef __SOCKET_CLIENT_HH__
-#define __SOCKET_CLIENT_HH__
+#ifndef __MEMORY_CLIENT_HH__
+#define __MEMORY_CLIENT_HH__
 #include <string>
 #include <napi.h>
 #include "messages.pb.h"
 
-namespace SocketClient {
+namespace ClientAction {
     /**
      * 初始化Socket，并连接到服务器
      */
@@ -24,4 +24,4 @@ namespace SocketClient {
     void sendMessageAsync(const skyline::Message& message);
 }
 
-#endif // __SOCKET_CLIENT_HH__
+#endif // __MEMORY_CLIENT_HH__

@@ -1,4 +1,4 @@
-#include "socket_server.hh"
+#include "memory_server.hh"
 #include "../common/convert.hh"
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
@@ -13,7 +13,7 @@
 
 using Logger::logger;
 
-namespace SocketServer {
+namespace MemoryServer {
 static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToClient;
 static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromClient;
 static std::atomic<bool> client_connected{false};

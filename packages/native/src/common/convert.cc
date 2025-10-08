@@ -14,7 +14,7 @@
 #include "../client/skyline_global/shadow_node/swiper_item.hh"
 #include "../client/skyline_global/shadow_node/text.hh"
 #include "../client/skyline_global/shadow_node/view.hh"
-#include "../client/socket_client.hh"
+#include "../client/client_action.hh"
 #include "../common/snowflake.hh"
 #include "napi.h"
 #include "protobuf_converter.hh"
@@ -68,7 +68,7 @@ Napi::Value createInstanceFromProtobuf(Napi::Env& env, const std::string& instan
                     args.push_back(ProtobufConverter::napiToProtobufValue(
                         env, info[i]));
                 }
-                auto result = SocketClient::callStaticSync(
+                auto result = ClientAction::callStaticSync(
                     "functionData", instanceId, args);
 
                 return ProtobufConverter::protobufValueToNapi(env, result);

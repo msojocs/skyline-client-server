@@ -1,5 +1,5 @@
-#ifndef __SOCKET_SERVER_HH__
-#define __SOCKET_SERVER_HH__
+#ifndef __MEMORY_SERVER_HH__
+#define __MEMORY_SERVER_HH__
 
 #include <napi.h>
 #include <memory>
@@ -10,7 +10,7 @@
 #include "messages.pb.h"
 #include "../common/protobuf_converter.hh"
 
-namespace SocketServer {
+namespace MemoryServer {
     // Protobuf-based methods (replacing JSON versions)
     void setMessageCallback(const Napi::CallbackInfo &info);
     Napi::Value start(const Napi::CallbackInfo &info);
@@ -19,4 +19,4 @@ namespace SocketServer {
     Napi::Value sendMessageSingle(const Napi::CallbackInfo &info);
 }
 
-#endif // __SOCKET_SERVER_HH__
+#endif // __MEMORY_SERVER_HH__

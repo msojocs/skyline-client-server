@@ -131,4 +131,5 @@ include_directories(${NODE_ADDON_API_DIR})
 
 
 add_subdirectory(src)
+add_subdirectory(test)
 ################test##################

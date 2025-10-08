@@ -1,7 +1,7 @@
 #include "page_context.hh"
 #include "napi.h"
 #include <spdlog/spdlog.h>
-#include "../socket_client.hh"
+#include "../client_action.hh"
 #include "../../common/protobuf_converter.hh"
 
 namespace Skyline {
@@ -67,8 +67,8 @@ void PageContext::setFrameworkType(const Napi::CallbackInfo &info, const Napi::V
   for (int i = 0; i < info.Length(); i++) {
     args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
   }
-  // 发送消息到 WebSocket
-  SocketClient::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
+  // 发送消息到 Server
+  ClientAction::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
 }
 /**
  * 1个Array参数

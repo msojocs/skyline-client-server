@@ -164,7 +164,7 @@ namespace SharedMemory {
                     ReleaseMutex(mutex_);
                     CloseHandle(mutex_);
                     mutex_ = nullptr;
-                    throw std::runtime_error("Failed to open file");
+                    throw std::runtime_error("Failed to open memory file");
                 }
             }
             

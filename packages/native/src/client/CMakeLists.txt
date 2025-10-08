@@ -1,8 +1,10 @@
-set(CLIENT_NAME skylineClient)
+set(CLIENT_NAME skyline)
 set(CLIENT_DIR_LIST
-    client.cc
-    socket_client.cc
-    socket_client.hh
+    main.cc
+    client_action.cc
+    client_action.hh
+    client_memory.hh
+    client_memory.cc
     http_client.cc
     http_client.hh
     skyline_debug_info.hh
@@ -104,6 +106,6 @@ target_link_libraries(${CLIENT_NAME} PRIVATE Boost::asio Boost::thread)
 target_link_libraries(${CLIENT_NAME} PRIVATE skyline_protobuf)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build
-set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
+set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "D:/Program Files (x86)/Tencent/微信web开发者工具/code/package.nw/node_modules/skyline-addon/build")
 set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set_target_properties(${CLIENT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

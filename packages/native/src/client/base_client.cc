@@ -2,7 +2,7 @@
 #include "../common/convert.hh"
 #include "../common/protobuf_converter.hh"
 #include "napi.h"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include <spdlog/spdlog.h>
 
 
@@ -20,7 +20,7 @@ Napi::Value BaseClient::sendToServerSync(const Napi::CallbackInfo &info,
     }
     try {
         auto result =
-            SocketClient::callDynamicSync(m_instanceId, methodName, args);
+            ClientAction::callDynamicSync(m_instanceId, methodName, args);
         return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {
         throw Napi::Error::New(env, e.what());
@@ -36,7 +36,7 @@ Napi::Value BaseClient::sendToServerAsync(const Napi::CallbackInfo &info,
         args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
-        SocketClient::callDynamicAsync(m_instanceId, methodName, args);
+        ClientAction::callDynamicAsync(m_instanceId, methodName, args);
         return env.Undefined();
     } catch (const std::exception &e) {
         throw Napi::Error::New(env, e.what());
@@ -53,7 +53,7 @@ BaseClient::sendConstructorToServerSync(const Napi::CallbackInfo &info,
         args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
-        auto result = SocketClient::callConstructorSync(className, args);
+        auto result = ClientAction::callConstructorSync(className, args);
         // The result should be a skyline::Value containing the instance ID as a
         // string
         if (result.has_string_value()) {
@@ -73,7 +73,7 @@ void BaseClient::setProperty(const Napi::CallbackInfo &info,
     std::vector<skyline::Value> args;
     args.push_back(ProtobufConverter::napiToProtobufValue(env, info[0]));
     try {
-        auto result = SocketClient::callDynamicPropertySetSync(
+        auto result = ClientAction::callDynamicPropertySetSync(
             m_instanceId, propertyName, args);
     } catch (const std::exception &e) {
         throw Napi::Error::New(env, e.what());
@@ -85,7 +85,7 @@ Napi::Value BaseClient::getProperty(const Napi::CallbackInfo &info,
                                     const std::string &propertyName) {
     auto env = info.Env();
     try {
-        auto result = SocketClient::callDynamicPropertyGetSync(m_instanceId,
+        auto result = ClientAction::callDynamicPropertyGetSync(m_instanceId,
                                                                propertyName);
         return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {

@@ -1,7 +1,7 @@
 
 #include "gesture_handler_module.hh"
 #include "../../common/protobuf_converter.hh"
-#include "../socket_client.hh"
+#include "../client_action.hh"
 
 namespace Skyline {
 namespace GestureHandlerModule {
@@ -12,7 +12,7 @@ namespace GestureHandlerModule {
       args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
-      auto result = SocketClient::callStaticSync("SkylineGestureModule", methodName, args);
+      auto result = ClientAction::callStaticSync("SkylineGestureModule", methodName, args);
       return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());

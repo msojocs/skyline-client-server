@@ -1,5 +1,5 @@
 #include "worklet_module.hh"
-#include "../socket_client.hh"
+#include "../client_action.hh"
 #include "../../common/protobuf_converter.hh"
 #include "napi.h"
 
@@ -11,7 +11,7 @@ namespace WorkletModule {  Napi::Value sendToServerSync(const Napi::CallbackInfo
       args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
-      auto result = SocketClient::callStaticSync("SkylineWorkletModule", methodName, args);
+      auto result = ClientAction::callStaticSync("SkylineWorkletModule", methodName, args);
       return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());

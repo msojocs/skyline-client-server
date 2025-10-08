@@ -1,6 +1,6 @@
 #include "./skyline_debug_info.hh"
 #include <string>
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "../common/protobuf_converter.hh"
 #include "../common/logger.hh"
 
@@ -13,7 +13,7 @@ namespace SkylineDebugInfo{
         try {
             logger->info("Call GetVersion with Protobuf...");
             std::vector<skyline::Value> reqData; // 使用空参数数组
-            auto result = SocketClient::callStaticSync("global", "SkylineDebugInfo", reqData);
+            auto result = ClientAction::callStaticSync("global", "SkylineDebugInfo", reqData);
             logger->info("Protobuf SkylineDebugInfo result: {}", result.DebugString());
             // 转换 protobuf Value 到 Napi::Value
             auto env = info.Env();

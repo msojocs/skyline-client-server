@@ -1,4 +1,4 @@
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "../common/convert.hh"
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
@@ -10,17 +10,16 @@
 #include <queue>
 #include <thread>
 #include <unordered_map>
-#include "../memory/skyline_memory.hh"
+#include "client_memory.hh"
+#include "client.hh"
 
 using Logger::logger;
 
-namespace SocketClient {
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromServer;
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToServer;
-static std::atomic<bool> is_connected{false};
+namespace ClientAction {
+static std::shared_ptr<Client> client;
 static std::mutex socketRequestMutex; // Add mutex for thread synchronization
 static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
-    socketRequest;
+    requestMapping;
 static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 
 // Forward declarations
@@ -37,10 +36,10 @@ void processMessage(const skyline::Message &message) {
         // Check if it's a response to a request
         if (!message.id().empty()) {
             std::lock_guard<std::mutex> lock(socketRequestMutex);
-            auto it = socketRequest.find(message.id());
-            if (it != socketRequest.end()) {
+            auto it = requestMapping.find(message.id());
+            if (it != requestMapping.end()) {
                 it->second->set_value(message);
-                socketRequest.erase(it);
+                requestMapping.erase(it);
                 return;
             }
         }
@@ -91,7 +90,7 @@ void processMessage(const skyline::Message &message) {
                                 // uint32_t messageLength = static_cast<uint32_t>(serializedMessage.size());
                                 // std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
                                 // std::string fullMessage = lengthPrefix + serializedMessage;
-                                msgToServer->sendMessage(serializedMessage);
+                                client->sendMessage(serializedMessage);
                             }
                         }
                     };
@@ -118,22 +117,17 @@ void processMessage(const skyline::Message &message) {
 void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
-
-        msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), true);
-        logger->info("Shared memory for server to client initialized");
-        msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), true);
-        #ifdef _WIN32
-        msgToServer->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_client2server_notify");
-        #elif __linux__
-        msgToServer->file_notify = sem_open("skyline_client2server_notify", O_CREAT, 0644, 0);
-        #endif
-        logger->info("Shared memory for client to server initialized");
+        
+        // TODO: 初始化不同的客户端以应对不同的传输方式
+        client = std::make_shared<ClientMemory>();
+        client->Init(env);
+        
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready
         // Start synchronous message reading thread
         std::thread([]() {
             try {
                 while (true) {
-                    std::string msg = msgFromServer->receiveMessage(
+                    std::string msg = client->receiveMessage(
                         #ifdef _WIN32
                         "Global\\skyline_server2client_notify"
                         #else
@@ -187,7 +181,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     // Lock the mutex while manipulating the map
     {
         std::lock_guard<std::mutex> lock(socketRequestMutex);
-        auto insertResult = socketRequest.emplace(message.id(), promiseObj);
+        auto insertResult = requestMapping.emplace(message.id(), promiseObj);
         if (!insertResult.second) {
             blocked = false;
             throw std::runtime_error("id insert to request map failed: " + message.id());
@@ -195,7 +189,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     }
 
     // Send message with socket protection
-    msgToServer->sendMessage(serializedMessage);
+    client->sendMessage(serializedMessage);
     logger->debug("send end.");
     
     // Wait for response with timeout
@@ -208,7 +202,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
         if (waitStatus == std::future_status::ready) {
             break;
         }
-          // Handle callback queue during wait
+        // Handle callback queue during wait
         if (!callbackQueue.empty()) {
             auto pbMessage = callbackQueue.front();
             callbackQueue.pop();
@@ -244,7 +238,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
                         // Send reply using Protobuf
                         {
                             std::string serializedMessage = ProtobufConverter::serializeMessage(callbackResult);
-                            msgToServer->sendMessage(serializedMessage);
+                            client->sendMessage(serializedMessage);
                         }
                     }
                 } else {
@@ -256,7 +250,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     // 检查是否超时
     if (std::chrono::steady_clock::now() >= timeout) {
         blocked = false;
-        socketRequest.erase(message.id());
+        requestMapping.erase(message.id());
         throw std::runtime_error("Operation timed out after 5 seconds");
     }
 
@@ -280,7 +274,7 @@ void sendMessageAsync(const skyline::Message &message) {
     // 序列化Protobuf消息
     std::string serializedMessage = ProtobufConverter::serializeMessage(message);
     
-    msgToServer->sendMessage(serializedMessage);
+    client->sendMessage(serializedMessage);
 }
 
 void callDynamicAsync(const std::string &instanceId, const std::string &action,

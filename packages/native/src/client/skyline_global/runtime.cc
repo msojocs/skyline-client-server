@@ -1,6 +1,6 @@
 #include "runtime.hh"
 #include "../../common/protobuf_converter.hh"
-#include "../socket_client.hh"
+#include "../client_action.hh"
 #include "napi.h"
 #include <cstdint>
 #include <memory>
@@ -23,7 +23,7 @@ namespace Runtime {
       args.push_back(ProtobufConverter::napiToProtobufValue(env, info[i]));
     }
     try {
-      auto result = SocketClient::callStaticSync("SkylineRuntime", methodName, args);
+      auto result = ClientAction::callStaticSync("SkylineRuntime", methodName, args);
       return ProtobufConverter::protobufValueToNapi(env, result);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());

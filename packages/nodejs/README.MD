@@ -12,5 +12,14 @@
 │  ├─sharedMemory (重写版)
 │  ├─skyline-server (编译后的SkylineServer native项目文件)
 │  └─skyline-addon (官方原版)
-└─webview
-   └─skyline.js (编译后的ts项目文件) 
+├─nw.dll    (伪造的nw库，实际转发给node.exe)
+├─node.dll  (伪造的node.dll库，实际转发给node.exe)
+└─skyline.js (编译后的ts项目文件) 
+
+## 调用
+
+skyline.node
+   │ 
+   ├─nw.dll
+   │ 
+   └─node.dll

@@ -1,8 +1,8 @@
 
 set(SERVER_NAME skylineServer)
-set(SERVER_DIR_LIST    server.cc
-    socket_server.cc
-    socket_server.hh
+set(SERVER_DIR_LIST    main.cc
+    memory_server.cc
+    memory_server.hh
     ../common/convert.cc
     ../common/logger.cc
     ../common/protobuf_converter.cc

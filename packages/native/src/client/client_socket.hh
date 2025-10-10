@@ -8,14 +8,13 @@
 
 #include <string>
 #include <napi.h>
-#include "../memory/skyline_memory.hh"
 #include "client.hh"
 #include <boost/asio.hpp>
 
-
-using boost::asio::ip::tcp;
 namespace SkylineClient {
     
+
+using boost::asio::ip::tcp;
 class ClientSocket : public Client {
     public:
     void Init(Napi::Env env);

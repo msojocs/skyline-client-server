@@ -44,12 +44,15 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
         throw std::runtime_error("Skyline服务器停止失败: " + destroy_result);
     }
     std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    // TODO: Memory先初始化再启动，Socket先启动再初始化
     logger->info("initClient start");
     ClientAction::initSocket(env);
     logger->info("initClient end");
 
     // 执行start操作
     log.Call({Napi::String::New(env, "正在启动Skyline服务器...")});
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     std::string start_result = HttpClient::sendHttpRequest("/start", "start");
     
     if (start_result == "ok") {

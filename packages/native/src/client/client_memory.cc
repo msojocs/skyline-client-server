@@ -1,6 +1,8 @@
 #include "client_memory.hh"
 #include "../common/logger.hh"
 
+namespace SkylineClient {
+
 using Logger::logger;
 void ClientMemory::Init(Napi::Env env) {
     msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), true);
@@ -22,3 +24,4 @@ std::string ClientMemory::receiveMessage(const std::string &name) {
 }
 
 ClientMemory::~ClientMemory() {}
+}

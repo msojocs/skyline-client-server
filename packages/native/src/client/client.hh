@@ -2,6 +2,8 @@
 #define __CLIENT_HH__
 
 #include "napi.h"
+namespace SkylineClient {
+
 class Client {
 public:
     virtual void Init(Napi::Env env) = 0;
@@ -13,4 +15,5 @@ public:
     virtual std::string receiveMessage(const std::string &name) = 0;
 
 };
+}
 #endif // __CLIENT_HH__

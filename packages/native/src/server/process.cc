@@ -1,18 +1,18 @@
-#include "server_memory.hh"
 #include "../common/convert.hh"
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
 #include "napi.h"
 #include <exception>
 #include <memory>
-#include <windows.h>
 #include <thread>
 #include <chrono>
 #include <future>
 #include <queue>
 #include <mutex>
-#include "../memory/skyline_memory.hh"
 #include "messages.pb.h"
+// #include "server_memory.hh"
+#include "server_memory.hh"
+// #include "server_socket.hh"
 
 using Logger::logger;
 
@@ -197,7 +197,6 @@ Napi::Value sendMessageSingle(const Napi::CallbackInfo &info) {
     logger->debug("Send msg to client: {}", message.DebugString());
     // Serialize the message and send it
     std::string serializedMessage = message.SerializeAsString();
-    std::uint32_t messageLength = static_cast<std::uint32_t>(serializedMessage.size());
     server->sendMessage(serializedMessage);
     return info.Env().Undefined();
 }

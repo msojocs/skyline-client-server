@@ -11,12 +11,12 @@
 #include <thread>
 #include <unordered_map>
 #include "client_memory.hh"
-#include "client.hh"
+// #include "client_socket.hh"
 
 using Logger::logger;
 
 namespace ClientAction {
-static std::shared_ptr<Client> client;
+static std::shared_ptr<SkylineClient::Client> client;
 static std::mutex socketRequestMutex; // Add mutex for thread synchronization
 static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
     requestMapping;
@@ -118,8 +118,7 @@ void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
         
-        // TODO: 初始化不同的客户端以应对不同的传输方式
-        client = std::make_shared<ClientMemory>();
+        client = std::make_shared<SkylineClient::ClientMemory>();
         client->Init(env);
         
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready

@@ -14,7 +14,7 @@ using boost::asio::ip::tcp;
 namespace SkylineServer {
 void ServerSocket::Init(Napi::Env env) {
     try {
-        int port = 12345; // Default port
+        int port = 3001; // Default port
         
         acceptor = std::make_shared<tcp::acceptor>(io_context, tcp::endpoint(tcp::v4(), port));
         socket = std::make_shared<tcp::socket>(io_context);

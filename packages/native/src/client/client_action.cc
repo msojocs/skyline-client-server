@@ -126,13 +126,7 @@ void initSocket(Napi::Env &env) {
         std::thread([]() {
             try {
                 while (true) {
-                    std::string msg = client->receiveMessage(
-                        #ifdef _WIN32
-                        "Global\\skyline_server2client_notify"
-                        #else
-                        "skyline_server2client_notify"
-                        #endif
-                    );
+                    std::string msg = client->receiveMessage();
                     if (msg.empty()) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         continue;

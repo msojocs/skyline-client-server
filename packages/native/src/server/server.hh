@@ -7,7 +7,7 @@ namespace SkylineServer {
     public:
         virtual void Init(Napi::Env env) = 0;
         virtual void sendMessage(const std::string &message) = 0;
-        virtual std::string receiveMessage(const std::string &name) = 0;
+        virtual std::string receiveMessage() = 0;
     };
 }
 #endif // __SERVER_HH__

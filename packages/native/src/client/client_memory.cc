@@ -5,7 +5,6 @@ namespace SkylineClient {
 
 using Logger::logger;
 void ClientMemory::Init(Napi::Env env) {
-    msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), true);
     logger->info("Shared memory for server to client initialized");
     msgToServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), true);
     msgFromServer = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), false);
@@ -19,7 +18,14 @@ void ClientMemory::Init(Napi::Env env) {
 void ClientMemory::sendMessage(const std::string &message) {
     msgToServer->sendMessage(message);
 }
-std::string ClientMemory::receiveMessage(const std::string &name) {
+std::string ClientMemory::receiveMessage() {
+    
+    #ifdef _WIN32
+    std::string name="Global\\skyline_server2client_notify";
+    #else
+    std::string name="skyline_server2client_notify";
+    #endif
+        
     return msgFromServer->receiveMessage(name);
 }
 

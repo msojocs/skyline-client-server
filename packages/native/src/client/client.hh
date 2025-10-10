@@ -12,7 +12,7 @@ public:
     virtual void sendMessage(const std::string &message) = 0;
 
     // Receive a message from the shared memory
-    virtual std::string receiveMessage(const std::string &name) = 0;
+    virtual std::string receiveMessage() = 0;
 
 };
 }

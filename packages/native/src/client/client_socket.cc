@@ -46,7 +46,7 @@ void ClientSocket::sendMessage(const std::string &message) {
         logger->error("Socket is not open");
     }
 }
-std::string ClientSocket::receiveMessage(const std::string &name) {
+std::string ClientSocket::receiveMessage() {
     if (socket && socket->is_open()) {
         // Read the message length first
         uint32_t message_length = 0;

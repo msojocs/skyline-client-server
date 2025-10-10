@@ -15,7 +15,7 @@ namespace SkylineServer {
         void Init(Napi::Env env);
         ~ServerSocket();
         void sendMessage(const std::string &message);
-        std::string receiveMessage(const std::string &name);
+        std::string receiveMessage();
     private:
         boost::asio::io_context io_context;
         std::shared_ptr<tcp::acceptor> acceptor;

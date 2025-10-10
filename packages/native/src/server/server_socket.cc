@@ -67,7 +67,7 @@ void ServerSocket::sendMessage(const std::string &message) {
         logger->error("Error sending message: {}", e.what());
     }
 }
-std::string ServerSocket::receiveMessage(const std::string &name) {
+std::string ServerSocket::receiveMessage() {
     try {
         if (socket && socket->is_open()) {
             // Read the message length first

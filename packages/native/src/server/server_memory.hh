@@ -9,7 +9,7 @@ namespace SkylineServer {
         void Init(Napi::Env env);
         ~ServerMemory();
         void sendMessage(const std::string &message);
-        std::string receiveMessage(const std::string &name);
+        std::string receiveMessage();
     private:
         std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromClient;
         std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToClient;

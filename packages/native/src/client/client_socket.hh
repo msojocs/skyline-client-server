@@ -20,7 +20,7 @@ class ClientSocket : public Client {
     void Init(Napi::Env env);
     ~ClientSocket();
     void sendMessage(const std::string &message);
-    std::string receiveMessage(const std::string &name);
+    std::string receiveMessage();
 
     private:
     boost::asio::io_context io_context;

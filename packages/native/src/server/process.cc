@@ -105,13 +105,7 @@ int startInner(const Napi::Env &env, std::string &host, int port) {
                 try{
                     // Handle client in a separate thread
                     logger->info("start to getMessage!");
-                    auto msg = server->receiveMessage(
-                        #ifdef _WIN32
-                        "Global\\skyline_client2server_notify"
-                        #elif __linux__
-                        "skyline_client2server_notify"
-                        #endif
-                    );
+                    auto msg = server->receiveMessage();
                     if (msg.empty()) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         continue;

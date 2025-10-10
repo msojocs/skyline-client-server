@@ -39,7 +39,7 @@ namespace SkylineServer {
             logger->error("Error sending message: {}", e.what());
         }
     }
-    std::string ServerMemory::receiveMessage(const std::string &name) {
+    std::string ServerMemory::receiveMessage() {
         try {
             if (msgFromClient) {
                 auto msg = msgFromClient->receiveMessage(

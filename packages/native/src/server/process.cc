@@ -1,4 +1,4 @@
-#include "memory_server.hh"
+#include "server_memory.hh"
 #include "../common/convert.hh"
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
@@ -8,14 +8,16 @@
 #include <windows.h>
 #include <thread>
 #include <chrono>
+#include <future>
+#include <queue>
 #include <mutex>
 #include "../memory/skyline_memory.hh"
+#include "messages.pb.h"
 
 using Logger::logger;
 
 namespace MemoryServer {
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToClient;
-static std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromClient;
+static std::shared_ptr<SkylineServer::Server> server;
 static std::atomic<bool> client_connected{false};
 static Napi::ThreadSafeFunction messageHandleTsfn;
 static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
@@ -95,20 +97,15 @@ void processMessage(const skyline::Message &message) {
 }
 int startInner(const Napi::Env &env, std::string &host, int port) {
     try {
-        msgToClient =  std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_server2client"), false);
-        #ifdef _WIN32
-        msgToClient->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_server2client_notify");
-        #elif __linux__
-        msgToClient->file_notify = sem_open("skyline_server2client_notify", O_CREAT, 0644, 0);
-        #endif
-        msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>(std::string("skyline_client2server"), false);
+        server = std::make_shared<SkylineServer::ServerMemory>();
+        server->Init(env);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
             while (true) {
                 try{
                     // Handle client in a separate thread
                     logger->info("start to getMessage!");
-                    auto msg = msgFromClient->receiveMessage(
+                    auto msg = server->receiveMessage(
                         #ifdef _WIN32
                         "Global\\skyline_client2server_notify"
                         #elif __linux__
@@ -201,7 +198,7 @@ Napi::Value sendMessageSingle(const Napi::CallbackInfo &info) {
     // Serialize the message and send it
     std::string serializedMessage = message.SerializeAsString();
     std::uint32_t messageLength = static_cast<std::uint32_t>(serializedMessage.size());
-    msgToClient->sendMessage(serializedMessage);
+    server->sendMessage(serializedMessage);
     return info.Env().Undefined();
 }
 /**
@@ -241,7 +238,7 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
     // 发送消息给单一客户端
     // Serialize the message and send it
     std::string serializedMessage = message.SerializeAsString();
-    msgToClient->sendMessage(serializedMessage);
+    server->sendMessage(serializedMessage);
 
     // 使用更高效的等待方式
     auto start = std::chrono::steady_clock::now();

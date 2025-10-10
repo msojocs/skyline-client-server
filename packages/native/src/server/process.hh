@@ -1,5 +1,5 @@
-#ifndef __MEMORY_SERVER_HH__
-#define __MEMORY_SERVER_HH__
+#ifndef __PROCESS_HH__
+#define __PROCESS_HH__
 
 #include <napi.h>
 #include <memory>
@@ -19,4 +19,4 @@ namespace MemoryServer {
     Napi::Value sendMessageSingle(const Napi::CallbackInfo &info);
 }
 
-#endif // __MEMORY_SERVER_HH__
+#endif // __PROCESS_HH__

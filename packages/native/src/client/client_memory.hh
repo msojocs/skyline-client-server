@@ -1,3 +1,5 @@
+#ifndef CLIENT_MEMORY_HH
+#define CLIENT_MEMORY_HH
 #include "client.hh"
 #include "../memory/skyline_memory.hh"
 
@@ -12,3 +14,4 @@ class ClientMemory : public Client {
     std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromServer;
     std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToServer;
 };
+#endif // CLIENT_MEMORY_HH

@@ -5,6 +5,8 @@ set(CLIENT_DIR_LIST
     client_action.hh
     client_memory.hh
     client_memory.cc
+    client_socket.hh
+    client_socket.cc
     http_client.cc
     http_client.hh
     skyline_debug_info.hh

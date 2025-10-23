@@ -108,6 +108,6 @@ target_link_libraries(${CLIENT_NAME} PRIVATE Boost::asio Boost::thread)
 target_link_libraries(${CLIENT_NAME} PRIVATE skyline_protobuf)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build
-set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "D:/Program Files (x86)/Tencent/微信web开发者工具/code/package.nw/node_modules/skyline-addon/build")
+set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set_target_properties(${CLIENT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

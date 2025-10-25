@@ -10,7 +10,7 @@
 #include <queue>
 #include <thread>
 #include <unordered_map>
-#include "client_memory.hh"
+#include "client_socket.hh"
 // #include "client_socket.hh"
 
 using Logger::logger;
@@ -118,7 +118,7 @@ void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
         
-        client = std::make_shared<SkylineClient::ClientMemory>();
+        client = std::make_shared<SkylineClient::ClientSocket>();
         client->Init(env);
         
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready

@@ -33,16 +33,16 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
     // 检查服务器状态并执行重启流程
     // 执行destroy操作
-    log.Call({Napi::String::New(env, "正在停止Skyline服务器...")});
-    std::string destroy_result = HttpClient::sendHttpRequest("/destroy", "destroy");
+    // log.Call({Napi::String::New(env, "正在停止Skyline服务器...")});
+    // std::string destroy_result = HttpClient::sendHttpRequest("/destroy", "destroy");
 
-    if (destroy_result == "ok") {
-        logger->info("服务器停止成功");
-        log.Call({Napi::String::New(env, "Skyline服务器停止: ok")});
-    } else {
-        logger->warn("服务器停止失败. 响应: '{}'", destroy_result);
-        throw std::runtime_error("Skyline服务器停止失败: " + destroy_result);
-    }
+    // if (destroy_result == "ok") {
+    //     logger->info("服务器停止成功");
+    //     log.Call({Napi::String::New(env, "Skyline服务器停止: ok")});
+    // } else {
+    //     logger->warn("服务器停止失败. 响应: '{}'", destroy_result);
+    //     throw std::runtime_error("Skyline服务器停止失败: " + destroy_result);
+    // }
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // TODO: Memory先初始化再启动，Socket先启动再初始化
@@ -53,15 +53,15 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     // 执行start操作
     log.Call({Napi::String::New(env, "正在启动Skyline服务器...")});
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    std::string start_result = HttpClient::sendHttpRequest("/start", "start");
+    // std::string start_result = HttpClient::sendHttpRequest("/start", "start");
     
-    if (start_result == "ok") {
-        logger->info("服务器启动成功");
-        log.Call({Napi::String::New(env, "Skyline服务器启动: ok")});
-    } else {
-        logger->warn("服务器启动失败. 响应: '{}'", start_result);
-        throw std::runtime_error("Skyline服务器启动失败: " + start_result);
-    }
+    // if (start_result == "ok") {
+    //     logger->info("服务器启动成功");
+    //     log.Call({Napi::String::New(env, "Skyline服务器启动: ok")});
+    // } else {
+    //     logger->warn("服务器启动失败. 响应: '{}'", start_result);
+    //     throw std::runtime_error("Skyline服务器启动失败: " + start_result);
+    // }
     
     SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
     SkylineShell::SkylineShell::Init(env, exports);

@@ -40,7 +40,8 @@ try {
   g.window = g
   window = g
   registerDefaultClazz(g)
-  server.start('127.0.0.1', 3001)
+  const port = 3001
+  server.start('127.0.0.1', port)
   g.send = server.sendMessageSingle
   const reply = server.sendMessageSingle as (message: ResponseMessage) => void
   server.setMessageCallback((message: RequestMessage) => {
@@ -251,7 +252,7 @@ try {
       }
     }
   });
-  log.info('✅ WebSocket Server listening on ws://localhost:3001');
+  log.info(`✅ Server listening on *:${port}`);
   log.info('end....')
 }
 catch (err) {

@@ -1,10 +1,9 @@
 #include <napi.h>
 #include <sys/types.h>
-#include "memory_server.hh"
+#include "process.hh"
 #include "../common/logger.hh"
 
 #ifdef _WIN32
-#include <winsock2.h>
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib")
 #endif
@@ -23,11 +22,11 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   Logger::Init();
   logger->info("initServer end");
   
-  exports.Set("start", Napi::Function::New(env, MemoryServer::start));
-  exports.Set("stop", Napi::Function::New(env, MemoryServer::stop));
-  exports.Set("setMessageCallback", Napi::Function::New(env, MemoryServer::setMessageCallback));
-  exports.Set("sendMessageSync", Napi::Function::New(env, MemoryServer::sendMessageSync));
-  exports.Set("sendMessageSingle", Napi::Function::New(env, MemoryServer::sendMessageSingle));
+  exports.Set("start", Napi::Function::New(env, Process::start));
+  exports.Set("stop", Napi::Function::New(env, Process::stop));
+  exports.Set("setMessageCallback", Napi::Function::New(env, Process::setMessageCallback));
+  exports.Set("sendMessageSync", Napi::Function::New(env, Process::sendMessageSync));
+  exports.Set("sendMessageSingle", Napi::Function::New(env, Process::sendMessageSingle));
   logger->info("return result");
   return exports;
 }

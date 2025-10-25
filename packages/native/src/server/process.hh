@@ -2,15 +2,8 @@
 #define __PROCESS_HH__
 
 #include <napi.h>
-#include <memory>
-#include <map>
-#include <future>
-#include <queue>
-#include "../common/snowflake.hh"
-#include "messages.pb.h"
-#include "../common/protobuf_converter.hh"
 
-namespace MemoryServer {
+namespace Process {
     // Protobuf-based methods (replacing JSON versions)
     void setMessageCallback(const Napi::CallbackInfo &info);
     Napi::Value start(const Napi::CallbackInfo &info);

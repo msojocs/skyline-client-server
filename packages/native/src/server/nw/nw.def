@@ -11169,7 +11169,7 @@ EXPORTS
     ?SetSupportsLegacyWireFormat@ValueDeserializer@v8@@QEAAX_N@Z=node.exe.?SetSupportsLegacyWireFormat@ValueDeserializer@v8@@QEAAX_N@Z
     ?SetSyntheticModuleExport@Module@v8@@QEAA?AV?$Maybe@_N@2@PEAVIsolate@2@V?$Local@VString@v8@@@2@V?$Local@VValue@v8@@@2@@Z=node.exe.?SetSyntheticModuleExport@Module@v8@@QEAA?AV?$Maybe@_N@2@PEAVIsolate@2@V?$Local@VString@v8@@@2@V?$Local@VValue@v8@@@2@@Z
     ?SetSyntheticModuleExport@Module@v8@@QEAAXV?$Local@VString@v8@@@2@V?$Local@VValue@v8@@@2@@Z=node.exe.?SetSyntheticModuleExport@Module@v8@@QEAAXV?$Local@VString@v8@@@2@V?$Local@VValue@v8@@@2@@Z
-    ?SetTLSPlatform@v8@@YAXPEAVPlatform@1@@Z=forward_SetTLSPlatform_v8__YAXPEAVPlatform_1__Z
+    ?SetTLSPlatform@v8@@YAXPEAVPlatform@1@@Z=node.exe.?SetTLSPlatform@V8@v8@@SAXPEAVPlatform@2@@Z
     ?SetTargetNativeContextRef@JSHeapBroker@compiler@internal@v8@@QEAAXV?$Handle@VNativeContext@internal@v8@@@34@@Z=node.exe.?SetTargetNativeContextRef@JSHeapBroker@compiler@internal@v8@@QEAAXV?$Handle@VNativeContext@internal@v8@@@34@@Z
     ?SetTemporaryObjectTrackingDisabled@Debug@internal@v8@@AEAAX_N@Z=node.exe.?SetTemporaryObjectTrackingDisabled@Debug@internal@v8@@AEAAX_N@Z
     ?SetTerminateOnResume@Debug@internal@v8@@QEAAXXZ=node.exe.?SetTerminateOnResume@Debug@internal@v8@@QEAAXXZ

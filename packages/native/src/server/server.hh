@@ -5,7 +5,7 @@
 namespace SkylineServer {
     class Server {
     public:
-        virtual void Init(Napi::Env env) = 0;
+        virtual void Init(const Napi::CallbackInfo &info) = 0;
         virtual void sendMessage(const std::string &message) = 0;
         virtual std::string receiveMessage() = 0;
     };

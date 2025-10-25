@@ -12,7 +12,7 @@ using boost::asio::ip::tcp;
 namespace SkylineServer {
     class ServerSocket : public Server {
     public:
-        void Init(Napi::Env env);
+        void Init(const Napi::CallbackInfo &info);
         ~ServerSocket();
         void sendMessage(const std::string &message);
         std::string receiveMessage();

@@ -122,15 +122,20 @@ std::string SharedMemoryCommunication::receiveMessage(const std::string & name) 
     if (!this->shared_memory || !this->shared_memory->get_address()) {
         throw std::runtime_error("Shared memory not initialized or address is null");
     }
+    if (name.length() == 0) {
+        throw std::runtime_error("Semaphore name is empty");
+    }
     auto header = static_cast<SharedMemory::SharedMemoryHeader *>(this->shared_memory->get_address());
     // 检查是否有消息
     if (header->data_start_offset == header->data_end_offset) {
         logger->warn("No messages available in shared memory, wait...");
         #ifdef _WIN32
         // 在Windows上使用信号量等待通知
-        auto notify = OpenSemaphoreA(EVENT_ALL_ACCESS, FALSE, name.c_str());
-        if (notify == INVALID_HANDLE_VALUE) {
-            logger->error("Failed to open semaphore: {}", GetLastError());
+        // OpenSemaphore returns NULL on failure (not INVALID_HANDLE_VALUE)
+        auto notify = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, name.c_str());
+        if (notify == NULL) {
+            logger->error("Failed to open semaphore, GetLastError(): {}", GetLastError());
+            Sleep(5 * 1000);
             return "";
         }
         #elif __linux__
@@ -144,6 +149,13 @@ std::string SharedMemoryCommunication::receiveMessage(const std::string & name) 
         // 等待通知
         #ifdef _WIN32
         auto waitResult = WaitForSingleObject(notify, INFINITE);
+        if (waitResult == WAIT_FAILED) {
+            logger->error("WaitForSingleObject failed: {}", GetLastError());
+            CloseHandle(notify);
+            return "";
+        }
+        // Close the handle opened by OpenSemaphoreA to avoid leaks
+        CloseHandle(notify);
         #elif __linux__
         sem_wait(notify);
         #endif

@@ -13,11 +13,6 @@ static FARPROC GetOriginalFunction(const char* name, const char* func) {
 }
 
 extern "C" {
-    // ?InternalFieldCount@Object@v8@@QEBAHXZ
-    __declspec(dllexport) int forward_InternalFieldCount_Object_v8__QEAAHXZ(void* platform) {
-        printf("TODO: forward_InternalFieldCount_Object_v8__QEAAHXZ\n");
-        return 1;
-    }
     // ?SetTLSPlatform@v8@@YAXPEAVPlatform@1@@Z
     __declspec(dllexport) void forward_SetTLSPlatform_v8__YAXPEAVPlatform_1__Z(void* platform) {
         printf("TODO: forward_SetTLSPlatform_v8__YAXPEAVPlatform_1__Z\n");

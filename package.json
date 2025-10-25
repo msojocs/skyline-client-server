@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "prepare": "node scripts/prepare/nwjs.js",
-    "server:start": "./packages/nodejs/node.exe packages/nodejs/server.js"
+    "server:start": ".\\packages\\nodejs\\node.exe packages/nodejs/server.js"
   },
   "keywords": [],
   "author": "",

@@ -12,12 +12,14 @@ using Logger::logger;
 using boost::asio::ip::tcp;
 
 namespace SkylineServer {
-void ServerSocket::Init(Napi::Env env) {
+void ServerSocket::Init(const Napi::CallbackInfo &info) {
     try {
-        int port = 3001; // Default port
+        auto env = info.Env();
+        auto port = info[1].As<Napi::Number>().Int32Value();
         
         acceptor = std::make_shared<tcp::acceptor>(io_context, tcp::endpoint(tcp::v4(), port));
         socket = std::make_shared<tcp::socket>(io_context);
+        logger->info("Socket server listening on *:{}", port);
 
         // Start accepting connections
         acceptor->async_accept(*socket, [this](const boost::system::error_code &error) {
@@ -62,6 +64,7 @@ void ServerSocket::sendMessage(const std::string &message) {
             logger->info("Sent message of length {}", message.size());
         } else {
             logger->error("Socket is not open. Cannot send message.");
+            std::this_thread::sleep_for(std::chrono::seconds(5));
         }
     } catch (const std::exception &e) {
         logger->error("Error sending message: {}", e.what());
@@ -84,10 +87,12 @@ std::string ServerSocket::receiveMessage() {
             return message;
         } else {
             logger->error("Socket is not open. Cannot receive message.");
+            std::this_thread::sleep_for(std::chrono::seconds(5));
             return "";
         }
     } catch (const std::exception &e) {
         logger->error("Error receiving message: {}", e.what());
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         return "";
     }
 }

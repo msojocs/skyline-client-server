@@ -11,12 +11,12 @@
 #include <mutex>
 #include "messages.pb.h"
 // #include "server_memory.hh"
-#include "server_memory.hh"
+#include "server_socket.hh"
 // #include "server_socket.hh"
 
 using Logger::logger;
 
-namespace MemoryServer {
+namespace Process {
 static std::shared_ptr<SkylineServer::Server> server;
 static std::atomic<bool> client_connected{false};
 static Napi::ThreadSafeFunction messageHandleTsfn;
@@ -95,10 +95,10 @@ void processMessage(const skyline::Message &message) {
         logger->error("Unknown error occurred while processing protobuf message");
     }
 }
-int startInner(const Napi::Env &env, std::string &host, int port) {
+int startInner(const Napi::CallbackInfo &info) {
     try {
-        server = std::make_shared<SkylineServer::ServerMemory>();
-        server->Init(env);
+        server = std::make_shared<SkylineServer::ServerSocket>();
+        server->Init(info);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
             while (true) {
@@ -126,11 +126,10 @@ int startInner(const Napi::Env &env, std::string &host, int port) {
             }
         }).detach();
 
-        logger->info("Socket server listening on {}:{}", host, port);
         return 0;
     } catch (std::exception &e) {
         logger->error("Failed to start server: {}", e.what());
-        throw Napi::Error::New(env, e.what());
+        throw Napi::Error::New(info.Env(), e.what());
     }
 }
 
@@ -146,11 +145,12 @@ Napi::Value start(const Napi::CallbackInfo &info) {
     if (!info[1].IsNumber()) {
         throw Napi::TypeError::New(info.Env(),
                                    "Second argument must be a number");
-    }    auto env = info.Env();
+    } 
+    auto env = info.Env();
     auto host = info[0].As<Napi::String>().Utf8Value();
     auto port = info[1].As<Napi::Number>().Int32Value();
     communicationUuid.init(3, 1);
-    startInner(env, host, port);
+    startInner(info);
     
     return env.Undefined();
 }

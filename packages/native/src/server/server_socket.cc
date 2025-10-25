@@ -1,5 +1,6 @@
 #include "server_socket.hh"
 #include <boost/asio.hpp>
+#include <cstdlib>
 #include <thread>
 #include <mutex>
 #include <memory>
@@ -92,7 +93,8 @@ std::string ServerSocket::receiveMessage() {
         }
     } catch (const std::exception &e) {
         logger->error("Error receiving message: {}", e.what());
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        exit(1);
         return "";
     }
 }

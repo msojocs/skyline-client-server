@@ -1,4 +1,4 @@
-set(NODE_LIB_NAME node.dll)
+set(NODE_LIB_NAME node)
 add_library(${NODE_LIB_NAME} SHARED ./node.cpp)
 execute_process(COMMAND
     ${CMAKE_AR} /def:node.original.def /out:${CMAKE_BINARY_DIR}/node.original.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}

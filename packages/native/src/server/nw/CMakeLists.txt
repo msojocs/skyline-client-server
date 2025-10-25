@@ -1,4 +1,4 @@
-set(NW_LIB_NAME nw.dll)
+set(NW_LIB_NAME nw)
 add_library(${NW_LIB_NAME} SHARED ./nw.cpp)
 
 execute_process(COMMAND

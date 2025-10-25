@@ -14,13 +14,13 @@ mv *.node "$root_dir/tmp/upload"
 
 # skyline server ts
 cd "$root_dir/ts-linux-artifact"
-mv server.js "$root_dir/packages/nwjs/webview"
+mv server.js "$root_dir/packages/nodejs"
 
 # skyline server native
 cd "$root_dir/native-win-artifact"
-mkdir -p "$root_dir/packages/nwjs/node_modules/skyline-server"
-mv *.node "$root_dir/packages/nwjs/node_modules/skyline-server/skylineServer.node"
+mkdir -p "$root_dir/packages/nodejs/node_modules/skyline-server"
+mv *.node "$root_dir/packages/nodejs/node_modules/skyline-server/skylineServer.node"
 
 #pack
 cd "$root_dir/packages"
-tar -zcf "$root_dir/tmp/upload/skyline-skylineServer-win32-$arch-$tag.tar.gz" nwjs
+tar -zcf "$root_dir/tmp/upload/skyline-skylineServer-win32-$arch-$tag.tar.gz" nodejs

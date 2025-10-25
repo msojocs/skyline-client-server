@@ -51,7 +51,7 @@ interface LoggerConfigType {
  */
 type InterceptorFuncType = (config: LoggerConfigType) => void
 
-const isLogEnabled = true
+const isLogEnabled = false
 
 if (!isLogEnabled) {
   _console.info('================================日志打印已关闭！=======================================')

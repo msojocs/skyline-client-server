@@ -50,7 +50,7 @@ jobs:
           pnpm run build
           cd ../../
           mkdir -p tmp/build
-          mv packages/nodejs/webview/server.js tmp/build
+          mv packages/nodejs/server.js tmp/build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

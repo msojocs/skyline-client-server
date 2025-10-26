@@ -155,6 +155,7 @@ void initSocket(Napi::Env &env) {
 
 skyline::Message sendMessageSync(const skyline::Message &message) {
 
+    auto start = std::chrono::high_resolution_clock::now();
     blocked = true;
     
     // 序列化Protobuf消息
@@ -166,7 +167,6 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     // std::string lengthPrefix(reinterpret_cast<const char*>(&messageLength), sizeof(messageLength));
     // std::string fullMessage = lengthPrefix + serializedMessage;
     // logger->info("Full message with length prefix, total size: {}", fullMessage.size());
-    logger->debug("id: {}, content: {}", message.id(), message.DebugString());
 
     auto promiseObj = std::make_shared<std::promise<skyline::Message>>();
     std::future<skyline::Message> futureObj = promiseObj->get_future();
@@ -236,7 +236,8 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
                     }
                 } else {
                     logger->error("callbackId not found: {}", callbackId);
-                }            }
+                }
+            }
         }
     }
 
@@ -258,7 +259,9 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
             throw std::runtime_error("Server response error: " + responseData.error());
         }
     }
-    
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    logger->info("sendMessageSync duration: {} seconds", duration.count());
     return result;
 }
 

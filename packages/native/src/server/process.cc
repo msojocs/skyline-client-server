@@ -10,8 +10,8 @@
 #include <queue>
 #include <mutex>
 #include "messages.pb.h"
-// #include "server_memory.hh"
-#include "server_socket.hh"
+#include "server_memory.hh"
+// #include "server_socket.hh"
 // #include "server_socket.hh"
 
 using Logger::logger;
@@ -97,7 +97,7 @@ void processMessage(const skyline::Message &message) {
 }
 int startInner(const Napi::CallbackInfo &info) {
     try {
-        server = std::make_shared<SkylineServer::ServerSocket>();
+        server = std::make_shared<SkylineServer::ServerMemory>();
         server->Init(info);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
@@ -107,7 +107,7 @@ int startInner(const Napi::CallbackInfo &info) {
                     logger->info("start to getMessage!");
                     auto msg = server->receiveMessage();
                     if (msg.empty()) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(0));
                         continue;
                     }
                     skyline::Message pbMessage;

@@ -1,18 +1,14 @@
 #include "server_memory.hh"
 #include "../common/logger.hh"
+#include <chrono>
 
 using Logger::logger;
 
 namespace SkylineServer {
-    void ServerMemory::Init(Napi::Env env) {
+    void ServerMemory::Init(const Napi::CallbackInfo &info) {
         try {
-            msgToClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>("skyline_server2client", false);
-            #ifdef _WIN32
-            msgToClient->file_notify = CreateSemaphoreA(nullptr, 0, 1, "Global\\skyline_server2client_notify");
-            #elif __linux__
-            msgToClient->file_notify = sem_open("skyline_server2client_notify", O_CREAT, 0644, 0);
-            #endif
-            msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>("skyline_client2server", false);
+            msgToClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>("skyline_server2client", true);
+            msgFromClient = std::make_shared<SkylineMemory::SharedMemoryCommunication>("skyline_client2server", true);
             logger->info("Shared memory server initialized");
         } catch (const std::exception &e) {
             logger->error("Failed to initialize shared memory server: {}", e.what());
@@ -42,13 +38,10 @@ namespace SkylineServer {
     std::string ServerMemory::receiveMessage() {
         try {
             if (msgFromClient) {
-                auto msg = msgFromClient->receiveMessage(
-                        #ifdef _WIN32
-                        "Global\\skyline_client2server_notify"
-                        #elif __linux__
-                        "skyline_client2server_notify"
-                        #endif
-                    );
+                auto msg = msgFromClient->receiveMessage();
+                if (msg.empty()) {
+                    return "";
+                }
                 logger->info("Received message of length {}", msg.size());
                 return msg;
             } else {

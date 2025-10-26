@@ -130,7 +130,7 @@ namespace SharedMemory {
                     ReleaseMutex(mutex_);
                     CloseHandle(mutex_);
                     mutex_ = nullptr;
-                    throw std::runtime_error("Failed to create file");
+                    throw std::runtime_error("Failed to create file" + key);
                 }
                 
                 // 设置文件大小
@@ -164,7 +164,7 @@ namespace SharedMemory {
                     ReleaseMutex(mutex_);
                     CloseHandle(mutex_);
                     mutex_ = nullptr;
-                    throw std::runtime_error("Failed to open memory file");
+                    throw std::runtime_error("Failed to open memory file: " + key);
                 }
             }
             

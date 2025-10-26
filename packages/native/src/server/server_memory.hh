@@ -6,7 +6,7 @@
 namespace SkylineServer {
     class ServerMemory : public Server {
     public:
-        void Init(Napi::Env env);
+        void Init(const Napi::CallbackInfo &info);
         ~ServerMemory();
         void sendMessage(const std::string &message);
         std::string receiveMessage();

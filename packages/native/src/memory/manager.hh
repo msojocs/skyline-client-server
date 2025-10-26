@@ -60,8 +60,7 @@ namespace SharedMemory {
         
         // 创建文件映射
         bool create_mapping(HANDLE file_handle, size_t mapping_size);
-#else
-        sem_t* mutex_;              // 互斥锁
+
 #endif
     };
 }

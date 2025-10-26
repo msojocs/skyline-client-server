@@ -45,8 +45,6 @@ namespace SharedMemory {
         : key_(key), size_(size), address_(nullptr)
 #ifdef _WIN32
         , file_mapping_(nullptr), mutex_(nullptr)
-#else
-        , mutex_(nullptr)
 #endif
     {
         // 计算实际需要分配的大小（包括头部）
@@ -248,29 +246,6 @@ namespace SharedMemory {
         // 创建共享内存名称
         std::string shm_name = "/skyline_" + key + ".dat";
         
-        // 创建互斥锁名称
-        std::string mutex_name = "/skyline_mutex_" + key;
-        
-        // 创建或打开互斥锁
-        if (create) {
-            mutex_ = sem_open(mutex_name.c_str(), O_CREAT, 0644, 1);
-        }
-        else {
-            mutex_ = sem_open(mutex_name.c_str(), O_RDWR);
-        }
-        if (mutex_ == SEM_FAILED) {
-            logger->error("Failed to create mutex, error: {}", strerror(errno));
-            throw std::runtime_error("Failed to create mutex");
-        }
-        
-        // 获取互斥锁
-        if (sem_wait(mutex_) != 0) {
-            logger->error("Failed to acquire mutex, error: {}", strerror(errno));
-            sem_close(mutex_);
-            mutex_ = nullptr;
-            throw std::runtime_error("Failed to acquire mutex");
-        }
-        
         try {
             int flags = O_RDWR;
             if (create) {
@@ -281,9 +256,7 @@ namespace SharedMemory {
             int fd = shm_open(shm_name.c_str(), flags, 0644);
             if (fd == -1) {
                 logger->error("Failed to open shared memory, error: {}", strerror(errno));
-                sem_post(mutex_);
-                sem_close(mutex_);
-                mutex_ = nullptr;
+
                 throw std::runtime_error("Failed to open shared memory");
             }
             
@@ -292,9 +265,7 @@ namespace SharedMemory {
                 if (ftruncate(fd, total_size) == -1) {
                     logger->error("Failed to set shared memory size, error: {}", strerror(errno));
                     close(fd);
-                    sem_post(mutex_);
-                    sem_close(mutex_);
-                    mutex_ = nullptr;
+
                     throw std::runtime_error("Failed to set shared memory size");
                 }
             }
@@ -304,9 +275,7 @@ namespace SharedMemory {
                 address_ = mmap(NULL, total_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
                 if (address_ == MAP_FAILED) {
                     logger->error("Failed to map shared memory, error: {}", strerror(errno));
-                    sem_post(mutex_);
-                    sem_close(mutex_);
-                    mutex_ = nullptr;
+
                     throw std::runtime_error("Failed to map shared memory");
                 }
                 // 读取头部信息
@@ -324,9 +293,7 @@ namespace SharedMemory {
             
             if (address_ == MAP_FAILED) {
                 logger->error("Failed to map shared memory, error: {}", strerror(errno));
-                sem_post(mutex_);
-                sem_close(mutex_);
-                mutex_ = nullptr;
+
                 throw std::runtime_error("Failed to map shared memory");
             }
             
@@ -354,17 +321,10 @@ namespace SharedMemory {
                 address_ = nullptr;
             }
             
-            if (mutex_) {
-                sem_post(mutex_);
-                sem_close(mutex_);
-                mutex_ = nullptr;
-            }
             
             throw;
         }
         
-        // 释放互斥锁
-        sem_post(mutex_);
 #endif
     }
     
@@ -397,12 +357,6 @@ namespace SharedMemory {
             size_t total_size = sizeof(SharedMemoryHeader) + size_;
             munmap(address_, total_size);
             address_ = nullptr;
-        }
-        
-        if (mutex_) {
-            sem_post(mutex_);
-            sem_close(mutex_);
-            mutex_ = nullptr;
         }
 #endif
         

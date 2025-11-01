@@ -1,7 +1,6 @@
 #include "client_action.hh"
 #include "../common/convert.hh"
 #include "../common/logger.hh"
-#include "../common/snowflake.hh"
 #include "../common/protobuf_converter.hh"
 #include <chrono>
 #include <condition_variable>
@@ -12,9 +11,12 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#define USE_MEMORY
+#ifdef USE_MEMORY
 #include "client_memory.hh"
+#else
 #include "client_socket.hh"
-// #include "client_socket.hh"
+#endif
 
 using Logger::logger;
 
@@ -122,7 +124,11 @@ void processMessage(const skyline::Message &message) {
 void initSocket(Napi::Env &env) {
     try {
         
+        #ifdef USE_MEMORY
+        client = std::make_shared<SkylineClient::ClientMemory>();
+        #else
         client = std::make_shared<SkylineClient::ClientSocket>();
+        #endif
         client->Init(env);
         
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready

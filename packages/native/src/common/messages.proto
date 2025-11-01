@@ -84,7 +84,7 @@ message ResponseData {
 
 // 主消息结构
 message Message {
-  string id = 1;
+  int64 id = 1;
   MessageType type = 2;
   
   oneof data {

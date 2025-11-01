@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include "client_memory.hh"
@@ -20,7 +21,7 @@ using Logger::logger;
 namespace ClientAction {
 static std::shared_ptr<SkylineClient::Client> client;
 static std::mutex socketRequestMutex; // Add mutex for thread synchronization
-static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>> requestMapping;
+static std::unordered_map<long, std::shared_ptr<std::promise<skyline::Message>>> requestMapping;
 static std::condition_variable blockQueueCV;
 static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 
@@ -28,21 +29,21 @@ static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 void processMessage(const skyline::Message &message);
 
 static std::atomic<bool> blocked{false};
-using snowflake_t = snowflake<1534832906275L>;
-static snowflake_t serverCommunicationUuid;
+static long requestId = 1;
 
 void processMessage(const skyline::Message &message) {
-    logger->info("received protobuf message, id: {}", message.id());
+    logger->info("Received protobuf message, id: {}", message.id());
 
     try {
         // Check if it's a response to a request
-        if (!message.id().empty()) {
+        if (message.id() > 0) {
             std::lock_guard<std::mutex> lock(socketRequestMutex);
             auto it = requestMapping.find(message.id());
             if (it != requestMapping.end()) {
                 it->second->set_value(message);
-                requestMapping.erase(it);
                 blockQueueCV.notify_all();
+                logger->info("Notify end: {}", message.id());
+                requestMapping.erase(it);
                 return;
             }
         }
@@ -77,7 +78,7 @@ void processMessage(const skyline::Message &message) {
                         logger->info("call callback function...");
                         auto resultValue = jsCallback.Call(argsVec);
                         logger->info("call callback function end...");                        // If callback expects a reply, send it back
-                        if (!message.id().empty()) {
+                        if (message.id() > 0) {
                             logger->info("reply callback...");
                             skyline::Value resultProtobuf = ProtobufConverter::napiToProtobufValue(env, resultValue);
                             
@@ -120,7 +121,6 @@ void processMessage(const skyline::Message &message) {
 
 void initSocket(Napi::Env &env) {
     try {
-        serverCommunicationUuid.init(1, 1);
         
         client = std::make_shared<SkylineClient::ClientSocket>();
         client->Init(env);
@@ -156,9 +156,13 @@ void initSocket(Napi::Env &env) {
     }
 }
 
-skyline::Message sendMessageSync(const skyline::Message &message) {
+skyline::Message sendMessageSync(skyline::Message &message) {
 
     auto start = std::chrono::high_resolution_clock::now();
+    if (requestId >= INT64_MAX) {
+        requestId = 1;
+    }
+    message.set_id(requestId++);
     blocked = true;
     
     // 序列化Protobuf消息
@@ -180,7 +184,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
         auto insertResult = requestMapping.emplace(message.id(), promiseObj);
         if (!insertResult.second) {
             blocked = false;
-            throw std::runtime_error("id insert to request map failed: " + message.id());
+            throw std::runtime_error("id insert to request map failed: " + std::to_string(message.id()));
         }
     }
 
@@ -191,8 +195,13 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     // Wait for response with timeout
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     
-    while (std::chrono::steady_clock::now() < timeout) {
-        
+    while (true) {
+        // 检查是否超时
+        if (std::chrono::steady_clock::now() >= timeout) {
+            blocked = false;
+            requestMapping.erase(message.id());
+            throw std::runtime_error("Operation timed out after 5 seconds");
+        }
         // 使用短暂等待替代立即轮询，减少 CPU 消耗
         auto waitStatus = futureObj.wait_for(std::chrono::milliseconds(0));
         
@@ -200,8 +209,10 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
             break;
         }
         {
+            logger->debug("Lock and wait: {}", message.id());
             std::unique_lock<std::mutex> lock(socketRequestMutex);
             blockQueueCV.wait_for(lock, std::chrono::milliseconds(1), [&]{return !callbackQueue.empty();});
+            logger->debug("Lock and wait end: {}", message.id());
         }
         // Handle callback queue during wait
         if (!callbackQueue.empty()) {
@@ -226,7 +237,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
                     auto resultValue = funcRef->Value().Call(argsVec);
 
                     // If callback expects a reply, send it back
-                    if (!pbMessage->id().empty()) {
+                    if (pbMessage->id() > 0) {
                         logger->info("reply callback...");
                         skyline::Value resultProtobuf = ProtobufConverter::napiToProtobufValue(env, resultValue);
                         
@@ -248,13 +259,6 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
                 }
             }
         }
-    }
-
-    // 检查是否超时
-    if (std::chrono::steady_clock::now() >= timeout) {
-        blocked = false;
-        requestMapping.erase(message.id());
-        throw std::runtime_error("Operation timed out after 5 seconds");
     }
 
     skyline::Message result = futureObj.get();
@@ -284,15 +288,13 @@ void sendMessageAsync(const skyline::Message &message) {
 
 void callDynamicAsync(const std::string &instanceId, const std::string &action,
                       const std::vector<skyline::Value> &params) {
-    std::string id = std::to_string(serverCommunicationUuid.nextid());
-    skyline::Message message = ProtobufConverter::createDynamicMessage(id, instanceId, action, params);
+    skyline::Message message = ProtobufConverter::createDynamicMessage(instanceId, action, params);
     sendMessageAsync(message);
 }
 
 skyline::Value callConstructorSync(const std::string &clazz,
                                    const std::vector<skyline::Value> &params) {
-    std::string id = std::to_string(serverCommunicationUuid.nextid());
-    skyline::Message message = ProtobufConverter::createConstructorMessage(id, clazz, params);
+    skyline::Message message = ProtobufConverter::createConstructorMessage(clazz, params);
     skyline::Message response = sendMessageSync(message);
     
     if (response.type() == skyline::MessageType::RESPONSE) {
@@ -314,8 +316,7 @@ skyline::Value callConstructorSync(const std::string &clazz,
 skyline::Value callDynamicSync(const std::string &instanceId,
                                const std::string &action,
                                const std::vector<skyline::Value> &params) {
-    std::string id = std::to_string(serverCommunicationUuid.nextid());
-    skyline::Message message = ProtobufConverter::createDynamicMessage(id, instanceId, action, params);
+    skyline::Message message = ProtobufConverter::createDynamicMessage(instanceId, action, params);
     skyline::Message response = sendMessageSync(message);
     
     if (response.type() == skyline::MessageType::RESPONSE) {
@@ -332,8 +333,7 @@ skyline::Value callDynamicSync(const std::string &instanceId,
 skyline::Value callDynamicPropertySetSync(const std::string &instanceId,
                                           const std::string &action,
                                           const std::vector<skyline::Value> &params) {
-    std::string id = std::to_string(serverCommunicationUuid.nextid());
-    skyline::Message message = ProtobufConverter::createDynamicPropertyMessage(id, instanceId, action, skyline::PropertyAction::SET, params);
+    skyline::Message message = ProtobufConverter::createDynamicPropertyMessage(instanceId, action, skyline::PropertyAction::SET, params);
     skyline::Message response = sendMessageSync(message);
     
     if (response.type() == skyline::MessageType::RESPONSE) {
@@ -349,9 +349,8 @@ skyline::Value callDynamicPropertySetSync(const std::string &instanceId,
 
 skyline::Value callDynamicPropertyGetSync(const std::string &instanceId,
                                           const std::string &action) {
-    std::string id = std::to_string(serverCommunicationUuid.nextid());
     std::vector<skyline::Value> emptyParams;
-    skyline::Message message = ProtobufConverter::createDynamicPropertyMessage(id, instanceId, action, skyline::PropertyAction::GET, emptyParams);
+    skyline::Message message = ProtobufConverter::createDynamicPropertyMessage(instanceId, action, skyline::PropertyAction::GET, emptyParams);
     skyline::Message response = sendMessageSync(message);
     
     if (response.type() == skyline::MessageType::RESPONSE) {
@@ -367,8 +366,7 @@ skyline::Value callDynamicPropertyGetSync(const std::string &instanceId,
 
 skyline::Value callStaticSync(const std::string &clazz,
                               const std::string &action, const std::vector<skyline::Value> &params) {
-    std::string id = std::to_string(serverCommunicationUuid.nextid());
-    skyline::Message message = ProtobufConverter::createStaticMessage(id, clazz, action, params);
+    skyline::Message message = ProtobufConverter::createStaticMessage(clazz, action, params);
     skyline::Message response = sendMessageSync(message);
     // logger->debug("callStaticSync response: {}", response.DebugString());
     if (response.type() == skyline::MessageType::RESPONSE) {

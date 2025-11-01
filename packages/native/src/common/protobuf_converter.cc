@@ -185,9 +185,8 @@ bool deserializeMessage(const std::string& data, skyline::Message& message) {
     return message.ParseFromString(data);
 }
 
-skyline::Message createConstructorMessage(const std::string& id, const std::string& clazz, const std::vector<skyline::Value>& params) {
+skyline::Message createConstructorMessage(const std::string& clazz, const std::vector<skyline::Value>& params) {
     skyline::Message message;
-    message.set_id(id);
     message.set_type(skyline::MessageType::CONSTRUCTOR);
     
     skyline::ConstructorData* data = message.mutable_constructor_data();
@@ -199,9 +198,8 @@ skyline::Message createConstructorMessage(const std::string& id, const std::stri
     return message;
 }
 
-skyline::Message createStaticMessage(const std::string& id, const std::string& clazz, const std::string& action, const std::vector<skyline::Value>& params) {
+skyline::Message createStaticMessage(const std::string& clazz, const std::string& action, const std::vector<skyline::Value>& params) {
     skyline::Message message;
-    message.set_id(id);
     message.set_type(skyline::MessageType::STATIC);
     
     skyline::StaticData* data = message.mutable_static_data();
@@ -214,9 +212,8 @@ skyline::Message createStaticMessage(const std::string& id, const std::string& c
     return message;
 }
 
-skyline::Message createDynamicMessage(const std::string& id, const std::string& instanceId, const std::string& action, const std::vector<skyline::Value>& params) {
+skyline::Message createDynamicMessage(const std::string& instanceId, const std::string& action, const std::vector<skyline::Value>& params) {
     skyline::Message message;
-    message.set_id(id);
     message.set_type(skyline::MessageType::DYNAMIC);
     
     skyline::DynamicData* data = message.mutable_dynamic_data();
@@ -229,9 +226,8 @@ skyline::Message createDynamicMessage(const std::string& id, const std::string& 
     return message;
 }
 
-skyline::Message createDynamicPropertyMessage(const std::string& id, const std::string& instanceId, const std::string& action, skyline::PropertyAction propertyAction, const std::vector<skyline::Value>& params) {
+skyline::Message createDynamicPropertyMessage(const std::string& instanceId, const std::string& action, skyline::PropertyAction propertyAction, const std::vector<skyline::Value>& params) {
     skyline::Message message;
-    message.set_id(id);
     message.set_type(skyline::MessageType::DYNAMIC_PROPERTY);
     
     skyline::DynamicPropertyData* data = message.mutable_dynamic_property_data();
@@ -245,9 +241,8 @@ skyline::Message createDynamicPropertyMessage(const std::string& id, const std::
     return message;
 }
 
-skyline::Message createCallbackMessage(const std::string& id, const std::string& callbackId, const std::vector<skyline::Value>& args, bool block) {
+skyline::Message createCallbackMessage(const std::string& callbackId, const std::vector<skyline::Value>& args, bool block) {
     skyline::Message message;
-    message.set_id(id);
     message.set_type(skyline::MessageType::EMIT_CALLBACK);
     
     skyline::CallbackData* data = message.mutable_callback_data();
@@ -260,7 +255,7 @@ skyline::Message createCallbackMessage(const std::string& id, const std::string&
     return message;
 }
 
-skyline::Message createCallbackReplyMessage(const std::string& id, const skyline::Value& result) {
+skyline::Message createCallbackReplyMessage(long id, const skyline::Value& result) {
     skyline::Message message;
     message.set_id(id);
     message.set_type(skyline::MessageType::CALLBACK_REPLY);
@@ -271,7 +266,7 @@ skyline::Message createCallbackReplyMessage(const std::string& id, const skyline
     return message;
 }
 
-skyline::Message createResponseMessage(const std::string& id, const skyline::Value& returnValue, const std::string& instanceId, const std::string& error) {
+skyline::Message createResponseMessage(long id, const skyline::Value& returnValue, const std::string& instanceId, const std::string& error) {
     skyline::Message message;
     message.set_id(id);
     message.set_type(skyline::MessageType::RESPONSE);

@@ -173,7 +173,7 @@ Napi::Object convertProtobufToJs(Napi::Env &env,
                                  const skyline::Message &message) {
     Napi::Object obj = Napi::Object::New(env);
 
-    obj.Set("id", Napi::String::New(env, message.id()));
+    obj.Set("id", Napi::Number::New(env, message.id()));
     obj.Set("type",
             Napi::String::New(env, messageTypeToString(message.type())));
     // Convert the specific data based on message type
@@ -315,7 +315,7 @@ skyline::Message convertJsToProtobuf(Napi::Env &env, const Napi::Object &obj) {
 
     // Set basic fields
     if (obj.Has("id")) {
-        message.set_id(obj.Get("id").As<Napi::String>().Utf8Value());
+        message.set_id(obj.Get("id").As<Napi::Number>().Int64Value());
     }
 
     if (obj.Has("type")) {

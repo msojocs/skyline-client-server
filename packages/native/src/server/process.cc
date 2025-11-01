@@ -1,7 +1,8 @@
 #include "../common/convert.hh"
 #include "../common/logger.hh"
-#include "../common/snowflake.hh"
 #include "napi.h"
+#include <basetsd.h>
+#include <cstdint>
 #include <exception>
 #include <memory>
 #include <thread>
@@ -20,17 +21,16 @@ static std::shared_ptr<SkylineServer::Server> server;
 static std::atomic<bool> client_connected{false};
 static Napi::ThreadSafeFunction messageHandleTsfn;
 static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
-static std::map<std::string, std::shared_ptr<std::promise<skyline::Message>>> socketRequest;
+static std::map<int64_t, std::shared_ptr<std::promise<skyline::Message>>> socketRequest;
 static std::queue<skyline::Message> blockQueue;
 static std::mutex blockQueueMutex; // 保护 blockQueue 的互斥锁
 static std::condition_variable blockQueueCV; // 条件变量，用于高效等待消息
-using snowflake_t = snowflake<1534832906275L>;
-static snowflake_t communicationUuid;
+static int64_t requestId = 1;
 
 void processMessage(const skyline::Message &message) {
     try {
         // Extract the message ID
-        std::string id = message.id();
+        auto id = message.id();
         logger->info("Received protobuf message: {}", id);
 
         // Check if there's a promise associated with this ID
@@ -151,7 +151,6 @@ Napi::Value start(const Napi::CallbackInfo &info) {
     auto env = info.Env();
     auto host = info[0].As<Napi::String>().Utf8Value();
     auto port = info[1].As<Napi::Number>().Int32Value();
-    communicationUuid.init(3, 1);
     startInner(info);
     
     return env.Undefined();
@@ -215,7 +214,10 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
     // Convert the JavaScript object to a Protobuf message
     skyline::Message message = Convert::convertJsToProtobuf(env, info[0].As<Napi::Object>());
 
-    auto id = std::to_string(communicationUuid.nextid());
+    if (requestId >= INT64_MAX) {
+        requestId = 1;
+    }
+    auto id = requestId++;
     message.set_id(id);
 
     // 先存储，再发送

@@ -9,10 +9,9 @@
 #include <future>
 #include <queue>
 #include <mutex>
+#include <condition_variable>
 #include "messages.pb.h"
-#include "server_memory.hh"
-// #include "server_socket.hh"
-// #include "server_socket.hh"
+#include "server_socket.hh"
 
 using Logger::logger;
 
@@ -24,29 +23,31 @@ static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
 static std::map<std::string, std::shared_ptr<std::promise<skyline::Message>>> socketRequest;
 static std::queue<skyline::Message> blockQueue;
 static std::mutex blockQueueMutex; // 保护 blockQueue 的互斥锁
+static std::condition_variable blockQueueCV; // 条件变量，用于高效等待消息
 using snowflake_t = snowflake<1534832906275L>;
 static snowflake_t communicationUuid;
 
 void processMessage(const skyline::Message &message) {
     try {
-        logger->info("received protobuf message");
-
         // Extract the message ID
         std::string id = message.id();
+        logger->info("Received protobuf message: {}", id);
 
         // Check if there's a promise associated with this ID
         auto it = socketRequest.find(id);
         if (it != socketRequest.end()) {
-            logger->info("found id: {}", id);
+            logger->info("Found id: {}", id);
             // server发出的消息的回复
             it->second->set_value(message);
             socketRequest.erase(it);
+            blockQueueCV.notify_all(); // 通知等待者有新消息到达
             return;
         }
-        logger->info("push protobuf message to queue... {}", id);
+        logger->info("Push protobuf message to queue... {}", id);
         {
             std::lock_guard<std::mutex> lock(blockQueueMutex);
             blockQueue.push(message);
+            blockQueueCV.notify_all(); // 通知等待者有新消息到达
         }
 
         // Check if Protobuf callback is set
@@ -58,8 +59,10 @@ void processMessage(const skyline::Message &message) {
         // Call the JavaScript callback through the thread-safe function
         auto callback = [message](Napi::Env env, Napi::Function jsCallback) {
             try {
+                logger->debug("Handle callback start. {}", message.id());
                 // Remove the corresponding message from the queue
                 {
+                    // TODO: 此处有性能浪费
                     std::lock_guard<std::mutex> lock(blockQueueMutex);
                     if (blockQueue.empty()) {
                         return;
@@ -97,7 +100,7 @@ void processMessage(const skyline::Message &message) {
 }
 int startInner(const Napi::CallbackInfo &info) {
     try {
-        server = std::make_shared<SkylineServer::ServerMemory>();
+        server = std::make_shared<SkylineServer::ServerSocket>();
         server->Init(info);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
@@ -107,7 +110,6 @@ int startInner(const Napi::CallbackInfo &info) {
                     logger->info("start to getMessage!");
                     auto msg = server->receiveMessage();
                     if (msg.empty()) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(0));
                         continue;
                     }
                     skyline::Message pbMessage;
@@ -170,7 +172,8 @@ void setMessageCallback(const Napi::CallbackInfo &info) {
     messageHandleTsfn = Napi::ThreadSafeFunction::New(
         info.Env(), info[0].As<Napi::Function>(), "Socket Protobuf Callback", 0, 1);
     messageHandleRef = std::make_shared<Napi::FunctionReference>(
-        Napi::Persistent(info[0].As<Napi::Function>()));    logger->info("Set protobuf message callback");
+        Napi::Persistent(info[0].As<Napi::Function>()));
+    logger->info("Set protobuf message callback");
 }
 
 Napi::Value sendMessageSingle(const Napi::CallbackInfo &info) {
@@ -186,9 +189,8 @@ Napi::Value sendMessageSingle(const Napi::CallbackInfo &info) {
     auto env = info.Env();
     // Convert the JavaScript object to a Protobuf message
     skyline::Message message = Convert::convertJsToProtobuf(env, info[0].As<Napi::Object>());
-    logger->info("send protobuf message to client, id: {}", message.id());
+    logger->info("Send protobuf message to client, id: {}", message.id());
 
-    logger->debug("Send msg to client: {}", message.DebugString());
     // Serialize the message and send it
     std::string serializedMessage = message.SerializeAsString();
     server->sendMessage(serializedMessage);
@@ -226,7 +228,7 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
     }
 
     logger->info("send protobuf sync message to client, id: {}", id);
-    logger->debug("id: {}, content: {}", id, message.DebugString());
+    // logger->debug("id: {}", id, message.DebugString());
 
     // 发送消息给单一客户端
     // Serialize the message and send it
@@ -245,28 +247,33 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
             throw Napi::Error::New(
                 info.Env(),
                 "Request to client timeout, request data:\n" + message.DebugString());
-        }        auto status = futureObj.wait_for(std::chrono::milliseconds(0));
+        }
+        auto status = futureObj.wait_for(std::chrono::milliseconds(0));
         if (status == std::future_status::ready) {
             break;
         }
 
         // 检查队列中是否有待处理的消息
         skyline::Message queuedMsg;
-        bool hasMessage = false;
         {
-            std::lock_guard<std::mutex> lock(blockQueueMutex);
+            std::unique_lock<std::mutex> lock(blockQueueMutex);
+            // 等待消息到达或超时（最多等10ms，避免单次等待过长）
+            blockQueueCV.wait_for(lock, std::chrono::milliseconds(1), 
+                                  [&]() { return !blockQueue.empty(); });
+            
             if (!blockQueue.empty()) {
                 queuedMsg = blockQueue.front();
                 blockQueue.pop();
-                hasMessage = true;
+            } else {
+                continue;
             }
         }
         
-        if (hasMessage) {
+        if (queuedMsg.IsInitialized()) {
             try {
                 // debug消息
                 // Client发来的消息
-                logger->debug("start to handle blocked protobuf message: {}", queuedMsg.id());
+                logger->debug("Start to handle blocked protobuf message: {}", queuedMsg.id());
                 // Call the JavaScript callback through the thread-safe function
                 messageHandleRef->Value().Call({Convert::convertProtobufToJs(env, queuedMsg)});
             } catch (const std::exception &e) {
@@ -281,7 +288,7 @@ Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
 
     logger->info("futureObj wait end, id: {}", id);
     skyline::Message result = futureObj.get();
-    logger->debug("id: {}, data: {}", id, result.DebugString());
+    logger->debug("Result get id: {}", id);
 
     // Convert the Protobuf message to a JavaScript value
     auto resultObj = Convert::convertProtobufToJs(env, result);

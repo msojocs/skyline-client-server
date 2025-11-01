@@ -26,6 +26,9 @@ void ServerSocket::Init(const Napi::CallbackInfo &info) {
         acceptor->async_accept(*socket, [this](const boost::system::error_code &error) {
             if (!error) {
                 logger->info("Client connected to socket server");
+                // Enable TCP_NODELAY to reduce latency
+                boost::asio::ip::tcp::no_delay option(true);
+                socket->set_option(option);
             } else {
                 logger->error("Error accepting connection: {}", error.message());
             }
@@ -62,7 +65,7 @@ void ServerSocket::sendMessage(const std::string &message) {
 
             // Then send the actual message
             boost::asio::write(*socket, boost::asio::buffer(message));
-            logger->info("Sent message of length {}", message.size());
+            logger->info("Sent message with length {}", message.size());
         } else {
             logger->error("Socket is not open. Cannot send message.");
             std::this_thread::sleep_for(std::chrono::seconds(5));

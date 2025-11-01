@@ -6,18 +6,10 @@
 
 namespace Logger {
     std::shared_ptr<spdlog::logger> logger;
-    #if defined (_SKYLINE_CLIENT_)
-    #ifdef _WIN32
-    #define LOG_FILE "D:/Log/SkylineClient/daily_log.log"
+    #ifdef _SKYLINE_CLIENT_
+    #define LOG_FILE "./log/client.log"
     #else
-    #define LOG_FILE "/tmp/Log/SkylineClient/daily_log.log"
-    #endif
-    #else
-    #ifdef _WIN32
-    #define LOG_FILE "D:/Log/SkylineServer/daily_log.log"
-    #else
-    #define LOG_FILE "/tmp/Log/SkylineServer/daily_log.log"
-    #endif
+    #define LOG_FILE "./log/server.log"
     #endif
 
     // 设置控制台回调函数
@@ -25,12 +17,12 @@ namespace Logger {
         std::vector<spdlog::sink_ptr> sinks;
         // auto stdout_log = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         // sinks.push_back(stdout_log);
-        // auto file_log = std::make_shared<spdlog::sinks::daily_file_sink_mt>(LOG_FILE, 0, 0);
-        // sinks.push_back(file_log);
+        auto file_log = std::make_shared<spdlog::sinks::daily_file_sink_mt>(LOG_FILE, 0, 0);
+        sinks.push_back(file_log);
         
         logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
-        logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-        logger->set_level(spdlog::level::info);
+        logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e.%f] [%l] %v");
+        logger->set_level(spdlog::level::debug);
         logger->flush_on(spdlog::level::err);
         spdlog::register_logger(logger);
         logger->info("Logger initialized successfully.");

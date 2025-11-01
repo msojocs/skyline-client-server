@@ -4,6 +4,7 @@ set(SERVER_DIR_LIST
     main.cc
     server_action.cc
     server_action.hh
+    server_socket.cc
     ../common/convert.cc
     ../common/logger.cc
 )

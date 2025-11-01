@@ -11,7 +11,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
-#define USE_MEMORY
+// #define USE_MEMORY
 #ifdef USE_MEMORY
 #include "client_memory.hh"
 #else

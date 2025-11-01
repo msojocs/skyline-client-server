@@ -12,7 +12,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "messages.pb.h"
-#define USE_MEMORY
+// #define USE_MEMORY
 #ifdef USE_MEMORY
 #include "server_memory.hh"
 #else
@@ -23,7 +23,6 @@ using Logger::logger;
 
 namespace Process {
 static std::shared_ptr<SkylineServer::Server> server;
-static std::atomic<bool> client_connected{false};
 static Napi::ThreadSafeFunction messageHandleTsfn;
 static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
 static std::map<int64_t, std::shared_ptr<std::promise<skyline::Message>>> socketRequest;

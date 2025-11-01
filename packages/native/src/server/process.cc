@@ -12,7 +12,12 @@
 #include <mutex>
 #include <condition_variable>
 #include "messages.pb.h"
+#define USE_MEMORY
+#ifdef USE_MEMORY
+#include "server_memory.hh"
+#else
 #include "server_socket.hh"
+#endif
 
 using Logger::logger;
 
@@ -100,14 +105,18 @@ void processMessage(const skyline::Message &message) {
 }
 int startInner(const Napi::CallbackInfo &info) {
     try {
+        #ifdef USE_MEMORY
+        server = std::make_shared<SkylineServer::ServerMemory>();
+        #else
         server = std::make_shared<SkylineServer::ServerSocket>();
+        #endif
         server->Init(info);
         // Start accepting connections (only one client in 1-to-1 scenario)
         std::thread([&]() {
             while (true) {
                 try{
                     // Handle client in a separate thread
-                    logger->info("start to getMessage!");
+                    // logger->info("start to getMessage!");
                     auto msg = server->receiveMessage();
                     if (msg.empty()) {
                         continue;

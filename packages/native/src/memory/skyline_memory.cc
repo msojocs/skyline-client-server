@@ -115,7 +115,7 @@ std::string SharedMemoryCommunication::receiveMessage() {
     auto header = static_cast<SharedMemory::SharedMemoryHeader *>(this->shared_memory->get_address());
     // 检查是否有消息
     if (header->data_start_offset == header->data_end_offset) {
-        logger->warn("No messages available in shared memory...");
+        // logger->warn("No messages available in shared memory...");
         return "";
     }
     if (header->data_start_offset == header->data_end_offset) {

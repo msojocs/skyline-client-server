@@ -1,4 +1,4 @@
-set(CLIENT_NAME skylineClient)
+set(CLIENT_NAME skyline)
 set(CLIENT_DIR_LIST
     client.cc
     socket_client.cc
@@ -70,7 +70,7 @@ if (WIN32)
         message("整合 node64.lib")
         target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
     endif()
-    target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
+    # target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
 
 else()
     # Linux specific libraries
@@ -85,6 +85,14 @@ target_link_libraries(${CLIENT_NAME} PRIVATE Boost::asio Boost::thread)
 target_link_libraries(${CLIENT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 # 设定输出目录为build
+message("Output env: $ENV{SKYLINE_DEV_PATH}")
+if ("$ENV{SKYLINE_DEV_PATH}" STREQUAL "")
+    message("Set output path: ${PROJECT_SOURCE_DIR}/build")
 set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
+else()
+    message("Set output path: $ENV{SKYLINE_DEV_PATH}")
+    set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY $ENV{SKYLINE_DEV_PATH})
+    set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY $ENV{SKYLINE_DEV_PATH})
+endif()
 set_target_properties(${CLIENT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

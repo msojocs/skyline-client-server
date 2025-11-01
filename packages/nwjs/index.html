@@ -15,32 +15,87 @@
 </body>
 <!-- <script src="server.js"></script> -->
 <!-- <script src="index.js"></script> -->
- <script>
+<script>
+    const port = 8086
     let webview = document.getElementById('skyline');
-    webview.addEventListener('loadstop', () => {
-        webview.contentWindow.postMessage('set-source')
-    })
-    webview.addEventListener('crashed', () => {
-        console.info('crashed')
-        webview.reload()
-    })
+    const commandData = {
+
+    }
+    const initWebview = (wv) => {
+        wv.addEventListener('loadstop', () => {
+            console.info('loadstop')
+            if (commandData.restart) {
+                commandData.restart.httpResp?.end('ok')
+                commandData.restart.httpResp = undefined
+                clearTimeout(commandData.restart.timeout)
+                commandData.restart.timeout = undefined
+            }
+            wv.contentWindow.postMessage('set-source')
+        })
+        wv.onexit = () => {
+            console.info('exit')
+            const wv2 = wv.cloneNode()
+            initWebview(wv2)
+            wv.remove()
+            webview = wv2
+            document.body.appendChild(wv2)
+        }
+    }
+    initWebview(webview)
+    
     window.addEventListener('message', (event) => {
         console.info('msg from webview', event)
         if (event.data === 'disconnected') {
             console.info('disconnected, restart')
             const wv = webview.cloneNode()
-            wv.addEventListener('loadstop', () => {
-                wv.contentWindow.postMessage('set-source')
-            })
-            wv.addEventListener('crashed', () => {
-                console.info('crashed')
-                wv.reload()
-            })
+            initWebview(wv)
             webview.remove()
             webview = wv
             document.body.appendChild(wv)
         }
     })
- </script>
+
+    {
+        const http = require('http')
+        http.createServer((request, response) => {
+            // 内容类型: text/plain
+            response.writeHead(200, {'Content-Type': 'text/plain'});
+            const cmd = request.url.substring(1)
+            if (cmd === 'restart') {
+                commandData.restart = {
+                    httpResp: response,
+                    timeout: setTimeout(() => {
+                        response.end('timeout')
+                    }, 10000)
+                }
+                const wv2 = webview.cloneNode()
+                initWebview(wv2)
+                webview.remove()
+                webview = wv2
+                document.body.appendChild(wv2)
+            } else if (cmd === 'destroy') {
+                const wv2 = webview.cloneNode()
+                initWebview(wv2)
+                webview.remove()
+                webview = wv2
+                
+                response.end('ok');
+            } else if (cmd === 'start') {
+                commandData.restart = {
+                    httpResp: response,
+                    timeout: setTimeout(() => {
+                        response.end('timeout')
+                    }, 10000)
+                }
+                document.body.appendChild(webview)
+            } else {
+                console.info('req', request, response)
+                // 发送响应数据 "Hello World"
+                response.end('Hello World\n');
+            }
+        })
+        .listen(port)
+    }
+</script>
 
 </html>

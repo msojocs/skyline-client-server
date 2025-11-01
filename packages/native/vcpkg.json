@@ -1,7 +1,6 @@
 {
   "dependencies": [
     "boost-asio",
-    "ixwebsocket",
     "nlohmann-json",
     "spdlog",
     "boost-thread"

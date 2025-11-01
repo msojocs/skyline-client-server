@@ -4,3 +4,4 @@ vcpkg_installed
 cache
 *.exp
 *.lib
+log

@@ -1,4 +1,4 @@
-const skylineClient = require("../build/skylineClient.node");
+const skylineClient = require("../packages/native/build/skylineClient.node");
 
 console.info("1111");
 console.info("Using global.SkylineDebugInfo:");

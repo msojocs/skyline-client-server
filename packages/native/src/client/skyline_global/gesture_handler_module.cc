@@ -2,7 +2,7 @@
 #include "gesture_handler_module.hh"
 #include <nlohmann/json.hpp>
 #include "../../common/convert.hh"
-#include "../socket_client.hh"
+#include "../client_action.hh"
 
 namespace Skyline {
 namespace GestureHandlerModule {
@@ -14,7 +14,7 @@ namespace GestureHandlerModule {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
     try {
-      auto result = SocketClient::callStaticSync("SkylineGestureModule", methodName, args);
+      auto result = ClientAction::callStaticSync("SkylineGestureModule", methodName, args);
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {

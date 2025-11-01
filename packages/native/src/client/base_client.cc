@@ -1,6 +1,6 @@
 #include "base_client.hh"
 #include "napi.h"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include <spdlog/spdlog.h>
 #include "../common/convert.hh"
 
@@ -16,7 +16,7 @@ namespace Skyline {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
     try {
-      auto result = SocketClient::callDynamicSync(m_instanceId, methodName, args);
+      auto result = ClientAction::callDynamicSync(m_instanceId, methodName, args);
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {
@@ -33,7 +33,7 @@ namespace Skyline {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
     try {
-      SocketClient::callDynamicAsync(m_instanceId, methodName, args);
+      ClientAction::callDynamicAsync(m_instanceId, methodName, args);
       return env.Undefined();
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());
@@ -49,7 +49,7 @@ namespace Skyline {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
     try {
-      auto result = SocketClient::callConstructorSync(className, args);
+      auto result = ClientAction::callConstructorSync(className, args);
       if (!result.contains("instanceId")) {
         throw Napi::Error::New(env, "No instanceId in result");
       }
@@ -66,7 +66,7 @@ namespace Skyline {
     nlohmann::json args;
     args[0] = Convert::convertValue2Json(env, info[0]);
     try {
-      auto result = SocketClient::callDynamicPropertySetSync(m_instanceId, propertyName, args);
+      auto result = ClientAction::callDynamicPropertySetSync(m_instanceId, propertyName, args);
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());
     }
@@ -79,7 +79,7 @@ namespace Skyline {
     nlohmann::json args;
     args[0] = Convert::convertValue2Json(env, info[0]);
     try {
-      auto result = SocketClient::callDynamicPropertyGetSync(m_instanceId, propertyName);
+      auto result = ClientAction::callDynamicPropertyGetSync(m_instanceId, propertyName);
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {

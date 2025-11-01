@@ -1,5 +1,5 @@
 #include "worklet_module.hh"
-#include "../socket_client.hh"
+#include "../client_action.hh"
 #include "../../common/convert.hh"
 #include "napi.h"
 
@@ -12,7 +12,7 @@ namespace WorkletModule {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
     try {
-      auto result = SocketClient::callStaticSync("SkylineWorkletModule", methodName, args);
+      auto result = ClientAction::callStaticSync("SkylineWorkletModule", methodName, args);
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {
@@ -35,7 +35,7 @@ namespace WorkletModule {
     for (int i = 0; i < info.Length(); i++) {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
-    auto result = SocketClient::callStaticSync("SkylineWorkletModule", __func__, args);
+    auto result = ClientAction::callStaticSync("SkylineWorkletModule", __func__, args);
     auto returnValue = result["returnValue"];
     return Convert::convertJson2Value(env, returnValue);
   }
@@ -45,7 +45,7 @@ namespace WorkletModule {
     for (int i = 0; i < info.Length(); i++) {
       args[i] = Convert::convertValue2Json(env, info[i]);
     }
-    auto result = SocketClient::callStaticSync("SkylineWorkletModule", __func__, args);
+    auto result = ClientAction::callStaticSync("SkylineWorkletModule", __func__, args);
     auto returnValue = result["returnValue"];
     return Convert::convertJson2Value(env, returnValue);
   }

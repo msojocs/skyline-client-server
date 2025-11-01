@@ -2,7 +2,7 @@
 #include <napi.h>
 #include <sys/types.h>
 #include "skyline_shell.hh"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "skyline_debug_info.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
@@ -23,7 +23,7 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::info("Starting Skyline Client...");
     
     Logger::Init();    logger->info("initSocket start");
-    SocketClient::initSocket(env);
+    ClientAction::initSocket(env);
     logger->info("initSocket end");
     SkylineDebugInfo::InitSkylineDebugInfo(env, exports);
     SkylineShell::SkylineShell::Init(env, exports);

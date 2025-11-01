@@ -1,5 +1,5 @@
-#ifndef __SOCKET_SERVER_HH__
-#define __SOCKET_SERVER_HH__
+#ifndef __SERVER_ACTION_HH__
+#define __SERVER_ACTION_HH__
 
 #include <napi.h>
 #include <memory>
@@ -9,7 +9,7 @@
 #include "../common/snowflake.hh"
 #include <nlohmann/json.hpp>
 
-namespace SocketServer {
+namespace ServerAction {
     void setMessageCallback(const Napi::CallbackInfo &info);
     Napi::Number start(const Napi::CallbackInfo &info);
     void stop(const Napi::CallbackInfo &info);

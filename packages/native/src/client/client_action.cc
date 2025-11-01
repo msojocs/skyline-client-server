@@ -1,38 +1,25 @@
-#include <boost/asio.hpp>
 #include <thread>
 #include <mutex>
 #include <queue>
 #include <chrono>
 #include <memory>
 #include <future>
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "../common/logger.hh"
 #include "../common/snowflake.hh"
 #include "../common/convert.hh"
+#include "client_socket.hh"
 
 using Logger::logger;
-using boost::asio::ip::tcp;
 
-namespace SocketClient {
-    static boost::asio::io_context io_context;
-    static std::shared_ptr<tcp::socket> socket;
+namespace ClientAction {
     static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
     static std::map<std::string, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<nlohmann::json> callbackQueue;
     static bool blocked = false;
-    static std::string serverAddress = "127.0.0.1";
-    static int serverPort = 3001;
     using snowflake_t = snowflake<1534832906275L>;
     static snowflake_t serverCommunicationUuid;
-
-    // Helper function to read a complete message from the socket
-    std::string readMessage() {
-        boost::asio::streambuf buf;
-        boost::asio::read_until(*socket, buf, "\n");
-        std::string data{std::istreambuf_iterator<char>(&buf),
-                        std::istreambuf_iterator<char>()};
-        return data;
-    }
+    static std::shared_ptr<SkylineClient::Client> client;
 
     void processMessage(std::string &message) {
         logger->info("received message: {}", message);
@@ -91,8 +78,7 @@ namespace SocketClient {
                                     {"result", resultJson},
                                 };
                                 // Add newline as message delimiter
-                                std::string message = callbackResult.dump() + "\n";
-                                boost::asio::write(*socket, boost::asio::buffer(message));
+                                client->sendMessage(callbackResult.dump());
                             }
                         });
                     } else {
@@ -118,8 +104,7 @@ namespace SocketClient {
                                     {"result", resultJson},
                                 };
                                 // Add newline as message delimiter
-                                std::string message = callbackResult.dump() + "\n";
-                                boost::asio::write(*socket, boost::asio::buffer(message));
+                                client->sendMessage(callbackResult.dump());
                             }
                         });
                     }
@@ -133,27 +118,14 @@ namespace SocketClient {
     void initSocket(Napi::Env &env) {
         try {
             serverCommunicationUuid.init(1, 1);
-
-            tcp::resolver resolver(io_context);
-            auto endpoints = resolver.resolve(serverAddress, std::to_string(serverPort));
-
-            socket = std::make_shared<tcp::socket>(io_context);
-            boost::asio::connect(*socket, endpoints);
-
-            // Start a thread for the io_context
-            std::thread([&]() {
-                try {
-                    io_context.run();
-                } catch (std::exception& e) {
-                    logger->error("IO context error: {}", e.what());
-                }
-            }).detach();
+            client = std::make_shared<SkylineClient::ClientSocket>();
+            client->Init(env);
 
             // Start a thread for reading messages
             std::thread([&]() {
                 try {
                     while (true) {
-                        std::string message = readMessage();
+                        std::string message = client->receiveMessage();
                         processMessage(message);
                     }
                 } catch (std::exception& e) {
@@ -161,7 +133,6 @@ namespace SocketClient {
                 }
             }).detach();
 
-            logger->info("Socket connected to {}:{}", serverAddress, serverPort);
         } catch (std::exception& e) {
             logger->error("Connection error: {}", e.what());
             throw Napi::Error::New(env, std::string("Socket connection failed: ") + e.what());
@@ -172,14 +143,10 @@ namespace SocketClient {
         std::string id = std::to_string(serverCommunicationUuid.nextid());
         data["id"] = id;
         logger->info("send to server {}", data.dump());
-        
-        if (!socket->is_open()) {
-            throw std::runtime_error("Socket is not open");
-        }
 
         blocked = true;
         // Add newline as message delimiter
-        std::string message = data.dump() + "\n";
+        std::string message = data.dump();
 
         auto promiseObj = std::make_shared<std::promise<std::string>>();
         std::future<std::string> futureObj = promiseObj->get_future();
@@ -195,7 +162,7 @@ namespace SocketClient {
             logger->info("is exists: {}", socketRequest.find(id) != socketRequest.end());
         }
 
-        boost::asio::write(*socket, boost::asio::buffer(message));
+        client->sendMessage(message);
 
         auto start = std::chrono::steady_clock::now();
         while (true) {
@@ -227,9 +194,8 @@ namespace SocketClient {
                             {"type", "callbackReply"},
                             {"result", resultJson},
                         };
-                        // Add newline as message delimiter
-                        std::string message = callbackResult.dump() + "\n";
-                        boost::asio::write(*socket, boost::asio::buffer(message));
+                            // Add newline as message delimiter
+                            client->sendMessage(callbackResult.dump());
                     }
                 } else {
                     logger->error("callbackId not found: {}", callbackId);
@@ -269,13 +235,7 @@ namespace SocketClient {
         data["id"] = id;
         logger->info("send to server {}", data.dump());
 
-        if (!socket->is_open()) {
-            throw std::runtime_error("Socket is not open");
-        }
-
-        // Add newline as message delimiter
-        std::string message = data.dump() + "\n";
-        boost::asio::write(*socket, boost::asio::buffer(message));
+        client->sendMessage(data.dump());
     }
 
     void callDynamicAsync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {

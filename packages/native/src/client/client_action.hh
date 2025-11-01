@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <napi.h>
 
-namespace SocketClient {
+namespace ClientAction {
     /**
      * 初始化Socket，并连接到服务器
      */

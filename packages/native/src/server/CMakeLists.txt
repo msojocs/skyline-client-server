@@ -1,8 +1,9 @@
 
 set(SERVER_NAME skylineServer)
-set(SERVER_DIR_LIST    server.cc
-    socket_server.cc
-    socket_server.hh
+set(SERVER_DIR_LIST
+    main.cc
+    server_action.cc
+    server_action.hh
     ../common/convert.cc
     ../common/logger.cc
 )

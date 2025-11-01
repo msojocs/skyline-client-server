@@ -1,4 +1,4 @@
-#include "socket_server.hh"
+#include "server_action.hh"
 #include <boost/asio.hpp>
 #include <thread>
 #include <mutex>
@@ -11,7 +11,7 @@
 using Logger::logger;
 using boost::asio::ip::tcp;
 
-namespace SocketServer {
+namespace ServerAction {
     static boost::asio::io_context io_context;
     static std::shared_ptr<tcp::acceptor> acceptor;
     static std::vector<std::shared_ptr<tcp::socket>> clients;

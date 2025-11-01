@@ -4,7 +4,7 @@
 #include "skyline_global/worklet_module.hh"
 #include "skyline_global/gesture_handler_module.hh"
 #include "napi.h"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include "../common/convert.hh"
 
 namespace SkylineGlobal {
@@ -13,13 +13,13 @@ namespace SkylineGlobal {
       auto skylineGlobal = Napi::Object::New(env);
       {
         nlohmann::json arg;
-        auto result = SocketClient::callStaticSync("SkylineGlobal", "userAgent", arg);
+        auto result = ClientAction::callStaticSync("SkylineGlobal", "userAgent", arg);
         auto returnValue = result["returnValue"];
         skylineGlobal.Set(Napi::String::New(env, "userAgent"), Napi::String::New(env, returnValue.get<std::string>()));
       }
       {
         nlohmann::json arg;
-        auto result = SocketClient::callStaticSync("SkylineGlobal", "features", arg);
+        auto result = ClientAction::callStaticSync("SkylineGlobal", "features", arg);
         auto returnValue = result["returnValue"];
         skylineGlobal.Set(Napi::String::New(env, "features"), Convert::convertJson2Value(env, returnValue));
       }

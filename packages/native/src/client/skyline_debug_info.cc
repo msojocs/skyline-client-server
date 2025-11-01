@@ -1,6 +1,6 @@
 #include "./skyline_debug_info.hh"
 #include <string>
-#include "socket_client.hh"
+#include "client_action.hh"
 #include <spdlog/spdlog.h>
 
 namespace SkylineDebugInfo{
@@ -11,7 +11,7 @@ namespace SkylineDebugInfo{
         try {
             spdlog::info("Call GetVersion sub...");
             nlohmann::json reqData;
-            auto result = SocketClient::callStaticSync("global", "SkylineDebugInfo", reqData);
+            auto result = ClientAction::callStaticSync("global", "SkylineDebugInfo", reqData);
             auto returnValue = result["returnValue"];
             
             auto gitRev = returnValue["skyline_git_rev"].get<std::string>();

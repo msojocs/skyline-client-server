@@ -1,6 +1,6 @@
 #include "skyline_shell.hh"
 #include "napi.h"
-#include "socket_client.hh"
+#include "client_action.hh"
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -85,7 +85,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     auto func1 = Napi::Function::New(env, [callbackPtr](const Napi::CallbackInfo &info) {
       auto env = info.Env();
       try {        nlohmann::json _t;
-        SocketClient::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
+        ClientAction::callCustomHandleSync("registerSkylineGlobalClazzRequest", _t);
         //* 客户端初始化SkylineGlobal
         SkylineGlobal::Init(env);
         callbackPtr->Value().Call({});
@@ -100,7 +100,7 @@ void SkylineShell::setNotifyBootstrapDoneCallback(const Napi::CallbackInfo &info
     // 发送消息到Socket
     nlohmann::json args;
     args[0] = Convert::convertValue2Json(env, func1);
-    SocketClient::callDynamicSync(m_instanceId, __func__, args);
+    ClientAction::callDynamicSync(m_instanceId, __func__, args);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -209,7 +209,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
 
     // 获取Server端的skyline路径
     nlohmann::json data1;
-    auto resp = SocketClient::callCustomHandleSync("getSkylineAddonPath", data1);
+    auto resp = ClientAction::callCustomHandleSync("getSkylineAddonPath", data1);
     auto returnValue = resp["returnValue"];
     auto skylineAddonPath = returnValue.get<std::string>();
 
@@ -225,7 +225,7 @@ void SkylineShell::createWindow(const Napi::CallbackInfo &info) {
       skylineAddonPath + "\\build\\skyline.node",
     };
     // 发送消息到Socket
-    SocketClient::callDynamicSync(m_instanceId, __func__, data);
+    ClientAction::callDynamicSync(m_instanceId, __func__, data);
   } catch (const std::exception &e) {
     throw Napi::Error::New(env, e.what());
   }
@@ -290,7 +290,7 @@ Napi:: Value SkylineShell::notifyHttpRequestComplete(const Napi::CallbackInfo &i
     // 写入数据
     memcpy(typedArray.Data(), buffer.Data(), buffer.Length());
     
-    SocketClient::callDynamicSync(m_instanceId, __func__, args);
+    ClientAction::callDynamicSync(m_instanceId, __func__, args);
     return env.Undefined();
   } catch (const std::exception& e) {
     throw Napi::Error::New(env, e.what());

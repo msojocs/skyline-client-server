@@ -1,6 +1,6 @@
 #include <napi.h>
 #include <sys/types.h>
-#include "socket_server.hh"
+#include "server_action.hh"
 #include "../common/logger.hh"
 
 #ifdef _WIN32
@@ -23,10 +23,10 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   Logger::Init();
   logger->info("initSocket end");
   
-  exports.Set("start", Napi::Function::New(env, SocketServer::start));
-  exports.Set("stop", Napi::Function::New(env, SocketServer::stop));
-  exports.Set("setMessageCallback", Napi::Function::New(env, SocketServer::setMessageCallback));
-  exports.Set("sendMessageSync", Napi::Function::New(env, SocketServer::sendMessageSync));
+  exports.Set("start", Napi::Function::New(env, ServerAction::start));
+  exports.Set("stop", Napi::Function::New(env, ServerAction::stop));
+  exports.Set("setMessageCallback", Napi::Function::New(env, ServerAction::setMessageCallback));
+  exports.Set("sendMessageSync", Napi::Function::New(env, ServerAction::sendMessageSync));
   logger->info("return result");
   return exports;
 }

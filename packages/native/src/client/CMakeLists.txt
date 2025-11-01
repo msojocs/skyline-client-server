@@ -1,8 +1,9 @@
 set(CLIENT_NAME skyline)
 set(CLIENT_DIR_LIST
-    client.cc
-    socket_client.cc
-    socket_client.hh
+    main.cc
+    client_action.cc
+    client_action.hh
+    client_socket.cc
     skyline_debug_info.hh
     skyline_debug_info.cc
     skyline_shell.hh

@@ -2,7 +2,7 @@
 #include "napi.h"
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
-#include "../socket_client.hh"
+#include "../client_action.hh"
 #include "../../common/convert.hh"
 
 namespace Skyline {
@@ -69,7 +69,7 @@ void PageContext::setFrameworkType(const Napi::CallbackInfo &info, const Napi::V
     args[i] = Convert::convertValue2Json(env, info[i]);
   }
   // 发送消息到 WebSocket
-  SocketClient::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
+  ClientAction::callDynamicPropertySetSync(m_instanceId, "frameworkType", args);
 }
 /**
  * 1个Array参数

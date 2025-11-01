@@ -14,7 +14,7 @@
 #include "../client/skyline_global/shadow_node/view.hh"
 #include "../client/skyline_global/shadow_node/hero.hh"
 #include "../client/skyline_global/shadow_node/input.hh"
-#include "../client/socket_client.hh"
+#include "../client/client_action.hh"
 #include "../common/snowflake.hh"
 #include "napi.h"
 #include <memory>
@@ -173,7 +173,7 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
         for (int i = 0; i < info.Length(); i++) {
           args[i] = convertValue2Json(env, info[i]);
         }
-        auto result = SocketClient::callStaticSync("functionData", data["instanceId"].get<std::string>(), args);
+        auto result = ClientAction::callStaticSync("functionData", data["instanceId"].get<std::string>(), args);
         auto returnValue = result["returnValue"];
 
         return Convert::convertJson2Value(env, returnValue);

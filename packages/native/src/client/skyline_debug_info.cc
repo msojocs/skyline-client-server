@@ -14,7 +14,7 @@ namespace SkylineDebugInfo{
             logger->info("Call GetVersion with Protobuf...");
             std::vector<skyline::Value> reqData; // 使用空参数数组
             auto result = ClientAction::callStaticSync("global", "SkylineDebugInfo", reqData);
-            logger->info("Protobuf SkylineDebugInfo result: {}", result.DebugString());
+            logger->debug("Protobuf SkylineDebugInfo result received.");
             // 转换 protobuf Value 到 Napi::Value
             auto env = info.Env();
             auto obj = ProtobufConverter::protobufValueToNapi(env, result);

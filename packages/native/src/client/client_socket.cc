@@ -24,6 +24,10 @@ void ClientSocket::Init(Napi::Env env) {
 
     socket = std::make_shared<tcp::socket>(io_context);
     boost::asio::connect(*socket, endpoints);
+    
+    // Enable TCP_NODELAY to reduce latency
+    boost::asio::ip::tcp::no_delay option(true);
+    socket->set_option(option);
 
     // Start a thread for the io_context
     std::thread([&]() {

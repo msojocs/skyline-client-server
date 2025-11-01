@@ -4,6 +4,7 @@
 #include "../common/snowflake.hh"
 #include "../common/protobuf_converter.hh"
 #include <chrono>
+#include <condition_variable>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -11,6 +12,7 @@
 #include <thread>
 #include <unordered_map>
 #include "client_memory.hh"
+#include "client_socket.hh"
 // #include "client_socket.hh"
 
 using Logger::logger;
@@ -18,8 +20,8 @@ using Logger::logger;
 namespace ClientAction {
 static std::shared_ptr<SkylineClient::Client> client;
 static std::mutex socketRequestMutex; // Add mutex for thread synchronization
-static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>>
-    requestMapping;
+static std::unordered_map<std::string, std::shared_ptr<std::promise<skyline::Message>>> requestMapping;
+static std::condition_variable blockQueueCV;
 static std::queue<std::shared_ptr<skyline::Message>> callbackQueue;
 
 // Forward declarations
@@ -40,6 +42,7 @@ void processMessage(const skyline::Message &message) {
             if (it != requestMapping.end()) {
                 it->second->set_value(message);
                 requestMapping.erase(it);
+                blockQueueCV.notify_all();
                 return;
             }
         }
@@ -48,6 +51,7 @@ void processMessage(const skyline::Message &message) {
         if (blocked) {
             logger->info("blocked, push protobuf message to queue...");
             callbackQueue.push(std::make_shared<skyline::Message>(message));
+            blockQueueCV.notify_all();
             return;
         }
 
@@ -118,7 +122,7 @@ void initSocket(Napi::Env &env) {
     try {
         serverCommunicationUuid.init(1, 1);
         
-        client = std::make_shared<SkylineClient::ClientMemory>();
+        client = std::make_shared<SkylineClient::ClientSocket>();
         client->Init(env);
         
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for shared memory to be ready
@@ -188,11 +192,16 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     auto timeout = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     
     while (std::chrono::steady_clock::now() < timeout) {
+        
         // 使用短暂等待替代立即轮询，减少 CPU 消耗
         auto waitStatus = futureObj.wait_for(std::chrono::milliseconds(0));
         
         if (waitStatus == std::future_status::ready) {
             break;
+        }
+        {
+            std::unique_lock<std::mutex> lock(socketRequestMutex);
+            blockQueueCV.wait_for(lock, std::chrono::milliseconds(1), [&]{return !callbackQueue.empty();});
         }
         // Handle callback queue during wait
         if (!callbackQueue.empty()) {
@@ -209,7 +218,8 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
                     logger->info("callbackId found: {}", callbackId);
                     auto env = ptr->funcRef->Env();
                     Napi::HandleScope scope(env);
-                    std::vector<Napi::Value> argsVec;                    for (const auto &arg : callbackData.args()) {
+                    std::vector<Napi::Value> argsVec;
+                    for (const auto &arg : callbackData.args()) {
                         argsVec.push_back(ProtobufConverter::protobufValueToNapi(env, arg));
                     }
                     std::shared_ptr<Napi::FunctionReference> funcRef = ptr->funcRef;
@@ -249,8 +259,8 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
 
     skyline::Message result = futureObj.get();
     blocked = false;
-    
-    logger->debug("Recevied message: {}", result.DebugString());
+
+    logger->debug("Received message: {}", result.id());
     // Check for errors in response
     if (result.type() == skyline::MessageType::RESPONSE) {
         const auto& responseData = result.response_data();
@@ -260,7 +270,7 @@ skyline::Message sendMessageSync(const skyline::Message &message) {
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    logger->info("sendMessageSync duration: {} seconds", duration.count());
+    logger->info("SendMessageSync duration: {} seconds", duration.count());
     return result;
 }
 

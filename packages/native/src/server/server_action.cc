@@ -1,6 +1,7 @@
 #include "server_action.hh"
 #include "server_socket.hh"
 #include <boost/asio.hpp>
+#include <cstdint>
 #include <thread>
 #include <mutex>
 #include <memory>
@@ -15,19 +16,18 @@ using Logger::logger;
 namespace ServerAction {
     static Napi::ThreadSafeFunction messageHandleTsfn;
     static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
-    static std::map<std::string, std::shared_ptr<std::promise<std::string>>> socketRequest;
+    static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<std::string> blockQueue;
     static bool isBlock = false;
-    using snowflake_t = snowflake<1534832906275L>;
-    static snowflake_t communicationUuid;
+    static int64_t requestId = 1;
     static std::shared_ptr<SkylineServer::Server> server;
 
     void processMessage(const std::string &message) {
         try {
-            logger->info("received message: {}", message);
+            logger->info("Received message: {}", message);
             
             if (message.empty()) {
-                logger->error("received message is empty!");
+                logger->error("Received message is empty!");
                 return;
             }
 
@@ -36,7 +36,7 @@ namespace ServerAction {
               auto id = json["id"];
               if (socketRequest.find(id) != socketRequest.end())
               {
-                logger->info("found id: {}", id.get<std::string>());
+                logger->info("found id: {}", id.get<int64_t>());
                 // server发出的消息的回复
                 socketRequest[id]->set_value(message);
                 socketRequest.erase(id);
@@ -120,7 +120,7 @@ namespace ServerAction {
         }
         auto host = info[0].As<Napi::String>().Utf8Value();
         auto port = info[1].As<Napi::Number>().Int32Value();
-        communicationUuid.init(3, 1);
+        
         return Napi::Number::New(info.Env(), startInner(info));
     }
 
@@ -167,13 +167,17 @@ namespace ServerAction {
       // 解析json字符串
       auto message = info[0].As<Napi::String>().Utf8Value();
       nlohmann::json json = nlohmann::json::parse(message);
-      json["id"] = std::to_string(communicationUuid.nextid());
-      
+      if (requestId >= INT64_MAX) {
+        requestId = 1;
+      }
+      auto id = requestId++;
+      json["id"] = id;
+
       // 先存储，再发送
       auto promiseObj = std::make_shared<std::promise<std::string>>();
       std::future<std::string> futureObj = promiseObj->get_future();
-      socketRequest.emplace(json["id"], promiseObj); // Updated to use json["id"]
-      logger->info("send to client: {}", json.dump());
+      socketRequest.emplace(id, promiseObj); // Updated to use json["id"]
+      logger->info("send to client: {}", id);
       server->sendMessage(json.dump());
       // 3秒超时
       auto start = std::chrono::high_resolution_clock::now();

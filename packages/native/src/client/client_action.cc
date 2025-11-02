@@ -1,3 +1,5 @@
+#include <cstdint>
+#include <string>
 #include <thread>
 #include <mutex>
 #include <queue>
@@ -14,17 +16,16 @@ using Logger::logger;
 
 namespace ClientAction {
     static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
-    static std::map<std::string, std::shared_ptr<std::promise<std::string>>> socketRequest;
+    static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<nlohmann::json> callbackQueue;
     static bool blocked = false;
-    using snowflake_t = snowflake<1534832906275L>;
-    static snowflake_t serverCommunicationUuid;
+    static int64_t requestId = 1;
     static std::shared_ptr<SkylineClient::Client> client;
 
     void processMessage(std::string &message) {
-        logger->info("received message: {}", message);
+        logger->info("Received message: {}", message);
         if (message.empty()) {
-            logger->error("received message is empty!");
+            logger->error("Received message is empty!");
             return;
         }
 
@@ -32,7 +33,7 @@ namespace ClientAction {
         if (json["type"].empty() && json.contains("id")) {
             // Response message
             auto id = json["id"];
-            logger->info("received message id: {}", json["id"].get<std::string>());
+            logger->info("Received message id: {}", json["id"].get<int64_t>());
             
             std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
             if (socketRequest.find(id) != socketRequest.end()) {
@@ -73,7 +74,7 @@ namespace ClientAction {
                             if (json.contains("id")) {
                                 logger->info("reply callback...");
                                 nlohmann::json callbackResult = {
-                                    {"id", json["id"].get<std::string>()},
+                                    {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
                                     {"result", resultJson},
                                 };
@@ -99,7 +100,7 @@ namespace ClientAction {
                             if (json.contains("id")) {
                                 logger->info("reply callback...");
                                 nlohmann::json callbackResult = {
-                                    {"id", json["id"].get<std::string>()},
+                                    {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
                                     {"result", resultJson},
                                 };
@@ -117,7 +118,6 @@ namespace ClientAction {
 
     void initSocket(Napi::Env &env) {
         try {
-            serverCommunicationUuid.init(1, 1);
             client = std::make_shared<SkylineClient::ClientSocket>();
             client->Init(env);
 
@@ -140,9 +140,12 @@ namespace ClientAction {
     }
 
     nlohmann::json sendMessageSync(nlohmann::json& data) {
-        std::string id = std::to_string(serverCommunicationUuid.nextid());
+        if (requestId >= INT64_MAX) {
+            requestId = 1;
+        }
+        auto id = requestId++;
         data["id"] = id;
-        logger->info("send to server {}", data.dump());
+        logger->info("Send to server {}", id);
 
         blocked = true;
         // Add newline as message delimiter
@@ -157,7 +160,7 @@ namespace ClientAction {
             auto insertResult = socketRequest.emplace(id, promiseObj);
             if (!insertResult.second) {
                 logger->error("insert failed: {}", id);
-                throw std::runtime_error("id insert to request map failed: " + id);
+                throw std::runtime_error("id insert to request map failed: " + std::to_string(id));
             }
             logger->info("is exists: {}", socketRequest.find(id) != socketRequest.end());
         }
@@ -190,7 +193,7 @@ namespace ClientAction {
                     if (json.contains("id")) {
                         logger->info("reply callback...");
                         nlohmann::json callbackResult = {
-                            {"id", json["id"].get<std::string>()},
+                            {"id", json["id"].get<int64_t>()},
                             {"type", "callbackReply"},
                             {"result", resultJson},
                         };
@@ -231,9 +234,12 @@ namespace ClientAction {
     }
 
     void sendMessageAsync(nlohmann::json& data) {
-        std::string id = std::to_string(serverCommunicationUuid.nextid());
+        if (requestId >= INT64_MAX) {
+            requestId = 1;
+        }
+        auto id = requestId++;
         data["id"] = id;
-        logger->info("send to server {}", data.dump());
+        logger->info("send to server {}", id);
 
         client->sendMessage(data.dump());
     }

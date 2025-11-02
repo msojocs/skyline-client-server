@@ -22,7 +22,7 @@ try {
     g.send = ws.send
     g.sendMessageSync = server.sendMessageSync
     const req = JSON.parse(message) as {
-      id: string
+      id: number
       type: 'constructor' | 'static' | 'dynamic' | 'dynamicProperty' | 'registerCallback'
       clazz: string
       action: string

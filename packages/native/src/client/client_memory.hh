@@ -2,6 +2,7 @@
 #define CLIENT_MEMORY_HH
 #include "client.hh"
 #include "../memory/skyline_memory.hh"
+#include <windows.h>
 namespace SkylineClient {
 class ClientMemory : public Client {
     public:
@@ -13,6 +14,8 @@ class ClientMemory : public Client {
     private:
     std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgFromServer;
     std::shared_ptr<SkylineMemory::SharedMemoryCommunication> msgToServer;
+    HANDLE semClientToServer;
+    HANDLE semServerToClient;
 };
 }
 #endif // CLIENT_MEMORY_HH

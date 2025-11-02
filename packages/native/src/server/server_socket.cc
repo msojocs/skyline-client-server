@@ -43,8 +43,11 @@ ServerSocket::~ServerSocket() {
 void ServerSocket::sendMessage(const std::string &message) {
     try {
         if (socket && socket->is_open()) {
+            uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
+            // First send the length of the message
+            boost::asio::write(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
             // Then send the actual message
-            boost::asio::write(*socket, boost::asio::buffer(message + "\n"));
+            boost::asio::write(*socket, boost::asio::buffer(message));
             logger->info("Sent message with length {}", message.size());
         } else {
             logger->error("Socket is not open. Cannot send message.");
@@ -57,11 +60,16 @@ void ServerSocket::sendMessage(const std::string &message) {
 std::string ServerSocket::receiveMessage() {
     try {
         if (socket && socket->is_open()) {
-            boost::asio::streambuf buf;
-            boost::asio::read_until(*socket, buf, "\n");
-            std::string data{std::istreambuf_iterator<char>(&buf),
-                            std::istreambuf_iterator<char>()};
-            return data;
+            uint32_t message_length = 0;
+            boost::asio::read(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
+            message_length = ntohl(message_length);
+
+            // Then read the actual message
+            std::vector<char> buffer(message_length);
+            boost::asio::read(*socket, boost::asio::buffer(buffer.data(), message_length));
+
+            std::string message(buffer.data(), message_length);
+            return message;
         } else {
             acceptor->accept(*socket);
             boost::asio::ip::tcp::no_delay option(true);

@@ -71,7 +71,7 @@ namespace ServerAction {
 
             messageHandleTsfn.BlockingCall(callback);
         } catch (const std::exception &e) {
-            logger->error("Error processing message: {}", e.what());
+            logger->error("Error processing message: {}\noriginal message: {}", e.what(), message);
         } catch (...) {
             logger->error("Unknown error occurred while processing message");
         }

@@ -187,8 +187,8 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
           // 创建实例
           // 先到cache找
           auto instanceId = data["instanceId"].get<int64_t>();
-          if (instanceCache.find(instanceId) != instanceCache.end()) {
-            return instanceCache[instanceId]->Value();
+          if (auto target = instanceCache.find(instanceId); target != instanceCache.end()) {
+            return target->second->Value();
           }
           // cache找不到
           auto result = func->New({Napi::Number::New(env, data["instanceId"].get<int64_t>())});

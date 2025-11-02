@@ -1,12 +1,7 @@
 #include "client_socket.hh"
-#include "../common/convert.hh"
 #include "../common/logger.hh"
 #include <boost/asio.hpp>
-#include <chrono>
-#include <future>
 #include <memory>
-#include <mutex>
-#include <queue>
 #include <thread>
 
 using boost::asio::ip::tcp;

@@ -1,6 +1,5 @@
 #include "image.hh"
 #include "napi.h"
-#include "../../../common/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *ImageShadowNode::GetClazz(Napi::Env env) {

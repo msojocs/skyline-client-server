@@ -7,17 +7,9 @@
 namespace Logger {
     std::shared_ptr<spdlog::logger> logger;
     #if defined (_SKYLINE_CLIENT_)
-    #ifdef _WIN32
-    #define LOG_FILE "D:/Log/Skyline/client_log.log"
+    #define LOG_FILE "./log/client_log.log"
     #else
-    #define LOG_FILE "/tmp/Log/Skyline/client_log.log"
-    #endif
-    #else
-    #ifdef _WIN32
-    #define LOG_FILE "D:/Log/Skyline/server_log.log"
-    #else
-    #define LOG_FILE "/tmp/Log/Skyline/server_log.log"
-    #endif
+    #define LOG_FILE "./log/server_log.log"
     #endif
 
     // 设置控制台回调函数

@@ -1,5 +1,3 @@
-#include "server_action.hh"
-#include "server_socket.hh"
 #include <boost/asio.hpp>
 #include <cstdint>
 #include <thread>
@@ -9,6 +7,8 @@
 #include "../common/convert.hh"
 #include "server.hh"
 #include <nlohmann/json.hpp>
+#include "server_action.hh"
+#include "server_memory.hh"
 
 using Logger::logger;
 
@@ -56,7 +56,7 @@ namespace ServerAction {
                         throw Napi::TypeError::New(info.Env(), "send: Wrong argument type");
                     }
                     auto message = info[0].As<Napi::String>().Utf8Value();
-                    logger->info("send message to all clients:{}", message);
+                    logger->info("send message to client:{}", message);
                     server->sendMessage(message);
                 }));
 
@@ -79,7 +79,7 @@ namespace ServerAction {
 
     int startInner(const Napi::CallbackInfo &info) {
         try {
-            server = std::make_shared<SkylineServer::ServerSocket>();
+            server = std::make_shared<SkylineServer::ServerMemory>();
             server->Init(info);
 
             std::thread([&]() {
@@ -187,7 +187,7 @@ namespace ServerAction {
           try {
             // debug消息
             // Client发来的消息
-            logger->info("start to handle blocked message: {}", msg);
+            logger->info("Start to handle blocked message: {}", msg);
             // Call the JavaScript callback through the thread-safe function
             auto ws = Napi::Object::New(env);
             ws.Set("send", Napi::Function::New(env, [](const Napi::CallbackInfo &info) {
@@ -195,7 +195,7 @@ namespace ServerAction {
                         throw Napi::TypeError::New(info.Env(), "send: Wrong argument type");
                     }
                     auto message = info[0].As<Napi::String>().Utf8Value();
-                    logger->info("send message to all clients:{}", message);
+                    logger->info("Send message to client:{}", message);
                     server->sendMessage(message);
                 }));
             messageHandleRef->Value().Call({ws, Napi::String::New(env, msg)});

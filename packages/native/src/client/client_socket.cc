@@ -8,13 +8,10 @@ using boost::asio::ip::tcp;
 using Logger::logger;
 
 namespace SkylineClient {
-static std::string serverAddress = "127.0.0.1";
-static int serverPort = 3001;
 void ClientSocket::Init(Napi::Env env) {
 
     tcp::resolver resolver(io_context);
-    auto endpoints =
-        resolver.resolve(serverAddress, std::to_string(serverPort));
+    auto endpoints = resolver.resolve("127.0.0.1", std::to_string(3001));
 
     socket = std::make_shared<tcp::socket>(io_context);
     boost::asio::connect(*socket, endpoints);

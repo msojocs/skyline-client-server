@@ -22,7 +22,8 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::info("Starting Skyline Client...");
     
-    Logger::Init();    logger->info("initSocket start");
+    Logger::Init();
+    logger->info("initSocket start");
     ClientAction::initSocket(env);
     logger->info("initSocket end");
     SkylineDebugInfo::InitSkylineDebugInfo(env, exports);

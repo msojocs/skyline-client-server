@@ -9,7 +9,7 @@
 #include "client_action.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
-#include "client_socket.hh"
+#include "client_memory.hh"
 
 using Logger::logger;
 
@@ -22,11 +22,11 @@ namespace ClientAction {
     static std::shared_ptr<SkylineClient::Client> client;
 
     void processMessage(std::string &message) {
-        logger->info("Received message: {}", message);
         if (message.empty()) {
             logger->error("Received message is empty!");
             return;
         }
+        logger->info("Received message: {}", message);
 
         nlohmann::json json = nlohmann::json::parse(message);
         if (json["type"].empty() && json.contains("id")) {
@@ -117,7 +117,7 @@ namespace ClientAction {
 
     void initSocket(Napi::Env &env) {
         try {
-            client = std::make_shared<SkylineClient::ClientSocket>();
+            client = std::make_shared<SkylineClient::ClientMemory>();
             client->Init(env);
 
             // Start a thread for reading messages

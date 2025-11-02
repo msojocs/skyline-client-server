@@ -4,6 +4,7 @@ set(CLIENT_DIR_LIST
     client_action.cc
     client_action.hh
     client_socket.cc
+    client_memory.cc
     skyline_debug_info.hh
     skyline_debug_info.cc
     skyline_shell.hh
@@ -17,6 +18,8 @@ set(CLIENT_DIR_LIST
     skyline_global/page_context.cc
     ../common/convert.cc
     ../common/logger.cc
+    ../memory/manager.cc
+    ../memory/skyline_memory.cc
     skyline_global/runtime.cc
     skyline_global/mutable_value.cc
     skyline_global/gesture_handler_module.cc

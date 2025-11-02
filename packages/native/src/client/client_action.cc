@@ -201,8 +201,8 @@ namespace ClientAction {
                             {"type", "callbackReply"},
                             {"result", resultJson},
                         };
-                            // Add newline as message delimiter
-                            client->sendMessage(callbackResult.dump());
+                        // Add newline as message delimiter
+                        client->sendMessage(callbackResult.dump());
                     }
                 } else {
                     logger->error("callbackId not found: {}", callbackId);

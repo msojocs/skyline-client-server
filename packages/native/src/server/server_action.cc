@@ -33,8 +33,7 @@ namespace ServerAction {
             nlohmann::json json = nlohmann::json::parse(message);
             if (!json["id"].empty()) {
               auto id = json["id"].get<int64_t>();
-              if (auto target = socketRequest.find(id); target != socketRequest.end())
-              {
+              if (auto target = socketRequest.find(id); target != socketRequest.end()) {
                 logger->info("found id: {}", id);
                 // server发出的消息的回复
                 target->second->set_value(message);
@@ -64,7 +63,7 @@ namespace ServerAction {
         } catch (const std::exception &e) {
             logger->error("Error processing message: {}\noriginal message: {}", e.what(), message);
         } catch (...) {
-            logger->error("Unknown error occurred while processing message");
+            logger->error("Unknown error occurred while processing message\noriginal message: {}", message);
         }
     }
 
@@ -166,39 +165,40 @@ namespace ServerAction {
       // 先存储，再发送
       auto promiseObj = std::make_shared<std::promise<std::string>>();
       std::future<std::string> futureObj = promiseObj->get_future();
-      socketRequest.emplace(id, promiseObj); // Updated to use json["id"]
+      socketRequest.emplace(id, promiseObj);
       logger->info("Sending to client: {}", id);
       server->sendMessage(json.dump());
       // 3秒超时
       auto start = std::chrono::high_resolution_clock::now();
       while (true) {
-        if (!blockQueue.empty()) {
-          auto msg = blockQueue.front();
-          blockQueue.pop();
-          try {
-            // Client发来的消息
-            logger->info("start to handle blocked message: {}", msg);
-            // Call the JavaScript callback through the thread-safe function
-            messageHandleRef->Value().Call({Napi::String::New(env, msg)});
-          }
-          catch (const std::exception &e) {
-            logger->error("Error parsing JSON: {}", e.what());
-            throw Napi::Error::New(info.Env(), e.what());
-          }
-          catch (...) {
-            logger->error("Unknown error occurred");
-            throw Napi::Error::New(info.Env(), "Unknown error occurred");
-          }
-        }
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         if (elapsed.count() > 3) {
-          socketRequest.erase(json["id"]);
+          socketRequest.erase(id);
           isBlock = false;
           throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + json.dump());
         }
         if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
           break;
+        }
+        if (blockQueue.empty()) {
+            continue;
+        }
+        auto msg = blockQueue.front();
+        blockQueue.pop();
+        try {
+            // Client发来的消息
+            logger->info("start to handle blocked message: {}", msg);
+            // Call the JavaScript callback through the thread-safe function
+            messageHandleRef->Value().Call({Napi::String::New(env, msg)});
+        }
+        catch (const std::exception &e) {
+            logger->error("Error parsing JSON: {}", e.what());
+            throw Napi::Error::New(info.Env(), e.what());
+        }
+        catch (...) {
+            logger->error("Unknown error occurred");
+            throw Napi::Error::New(info.Env(), "Unknown error occurred");
         }
       }
       isBlock = false;

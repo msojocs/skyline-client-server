@@ -29,25 +29,10 @@ namespace WorkletModule {
     return sendToServerSync(info, __func__);
   }
   Napi::Value makeMutable(const Napi::CallbackInfo &info) {
-    auto env = info.Env();
-    // 发送消息到 WebSocket
-    nlohmann::json args;
-    for (int i = 0; i < info.Length(); i++) {
-      args[i] = Convert::convertValue2Json(env, info[i]);
-    }
-    auto result = ClientAction::callStaticSync("SkylineWorkletModule", __func__, args);
-    auto returnValue = result["returnValue"];
-    return Convert::convertJson2Value(env, returnValue);
+    return sendToServerSync(info, __func__);
   }
   Napi::Value registerEventHandler(const Napi::CallbackInfo &info) {
-    auto env = info.Env();
-    nlohmann::json args;
-    for (int i = 0; i < info.Length(); i++) {
-      args[i] = Convert::convertValue2Json(env, info[i]);
-    }
-    auto result = ClientAction::callStaticSync("SkylineWorkletModule", __func__, args);
-    auto returnValue = result["returnValue"];
-    return Convert::convertJson2Value(env, returnValue);
+    return sendToServerSync(info, __func__);
   }
   Napi::Value unregisterEventHandler(const Napi::CallbackInfo &info) {
     return sendToServerSync(info, __func__);

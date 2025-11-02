@@ -34,6 +34,7 @@ void ClientSocket::Init(Napi::Env env) {
 }
 void ClientSocket::sendMessage(const std::string &message) {
     if (socket && socket->is_open()) {
+        logger->debug("Sending message: {}", message);
         uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
         // First send the length of the message
         boost::asio::write(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));

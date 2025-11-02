@@ -1,4 +1,3 @@
-import { TwitterSnowflake } from "@sapphire/snowflake"
 import { useCustomHandle } from "./custom-handle"
 
 const clazzMap = new Map<string, any>();
@@ -38,10 +37,11 @@ export const registerSkylineGlobalClazz = (g: any) => {
     clazzMap.set('SkylineGestureModule', g.SkylineGlobal.gestureHandlerModule)
 }
 
-const instanceMap = new Map<string, any>();
-(globalThis as any).instanceMap = instanceMap
+const instanceMap = new Map<number, any>();
+(globalThis as any).instanceMap = instanceMap;
+let instanceId = 1;
 export const useInstanceManage = () => ({
-    getInstance: (instanceId: string) => {
+    getInstance: (instanceId: number) => {
         return instanceMap.get(instanceId)
     },
     getInstanceId: (instance: any) => {
@@ -53,11 +53,11 @@ export const useInstanceManage = () => ({
         return null
     },
     setInstance: (instance: any) => {
-        const instanceId = TwitterSnowflake.generate().toString()
-        instanceMap.set(instanceId, instance)
-        return instanceId
+        const id = instanceId++
+        instanceMap.set(id, instance)
+        return id
     },
-    removeInstance: (instanceId: string) => {
+    removeInstance: (instanceId: number) => {
         instanceMap.delete(instanceId)
     },
     clearInstance: () => {

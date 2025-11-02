@@ -24,7 +24,7 @@
 namespace Convert {
 static int64_t callbackId = 1;
 static std::unordered_map<int64_t, CallbackData> callback;
-static std::unordered_map<std::string, std::shared_ptr<Napi::ObjectReference>> instanceCache;
+static std::unordered_map<int64_t, std::shared_ptr<Napi::ObjectReference>> instanceCache;
 
 static std::unordered_map<std::string, Napi::FunctionReference *> clazzMap;
 
@@ -61,10 +61,10 @@ void RegisteInstanceType(Napi::Env &env) {
 
 nlohmann::json convertObject2Json(Napi::Env &env, const Napi::Value &value) {
   Napi::Object obj = value.As<Napi::Object>();
-  if (obj.Get("instanceId").IsString()) {
+  if (obj.Get("instanceId").IsNumber()) {
     nlohmann::json jsonObj;
     jsonObj["instanceId"] =
-        obj.Get("instanceId").As<Napi::String>().Utf8Value();
+        obj.Get("instanceId").As<Napi::Number>().Int64Value();
     return jsonObj;
   }
   nlohmann::json jsonObj = nlohmann::json::object();
@@ -171,7 +171,7 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
         for (int i = 0; i < info.Length(); i++) {
           args[i] = convertValue2Json(env, info[i]);
         }
-        auto result = ClientAction::callStaticSync("functionData", data["instanceId"].get<std::string>(), args);
+        auto result = ClientAction::callStaticSync("functionData", std::to_string(data["instanceId"].get<int64_t>()), args);
         auto returnValue = result["returnValue"];
 
         return Convert::convertJson2Value(env, returnValue);
@@ -186,13 +186,12 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
           Napi::FunctionReference *func = it->second;
           // 创建实例
           // 先到cache找
-          auto instanceId = data["instanceId"].get<std::string>();
+          auto instanceId = data["instanceId"].get<int64_t>();
           if (instanceCache.find(instanceId) != instanceCache.end()) {
             return instanceCache[instanceId]->Value();
           }
           // cache找不到
-          auto result = func->New(
-              {Napi::String::New(env, data["instanceId"].get<std::string>())});
+          auto result = func->New({Napi::Number::New(env, data["instanceId"].get<int64_t>())});
           auto ref = Napi::Persistent(result);
           instanceCache.emplace(instanceId, std::make_shared<Napi::ObjectReference>(std::move(ref)) );
           return result;

@@ -243,7 +243,7 @@ namespace ClientAction {
         client->sendMessage(data.dump());
     }
 
-    void callDynamicAsync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
+    void callDynamicAsync(int64_t instanceId, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {
             {"type", "dynamic"},
             {"action", action},
@@ -268,7 +268,7 @@ namespace ClientAction {
         return sendMessageSync(json);
     }
 
-    nlohmann::json callDynamicSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
+    nlohmann::json callDynamicSync(int64_t instanceId, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {
             {"type", "dynamic"},
             {"action", action},
@@ -281,7 +281,7 @@ namespace ClientAction {
         return sendMessageSync(json);
     }
 
-    nlohmann::json callDynamicPropertySetSync(const std::string& instanceId, const std::string& action, nlohmann::json& args) {
+    nlohmann::json callDynamicPropertySetSync(int64_t instanceId, const std::string& action, nlohmann::json& args) {
         nlohmann::json json {
             {"type", "dynamicProperty"},
             {"action", action},
@@ -295,7 +295,7 @@ namespace ClientAction {
         return sendMessageSync(json);
     }
 
-    nlohmann::json callDynamicPropertyGetSync(const std::string& instanceId, const std::string& action) {
+    nlohmann::json callDynamicPropertyGetSync(int64_t instanceId, const std::string& action) {
         nlohmann::json json {
             {"type", "dynamicProperty"},
             {"action", action},

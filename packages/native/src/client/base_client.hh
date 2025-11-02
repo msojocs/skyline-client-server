@@ -8,7 +8,7 @@ class BaseClient {
 public:
   Napi::Value getInstanceId(const Napi::CallbackInfo &info);
 protected:
-  std::string m_instanceId;
+  int64_t m_instanceId;
   /**
    * 与服务器通信
    * 
@@ -26,7 +26,7 @@ protected:
    * 
    * 同步方法,用于构造函数
    */
-  std::string sendConstructorToServerSync(const Napi::CallbackInfo &info, const std::string &className);
+  int64_t sendConstructorToServerSync(const Napi::CallbackInfo &info, const std::string &className);
 
   /**
    * 获取property

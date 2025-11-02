@@ -6,7 +6,6 @@
 #include <map>
 #include <future>
 #include <queue>
-#include "../common/snowflake.hh"
 #include <nlohmann/json.hpp>
 
 namespace ServerAction {

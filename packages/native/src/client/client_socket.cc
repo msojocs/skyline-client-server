@@ -1,7 +1,6 @@
 #include "client_socket.hh"
 #include "../common/convert.hh"
 #include "../common/logger.hh"
-#include "../common/snowflake.hh"
 #include <boost/asio.hpp>
 #include <chrono>
 #include <future>

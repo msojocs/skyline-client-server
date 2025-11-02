@@ -7,7 +7,7 @@
 namespace Skyline {
 
   Napi::Value BaseClient::getInstanceId(const Napi::CallbackInfo &info) {
-    return Napi::String::New(info.Env(), m_instanceId);
+    return Napi::Number::New(info.Env(), m_instanceId);
   }
   Napi::Value BaseClient::sendToServerSync(const Napi::CallbackInfo &info, const std::string &methodName) {
     auto env = info.Env();
@@ -42,7 +42,7 @@ namespace Skyline {
       throw Napi::Error::New(env, "Unknown error occurred");
     }
   }
-  std::string BaseClient::sendConstructorToServerSync(const Napi::CallbackInfo &info, const std::string &className) {
+  int64_t BaseClient::sendConstructorToServerSync(const Napi::CallbackInfo &info, const std::string &className) {
     auto env = info.Env();
     nlohmann::json args;
     for (int i = 0; i < info.Length(); i++) {
@@ -53,7 +53,7 @@ namespace Skyline {
       if (!result.contains("instanceId")) {
         throw Napi::Error::New(env, "No instanceId in result");
       }
-      return result["instanceId"].get<std::string>();
+      return result["instanceId"].get<int64_t>();
     } catch (const std::exception &e) {
       throw Napi::Error::New(env, e.what());
     }

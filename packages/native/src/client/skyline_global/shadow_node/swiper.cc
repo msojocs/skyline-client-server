@@ -23,11 +23,8 @@ SwiperShadowNode::SwiperShadowNode(const Napi::CallbackInfo &info)
     throw Napi::TypeError::New(info.Env(),
                                "Constructor: Wrong number of arguments");
   }
-  if (!info[0].IsString()) {
-    throw Napi::TypeError::New(info.Env(),
-                               "Constructor: First argument must be a string");
-  }
-  m_instanceId = info[0].As<Napi::String>().Utf8Value();
+
+  m_instanceId = info[0].As<Napi::Number>().Int64Value();
 }
 Napi::Value SwiperShadowNode::onChangeEvent(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);

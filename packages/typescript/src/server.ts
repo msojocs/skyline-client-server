@@ -1,7 +1,6 @@
 import { useLogger } from "./common/log"
 import { registerDefaultClazz, useInstanceManage, useObjectManage } from "./server/object-manage"
 import { hookArgument, hookResult } from "./common/hook-argument"
-import { TwitterSnowflake } from "@sapphire/snowflake"
 const log = useLogger('Server')
 try {
   log.info('Hi rpc server!')
@@ -27,7 +26,7 @@ try {
       clazz: string
       action: string
       data: {
-        instanceId?: string
+        instanceId?: number
         clazz?: string
         callbackId?: string
         syncCallback?: boolean

@@ -1,4 +1,3 @@
-import { TwitterSnowflake } from "@sapphire/snowflake";
 import { useInstanceManage, useObjectManage } from "../server/object-manage";
 import { useLogger } from "./log";
 
@@ -167,13 +166,14 @@ export const hookArgument = (action: string, args: any[]) => {
         console.info('registerEventHandler', args)
     }
 }
+let functionDataId = 1;
 export const hookResult = (action: string, result: any) => {
     log.info('result before:', result)
     if (action === 'setLoadResourceCallback_syncResult') {
         return new Uint8Array(result);
     }
     else if (typeof result === 'function') {
-        const id = TwitterSnowflake.generate().toString()
+        const id = functionDataId++
         const { getClazz } = useObjectManage()
         const functionData = getClazz('functionData')
         functionData[id] = result;

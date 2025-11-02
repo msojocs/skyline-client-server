@@ -6,7 +6,6 @@
 #include <mutex>
 #include <memory>
 #include "../common/logger.hh"
-#include "../common/snowflake.hh"
 #include "../common/convert.hh"
 #include "server.hh"
 #include <nlohmann/json.hpp>
@@ -150,9 +149,9 @@ namespace ServerAction {
 
         logger->info("Set message callback");
     }
-        /**
-    * 给客户端发送消息
-    */
+    /**
+     * 给客户端发送消息
+     */
     Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
       if (info.Length() < 1) {
         throw Napi::TypeError::New(info.Env(), "sendMessageSync: Wrong number of arguments");

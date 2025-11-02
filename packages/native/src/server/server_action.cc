@@ -32,13 +32,13 @@ namespace ServerAction {
 
             nlohmann::json json = nlohmann::json::parse(message);
             if (!json["id"].empty()) {
-              auto id = json["id"];
-              if (socketRequest.find(id) != socketRequest.end())
+              auto id = json["id"].get<int64_t>();
+              if (auto target = socketRequest.find(id); target != socketRequest.end())
               {
-                logger->info("found id: {}", id.get<int64_t>());
+                logger->info("found id: {}", id);
                 // server发出的消息的回复
-                socketRequest[id]->set_value(message);
-                socketRequest.erase(id);
+                target->second->set_value(message);
+                socketRequest.erase(target);
                 return;
               }
             }

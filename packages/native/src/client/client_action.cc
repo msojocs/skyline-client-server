@@ -30,16 +30,20 @@ namespace ClientAction {
 
         nlohmann::json json = nlohmann::json::parse(message);
         if (json["type"].empty() && json.contains("id")) {
+            // 响应体一定没有type，只有id
+            // 但是不能用包含id就去查找请求，因为服务器的emitCallback请求也是包含id的
+            // 这时找不到，浪费性能，所以用type为空排除emitCallback的id查找，提高效率
             // Response message
-            auto id = json["id"];
-            logger->info("Received message id: {}", json["id"].get<int64_t>());
-            
+            auto id = json["id"].get<int64_t>();
+            logger->info("Received message id: {}", id);
+
             std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
-            if (socketRequest.find(id) != socketRequest.end()) {
-                socketRequest[id]->set_value(message);
-                socketRequest.erase(id);
+            
+            if (auto target = socketRequest.find(id);target != socketRequest.end()) {
+                target->second->set_value(message);
+                socketRequest.erase(target);
             } else {
-                logger->error("id not found: {}", id.get<std::string>());
+                logger->error("id not found: {}", id);
             }
         } else if(!json["type"].empty()) {
             if (blocked) {

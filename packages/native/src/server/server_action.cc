@@ -50,18 +50,9 @@ namespace ServerAction {
 
             // Call the JavaScript callback through the thread-safe function
             auto callback = [message](Napi::Env env, Napi::Function jsCallback) {
-                auto ws = Napi::Object::New(env);
-                ws.Set("send", Napi::Function::New(env, [](const Napi::CallbackInfo &info) {
-                    if (info.Length() < 1 || !info[0].IsString()) {
-                        throw Napi::TypeError::New(info.Env(), "send: Wrong argument type");
-                    }
-                    auto message = info[0].As<Napi::String>().Utf8Value();
-                    logger->info("send message to all clients:{}", message);
-                    server->sendMessage(message);
-                }));
 
                 try {
-                    jsCallback.Call({ws, Napi::String::New(env, message)});
+                    jsCallback.Call({Napi::String::New(env, message)});
                 } catch (const std::exception &e) {
                     logger->error("Error in callback: {}", e.what());
                 } catch (...) {
@@ -150,7 +141,7 @@ namespace ServerAction {
         logger->info("Set message callback");
     }
     /**
-     * 给客户端发送消息
+     * 给客户端发送消息，等待返回
      */
     Napi::Value sendMessageSync(const Napi::CallbackInfo &info) {
       if (info.Length() < 1) {
@@ -162,9 +153,9 @@ namespace ServerAction {
       }
       auto env = info.Env();
       isBlock = true;
-      logger->info("sendMessageSync: {}", info[0].As<Napi::String>().Utf8Value());
-      // 解析json字符串
       auto message = info[0].As<Napi::String>().Utf8Value();
+      logger->info("sendMessageSync: {}", message);
+      // 解析json字符串
       nlohmann::json json = nlohmann::json::parse(message);
       if (requestId >= INT64_MAX) {
         requestId = 1;
@@ -176,7 +167,7 @@ namespace ServerAction {
       auto promiseObj = std::make_shared<std::promise<std::string>>();
       std::future<std::string> futureObj = promiseObj->get_future();
       socketRequest.emplace(id, promiseObj); // Updated to use json["id"]
-      logger->info("send to client: {}", id);
+      logger->info("Sending to client: {}", id);
       server->sendMessage(json.dump());
       // 3秒超时
       auto start = std::chrono::high_resolution_clock::now();
@@ -185,20 +176,10 @@ namespace ServerAction {
           auto msg = blockQueue.front();
           blockQueue.pop();
           try {
-            // debug消息
             // Client发来的消息
             logger->info("start to handle blocked message: {}", msg);
             // Call the JavaScript callback through the thread-safe function
-            auto ws = Napi::Object::New(env);
-            ws.Set("send", Napi::Function::New(env, [](const Napi::CallbackInfo &info) {
-                    if (info.Length() < 1 || !info[0].IsString()) {
-                        throw Napi::TypeError::New(info.Env(), "send: Wrong argument type");
-                    }
-                    auto message = info[0].As<Napi::String>().Utf8Value();
-                    logger->info("send message to all clients:{}", message);
-                    server->sendMessage(message);
-                }));
-            messageHandleRef->Value().Call({ws, Napi::String::New(env, msg)});
+            messageHandleRef->Value().Call({Napi::String::New(env, msg)});
           }
           catch (const std::exception &e) {
             logger->error("Error parsing JSON: {}", e.what());
@@ -225,5 +206,21 @@ namespace ServerAction {
       auto resp = nlohmann::json::parse(result);
       auto v = Convert::convertJson2Value(env, resp["result"]);
       return v;
+    }
+    /**
+     * 给客户端发送消息
+     */
+    Napi::Value sendMessageSingle(const Napi::CallbackInfo &info) {
+        if (info.Length() < 1) {
+            throw Napi::TypeError::New(info.Env(), "sendMessageSingle: Wrong number of arguments");
+        }
+        
+        if (!info[0].IsString()) {
+            throw Napi::TypeError::New(info.Env(), "First argument must be a string");
+        }
+        auto message = info[0].As<Napi::String>().Utf8Value();
+        logger->info("sendMessageSingle: {}", message);
+        server->sendMessage(message);
+        return info.Env().Undefined();
     }
 }

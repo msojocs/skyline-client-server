@@ -27,6 +27,7 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("stop", Napi::Function::New(env, ServerAction::stop));
   exports.Set("setMessageCallback", Napi::Function::New(env, ServerAction::setMessageCallback));
   exports.Set("sendMessageSync", Napi::Function::New(env, ServerAction::sendMessageSync));
+  exports.Set("sendMessageSingle", Napi::Function::New(env, ServerAction::sendMessageSingle));
   logger->info("return result");
   return exports;
 }

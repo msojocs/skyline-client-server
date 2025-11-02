@@ -12,14 +12,14 @@ try {
   })
   require('skyline-addon/build/skyline.node')
   const server = require('skyline-server/skylineServer.node')
+  global.sendMessageSync = server.sendMessageSync
+  global.send = server.sendMessageSingle
   const g = global as any
   g.window = g
   window = g
   registerDefaultClazz(g)
   server.start('127.0.0.1', 3001)
-  server.setMessageCallback((ws: { send: (data: string) => void}, message: string) => {
-    g.send = ws.send
-    g.sendMessageSync = server.sendMessageSync
+  server.setMessageCallback((message: string) => {
     const req = JSON.parse(message) as {
       id: number
       type: 'constructor' | 'static' | 'dynamic' | 'dynamicProperty' | 'registerCallback'
@@ -46,7 +46,7 @@ try {
         const clazz = getClazz(req.clazz)
         if (!clazz) {
           log.error('Class not found', req.clazz)
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             error: 'Class not found'
           }))
@@ -57,7 +57,7 @@ try {
         const params = req.data.params || []
         const instanceId = setInstance(new clazz(...params))
         log.info('constructor end', req.clazz, instanceId)
-        ws.send(JSON.stringify({
+        global.send(JSON.stringify({
           id: req.id,
           result: {
             instanceId: instanceId
@@ -69,7 +69,7 @@ try {
         const { getClazz } = useObjectManage()
         const clazz = getClazz(req.clazz)
         if (!clazz) {
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             error: 'Class not found'
           }))
@@ -82,7 +82,7 @@ try {
           let result = clazz[req.action](...params);
           result = hookResult(`${req.action}_staticResult`, result)
           log.info("static call result", req.action, result);
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             result: {
               returnValue: result,
@@ -90,7 +90,7 @@ try {
           }));
         } else if (typeof clazz[req.action] !== 'undefined') {
           const result = clazz[req.action]
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             result: {
               returnValue: result
@@ -98,7 +98,7 @@ try {
           }));
         } else {
           log.error('Method not found or instance invalid', req.action, clazz[req.action])
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             error: 'Method not found or instance invalid',
           }));
@@ -108,7 +108,7 @@ try {
         // 动态对象调用请求
         if (!req.data.instanceId) {
           log.error('InstanceId not found')
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             error: 'InstanceId not found'
           }))
@@ -126,7 +126,7 @@ try {
           log.info("dynamic call result hooked", req.action, result);
 
           if (req.id) {
-            ws.send(JSON.stringify({
+            global.send(JSON.stringify({
               id: req.id,
               result: {
                 returnValue: result,
@@ -137,7 +137,7 @@ try {
             }
           }
         } else {
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             error: 'Method not found or instance invalid',
           }));
@@ -146,7 +146,7 @@ try {
       else if (req.type == 'dynamicProperty') {
         // 动态对象调用请求
         if (!req.data.instanceId) {
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             error: 'InstanceId not found'
           }))
@@ -175,7 +175,7 @@ try {
         log.info("dynamic property result hooked", req.action, result);
 
         if (req.id) {
-          ws.send(JSON.stringify({
+          global.send(JSON.stringify({
             id: req.id,
             result: {
               returnValue: result,
@@ -184,7 +184,7 @@ try {
         }
       }
       else {
-        ws.send(JSON.stringify({
+        global.send(JSON.stringify({
           id: req.id,
           error: 'Request type not recognized',
         }));
@@ -193,7 +193,7 @@ try {
     catch (err: any) {
       log.error('Error:', err)
       if (req.id) {
-        ws.send(JSON.stringify({
+        global.send(JSON.stringify({
           id: req.id,
           error: err.message,
         }))

@@ -32,8 +32,7 @@ void ClientSocket::Init(Napi::Env env) {
     auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
 
     tcp::resolver resolver(io_context);
-    auto endpoints =
-        resolver.resolve(serverAddress, std::to_string(serverPort));
+    auto endpoints = resolver.resolve("127.0.0.1", std::to_string(3001));
 
     socket = std::make_unique<tcp::socket>(io_context);
     log.Call(env.Global(), {Napi::String::New(env, "Connecting to server...")});

@@ -5,8 +5,11 @@ set(SERVER_DIR_LIST
     server_action.cc
     server_action.hh
     server_socket.cc
+    server_memory.cc
     ../common/convert.cc
     ../common/logger.cc
+    ../memory/manager.cc
+    ../memory/skyline_memory.cc
 )
 
 add_library(${SERVER_NAME}

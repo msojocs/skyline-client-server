@@ -11,7 +11,7 @@
 #include "client_action.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
-#include "client_socket.hh"
+#include "client_memory.hh"
 
 using Logger::logger;
 
@@ -28,13 +28,14 @@ namespace ClientAction {
     static int64_t requestId = 1;
     static std::shared_ptr<SkylineClient::Client> client;
 
+
     void processMessage(const std::string &message, int64_t messageId = 0) {
         logger->debug("Received message length: {}", message.size());
         if (message.empty()) {
             logger->error("Received message is empty!");
             return;
         }
-
+        
         if (messageId > 0 && (messageId & 1LL) == 1LL) {
             std::shared_ptr<std::promise<std::string>> promise;
             {
@@ -152,7 +153,7 @@ namespace ClientAction {
 
     void initSocket(Napi::Env &env) {
         try {
-            client = std::make_shared<SkylineClient::ClientSocket>();
+            client = std::make_shared<SkylineClient::ClientMemory>();
             client->Init(env);
 
             // Start a thread for reading messages

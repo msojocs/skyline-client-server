@@ -1,5 +1,3 @@
-#include "server_action.hh"
-#include "server_socket.hh"
 #include <boost/asio.hpp>
 #include <condition_variable>
 #include <cstdint>
@@ -11,6 +9,8 @@
 #include "../common/convert.hh"
 #include "server.hh"
 #include <nlohmann/json.hpp>
+#include "server_action.hh"
+#include "server_memory.hh"
 
 using Logger::logger;
 
@@ -105,7 +105,7 @@ namespace ServerAction {
 
     int startInner(const Napi::CallbackInfo &info) {
         try {
-            server = std::make_shared<SkylineServer::ServerSocket>();
+            server = std::make_shared<SkylineServer::ServerMemory>();
             server->Init(info);
 
             std::thread([&]() {

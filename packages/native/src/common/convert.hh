@@ -12,7 +12,7 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value);
 Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data);
 void RegisteInstanceType(Napi::Env &env);
 // find
-CallbackData * find_callback(const std::string &callbackId);
+CallbackData * find_callback(int64_t callbackId);
 } // namespace Convert
 
 #endif

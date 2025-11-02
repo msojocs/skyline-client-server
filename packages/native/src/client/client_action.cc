@@ -8,7 +8,6 @@
 #include <future>
 #include "client_action.hh"
 #include "../common/logger.hh"
-#include "../common/snowflake.hh"
 #include "../common/convert.hh"
 #include "client_socket.hh"
 
@@ -51,7 +50,7 @@ namespace ClientAction {
 
             std::string type = json["type"].get<std::string>();
             if (type == "emitCallback") {
-                std::string callbackId = json["callbackId"].get<std::string>();
+                auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
                     logger->info("callbackId found: {}", callbackId);
@@ -59,7 +58,7 @@ namespace ClientAction {
                     if (block.is_boolean() && block.get<bool>() == false) {
                         ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
                             auto args = json["data"]["args"];
-                            std::string callbackId = json["callbackId"].get<std::string>();
+                            auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
                             std::vector<Napi::Value> argsVec;
                             
@@ -85,7 +84,7 @@ namespace ClientAction {
                     } else {
                         ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
                             auto args = json["data"]["args"];
-                            std::string callbackId = json["callbackId"].get<std::string>();
+                            auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
                             std::vector<Napi::Value> argsVec;
                             
@@ -173,13 +172,13 @@ namespace ClientAction {
                 auto json = callbackQueue.front();
                 callbackQueue.pop();
                 logger->info("start to handle callback.");
-                std::string callbackId = json["callbackId"].get<std::string>();
+                auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
                     logger->info("callbackId found: {}", callbackId);
                     auto env = ptr->funcRef->Env();
                     auto args = json["data"]["args"];
-                    std::string callbackId = json["callbackId"].get<std::string>();
+                    auto callbackId = json["callbackId"].get<int64_t>();
                     Napi::HandleScope scope(env);
                     std::vector<Napi::Value> argsVec;
                     

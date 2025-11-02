@@ -15,25 +15,22 @@
 #include "../client/skyline_global/shadow_node/hero.hh"
 #include "../client/skyline_global/shadow_node/input.hh"
 #include "../client/client_action.hh"
-#include "../common/snowflake.hh"
 #include "napi.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
+#include <unordered_map>
 
 namespace Convert {
+static int64_t callbackId = 1;
+static std::unordered_map<int64_t, CallbackData> callback;
+static std::unordered_map<std::string, std::shared_ptr<Napi::ObjectReference>> instanceCache;
 
-static std::map<std::string, CallbackData> callback;
-static std::map<std::string, std::shared_ptr<Napi::ObjectReference>> instanceCache;
-using snowflake_t = snowflake<1534832906275L>;
-static snowflake_t callbackUuid;
-static snowflake_t sharedMemoryUuid;
-
-static std::map<std::string, Napi::FunctionReference *> clazzMap;
+static std::unordered_map<std::string, Napi::FunctionReference *> clazzMap;
 
 #ifdef _SKYLINE_CLIENT_
 
-CallbackData * find_callback(const std::string &callbackId)
+CallbackData * find_callback(int64_t callbackId)
 {
   auto it = callback.find(callbackId);
   if (it != callback.end()) {
@@ -42,8 +39,6 @@ CallbackData * find_callback(const std::string &callbackId)
   return nullptr;
 }
 void RegisteInstanceType(Napi::Env &env) {
-  callbackUuid.init(2, 1);
-  sharedMemoryUuid.init(4, 1);
   // 注册实例类型和对应的构造函数
   clazzMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
   clazzMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
@@ -96,16 +91,19 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
     Napi::Function func = value.As<Napi::Function>();
     nlohmann::json jsonObj;
     // 生成callbackId，把Function和callbackId绑定在一起
-    std::string callbackId = std::to_string(callbackUuid.nextid());
+    if (callbackId >= INT64_MAX) {
+      callbackId = 1;
+    }
+    auto cId = callbackId++;
     bool isSync = func.Get(Napi::String::New(env, "__syncCallback")).IsBoolean();
     if (isSync) {
       isSync = func.Get(Napi::String::New(env, "__syncCallback")).As<Napi::Boolean>().Value();
     }
     isSync = true;
-    jsonObj["callbackId"] = callbackId;
+    jsonObj["callbackId"] = cId;
     jsonObj["syncCallback"] = isSync;
 
-    callback[callbackId] = {
+    callback[cId] = {
         std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),
         Napi::ThreadSafeFunction::New(env, func, "Callback", 0, 1)};
     if (func.Get("__worklet").IsBoolean()) {

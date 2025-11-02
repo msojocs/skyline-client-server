@@ -161,10 +161,11 @@ namespace ClientAction {
                 logger->error("insert failed: {}", id);
                 throw std::runtime_error("id insert to request map failed: " + std::to_string(id));
             }
-            logger->info("is exists: {}", socketRequest.find(id) != socketRequest.end());
         }
 
+        logger->info("Sending message to server: {}", id);
         client->sendMessage(message);
+        logger->info("Message sent, waiting for response: {}", id);
 
         auto start = std::chrono::steady_clock::now();
         while (true) {
@@ -218,7 +219,7 @@ namespace ClientAction {
 
         std::string result = futureObj.get();
         blocked = false;
-        logger->info("result: {}", result);
+        logger->info("Result: {}", result);
 
         if (result.empty()) {
             throw std::runtime_error("Server response is empty");

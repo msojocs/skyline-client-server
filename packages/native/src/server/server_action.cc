@@ -3,7 +3,7 @@
 #include <boost/asio.hpp>
 #include <cstdint>
 #include <thread>
-#include <mutex>
+#include <queue>
 #include <memory>
 #include "../common/logger.hh"
 #include "../common/convert.hh"

@@ -2,10 +2,6 @@
 #define __SERVER_ACTION_HH__
 
 #include <napi.h>
-#include <memory>
-#include <map>
-#include <future>
-#include <queue>
 #include <nlohmann/json.hpp>
 
 namespace ServerAction {

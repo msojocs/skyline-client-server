@@ -2,11 +2,8 @@
 #include <boost/asio.hpp>
 #include <cstdlib>
 #include <thread>
-#include <mutex>
 #include <memory>
 #include "../common/logger.hh"
-#include "../common/convert.hh"
-
 
 using Logger::logger;
 using boost::asio::ip::tcp;

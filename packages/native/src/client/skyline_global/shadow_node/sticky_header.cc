@@ -1,5 +1,4 @@
 #include "sticky_header.hh"
-#include "../../../common/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *StickyHeaderShadowNode::GetClazz(Napi::Env env) {

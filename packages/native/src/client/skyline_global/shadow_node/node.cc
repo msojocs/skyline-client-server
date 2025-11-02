@@ -1,6 +1,5 @@
 #include "node.hh"
 #include "napi.h"
-#include <algorithm>
 #include <sstream>
 #include <vector>
 

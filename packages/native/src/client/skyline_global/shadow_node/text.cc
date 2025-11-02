@@ -1,6 +1,5 @@
 #include "text.hh"
 #include "napi.h"
-#include "../../../common/convert.hh"
 
 namespace Skyline {
 Napi::FunctionReference *TextShadowNode::GetClazz(Napi::Env env) {

@@ -2,3 +2,4 @@ server.js
 node.*
 nw.*
 *.dll
+cache

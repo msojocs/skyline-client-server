@@ -25,6 +25,12 @@ jobs:
   build-ts-linux:
     uses: ./.github/workflows/build-ts-linux.yaml
     secrets: inherit
+  build-docker:
+    needs:
+      - build-native-windows
+      - build-ts-linux
+    uses: ./.github/workflows/build-docker.yaml
+    secrets: inherit
 
   upload:
     name: Create release and upload artifacts

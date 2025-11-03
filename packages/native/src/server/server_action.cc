@@ -48,7 +48,7 @@ namespace ServerAction {
             }
 
             // Call the JavaScript callback through the thread-safe function
-            auto callback = [message](Napi::Env env, Napi::Function jsCallback) {
+            auto callback = [message = std::move(message)](Napi::Env env, Napi::Function jsCallback) {
 
                 try {
                     jsCallback.Call({Napi::String::New(env, message)});
@@ -154,6 +154,7 @@ namespace ServerAction {
       isBlock = true;
       auto message = info[0].As<Napi::String>().Utf8Value();
       logger->info("sendMessageSync: {}", message);
+      // TODO：减少反序列化开销，id作为额外数据进行传递（比如拼接到message中）
       // 解析json字符串
       nlohmann::json json = nlohmann::json::parse(message);
       if (requestId >= INT64_MAX) {

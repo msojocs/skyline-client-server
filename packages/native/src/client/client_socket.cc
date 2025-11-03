@@ -51,10 +51,8 @@ std::string ClientSocket::receiveMessage() {
         message_length = ntohl(message_length);
 
         // Then read the actual message
-        std::vector<char> buffer(message_length);
-        boost::asio::read(*socket, boost::asio::buffer(buffer.data(), message_length));
-
-        std::string message(buffer.data(), message_length);
+        std::string message(message_length, '\0');
+        boost::asio::read(*socket, boost::asio::buffer(message.data(), message_length));
         return message;
     } else {
         logger->error("Socket is not open");

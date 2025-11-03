@@ -128,15 +128,15 @@ void SkylineShell::setLoadResourceCallback(const Napi::CallbackInfo &info) {
   if (!info[0].IsFunction()) {
     throw Napi::Error::New(env, "参数必须为Function类型");
   }
-  
-  auto func = info[0].As<Napi::Function>();
-  //* 标记该回调使用同步方式调用
-  func.Set(Napi::String::New(env, "__syncCallback"), Napi::Boolean::New(env, true));
-
   // 发送消息到Socket
   sendToServerSync(info, __func__);
 }
 void SkylineShell::setLoadResourceAsyncCallback(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  auto func = info[0].As<Napi::Function>();
+  //* 标记该回调使用异步方式调用
+  func.Set(Napi::String::New(env, "__asyncCallback"), Napi::Boolean::New(env, true));
+
   sendToServerSync(info, __func__);
 }
 void SkylineShell::setHttpRequestCallback(const Napi::CallbackInfo &info) {

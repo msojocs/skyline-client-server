@@ -88,16 +88,15 @@ const hookArgumentItem = (action: string, arg: any) => {
         else if (arg.hasOwnProperty('callbackId')) {
             // 回调替换
             const callbackId = arg.callbackId
-            const syncCallback = arg.syncCallback
-            const g = global as any
+            const asyncCallback = arg.asyncCallback
             const temp: any = (...args1: any[]) => {
                 // 替换参数中的具体对象
                 hookCallbackArgument(args1)
                 log.info('callback emit', action, args1)
-                if (!syncCallback) {
+                if (asyncCallback) {
                     log.info('callback emit async', action, args1)
-                    // 异步回调，多数
-                    g.send(JSON.stringify({
+                    // 异步回调
+                    global.send(JSON.stringify({
                         type: 'emitCallback',
                         callbackId,
                         data: {
@@ -108,8 +107,8 @@ const hookArgumentItem = (action: string, arg: any) => {
                     return;
                 }
                 log.info('callback emit sync', action, args1)
-                // 同步回调，少数
-                const result = g.sendMessageSync(JSON.stringify({
+                // 同步回调
+                const result = global.sendMessageSync(JSON.stringify({
                     type: 'emitCallback',
                     callbackId,
                     data: {

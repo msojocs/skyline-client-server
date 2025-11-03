@@ -95,13 +95,12 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
       callbackId = 1;
     }
     auto cId = callbackId++;
-    bool isSync = func.Get(Napi::String::New(env, "__syncCallback")).IsBoolean();
-    if (isSync) {
-      isSync = func.Get(Napi::String::New(env, "__syncCallback")).As<Napi::Boolean>().Value();
+    bool isAsync = func.Get(Napi::String::New(env, "__asyncCallback")).IsBoolean();
+    if (isAsync) {
+      isAsync = func.Get(Napi::String::New(env, "__asyncCallback")).As<Napi::Boolean>().Value();
     }
-    isSync = true;
     jsonObj["callbackId"] = cId;
-    jsonObj["syncCallback"] = isSync;
+    jsonObj["asyncCallback"] = isAsync;
 
     callback[cId] = {
         std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),

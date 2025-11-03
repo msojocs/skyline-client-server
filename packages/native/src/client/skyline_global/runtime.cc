@@ -58,9 +58,6 @@ void registerNavigateBackInterceptCallback(const Napi::CallbackInfo &info) {
 }
 static std::unordered_map<int64_t, std::shared_ptr<Napi::Reference<Napi::Value>>> jsValueCache;
 Napi::Value registerJsValue(const Napi::CallbackInfo &info) {
-  if (info[0].IsFunction()) {
-    info[0].As<Napi::Function>().Set("__syncCallback", Napi::Boolean::New(info.Env(), true));
-  }
   auto jsId = sendToServerSync(info, __func__);
   jsValueCache.emplace(jsId.As<Napi::Number>().Int64Value(), std::make_shared<Napi::Reference<Napi::Value>>(Napi::Persistent(info[0])));
   return jsId;

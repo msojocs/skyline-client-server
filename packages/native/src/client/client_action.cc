@@ -21,7 +21,7 @@ namespace ClientAction {
     static int64_t requestId = 1;
     static std::shared_ptr<SkylineClient::Client> client;
 
-    void processMessage(std::string &message) {
+    void processMessage(const std::string &message) {
         logger->info("Received message: {}", message);
         if (message.empty()) {
             logger->error("Received message is empty!");
@@ -48,12 +48,11 @@ namespace ClientAction {
         } else if(!json["type"].empty()) {
             if (blocked) {
                 logger->info("blocked, push to queue...");
-                callbackQueue.push(json);
+                callbackQueue.push(std::move(json));
                 return;
             }
 
-            std::string type = json["type"].get<std::string>();
-            if (type == "emitCallback") {
+            if (json["type"].get<std::string>() == "emitCallback") {
                 auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
@@ -65,6 +64,7 @@ namespace ClientAction {
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
                             std::vector<Napi::Value> argsVec;
+                            argsVec.reserve(args.size());
                             
                             for (auto& arg : args) {
                                 argsVec.push_back(Convert::convertJson2Value(env, arg));
@@ -102,13 +102,12 @@ namespace ClientAction {
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
                             if (json.contains("id")) {
                                 logger->info("reply callback...");
-                                nlohmann::json callbackResult = {
+                                // Add newline as message delimiter
+                                client->sendMessage(nlohmann::json{
                                     {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
                                     {"result", resultJson},
-                                };
-                                // Add newline as message delimiter
-                                client->sendMessage(callbackResult.dump());
+                                }.dump());
                             }
                         });
                     }
@@ -196,13 +195,12 @@ namespace ClientAction {
                     auto resultJson = Convert::convertValue2Json(env, resultValue);
                     if (json.contains("id")) {
                         logger->info("reply callback...");
-                        nlohmann::json callbackResult = {
+                        // Add newline as message delimiter
+                        client->sendMessage(nlohmann::json{
                             {"id", json["id"].get<int64_t>()},
                             {"type", "callbackReply"},
                             {"result", resultJson},
-                        };
-                        // Add newline as message delimiter
-                        client->sendMessage(callbackResult.dump());
+                        }.dump());
                     }
                 } else {
                     logger->error("callbackId not found: {}", callbackId);

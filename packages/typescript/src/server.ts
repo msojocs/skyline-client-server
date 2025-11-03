@@ -29,7 +29,7 @@ try {
         instanceId?: number
         clazz?: string
         callbackId?: string
-        syncCallback?: boolean
+        asyncCallback?: boolean
         params?: any[]
         propertyAction?: 'set' | 'get'
       }

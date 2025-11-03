@@ -16,7 +16,7 @@ void ClientSocket::Init(Napi::Env env) {
     auto endpoints =
         resolver.resolve(serverAddress, std::to_string(serverPort));
 
-    socket = std::make_shared<tcp::socket>(io_context);
+    socket = std::make_unique<tcp::socket>(io_context);
     boost::asio::connect(*socket, endpoints);
     
     // Enable TCP_NODELAY to reduce latency
@@ -32,7 +32,7 @@ void ClientSocket::Init(Napi::Env env) {
         }
     }).detach();
 }
-void ClientSocket::sendMessage(const std::string &message) {
+void ClientSocket::sendMessage(std::string&& message) {
     if (socket && socket->is_open()) {
         logger->debug("Sending message: {}", message);
         uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));

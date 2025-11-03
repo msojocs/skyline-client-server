@@ -219,9 +219,7 @@ namespace ServerAction {
         if (!info[0].IsString()) {
             throw Napi::TypeError::New(info.Env(), "First argument must be a string");
         }
-        auto message = info[0].As<Napi::String>().Utf8Value();
-        logger->info("sendMessageSingle: {}", message);
-        server->sendMessage(message);
+        server->sendMessage(std::move(info[0].As<Napi::String>().Utf8Value()));
         return info.Env().Undefined();
     }
 }

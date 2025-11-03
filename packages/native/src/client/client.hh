@@ -9,7 +9,7 @@ public:
     virtual void Init(Napi::Env env) = 0;
     
     // Send a message to the shared memory
-    virtual void sendMessage(const std::string &message) = 0;
+    virtual void sendMessage(std::string &&message) = 0;
 
     // Receive a message from the shared memory
     virtual std::string receiveMessage() = 0;

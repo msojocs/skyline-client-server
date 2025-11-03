@@ -14,8 +14,8 @@ void ServerSocket::Init(const Napi::CallbackInfo &info) {
         auto env = info.Env();
         auto port = info[1].As<Napi::Number>().Int32Value();
         
-        acceptor = std::make_shared<tcp::acceptor>(io_context, tcp::endpoint(tcp::v4(), port));
-        socket = std::make_shared<tcp::socket>(io_context);
+        acceptor = std::make_unique<tcp::acceptor>(io_context, tcp::endpoint(tcp::v4(), port));
+        socket = std::make_unique<tcp::socket>(io_context);
         logger->info("Socket server listening on *:{}", port);
 
         // Run the IO context in a separate thread
@@ -40,7 +40,7 @@ ServerSocket::~ServerSocket() {
         logger->error("Error stopping socket server: {}", e.what());
     }
 }
-void ServerSocket::sendMessage(const std::string &message) {
+void ServerSocket::sendMessage(std::string&& message) {
     try {
         if (socket && socket->is_open()) {
             uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));

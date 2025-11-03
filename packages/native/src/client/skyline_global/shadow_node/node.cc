@@ -1,6 +1,5 @@
 #include "node.hh"
 #include "napi.h"
-#include <sstream>
 #include <vector>
 
 namespace Skyline {
@@ -32,8 +31,8 @@ Napi::Value ShadowNode::addClass(const Napi::CallbackInfo &info) {
   if (!info[0].IsString()) {
     throw Napi::TypeError::New(info.Env(), "addClass: First argument must be a string");
   }
-  std::string className = info[0].As<Napi::String>().Utf8Value();
-  classList.push_back(className);
+  // className
+  classList.push_back(std::move(info[0].As<Napi::String>().Utf8Value()));
   return sendToServerSync(info, __func__);
 }
 Napi::Value ShadowNode::setStyle(const Napi::CallbackInfo &info) {
@@ -111,18 +110,18 @@ Napi::Value ShadowNode::matches(const Napi::CallbackInfo &info) {
   if (styleScope != this->styleScope) {
     return Napi::Boolean::New(info.Env(), false);
   }
-  std::string className = info[1].As<Napi::String>().Utf8Value();
-  std::istringstream f(className);
-  std::string s;
-  std::vector<std::string> tempList;
-  while (getline(f, s, ' ')) {
-    tempList.push_back(s);
-  }
-  std::string last = tempList[tempList.size() - 1];
-  if (last[0] == '#') {
+  const std::string& className = info[1].As<Napi::String>().Utf8Value();
+  
+  // 快速路径：直接检查最后一个选择器
+  auto lastSpace = className.find_last_of(' ');
+  std::string_view lastSelector = (lastSpace == std::string::npos) 
+      ? std::string_view(className) 
+      : std::string_view(className).substr(lastSpace + 1);
+  
+  if (!lastSelector.empty() && lastSelector[0] == '#') {
     // element id
-    auto id = last.substr(1, last.length() - 1);
-    if (id == this->id) {
+    std::string_view idView = lastSelector.substr(1);
+    if (idView == this->id) {
       return Napi::Boolean::New(info.Env(), true);
     }
   }

@@ -103,8 +103,9 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
     jsonObj["asyncCallback"] = isAsync;
 
     callback[cId] = {
-        std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),
-        Napi::ThreadSafeFunction::New(env, func, "Callback", 0, 1)};
+      std::make_shared<Napi::FunctionReference>(Napi::Persistent(func)),
+      Napi::ThreadSafeFunction::New(env, func, "Callback", 0, 1)
+    };
     if (func.Get("__worklet").IsBoolean()) {
       jsonObj["asString"] = func.Get("asString").As<Napi::String>().Utf8Value();
       jsonObj["__workletHash"] = func.Get("__workletHash").As<Napi::Number>().Int64Value();
@@ -162,7 +163,7 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
 
 #ifdef _SKYLINE_CLIENT_
     if (data.contains("instanceId") && data.contains("instanceType") &&
-        data["instanceType"].get<std::string>() == "function") {
+        data["instanceType"].get_ref<const std::string&>() == "function") {
       // 返回值是个函数，如makeShareable
       return Napi::Function::New(env, [data](const Napi::CallbackInfo &info) {
         auto env = info.Env();
@@ -179,7 +180,8 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
 #endif
 
     if (data.contains("instanceId") && data.contains("instanceType")) {
-      auto it = clazzMap.find(data["instanceType"].get<std::string>());
+      const std::string& instanceType = data["instanceType"].get_ref<const std::string&>();
+      auto it = clazzMap.find(instanceType);
       if (it != clazzMap.end()) {
         try {
           Napi::FunctionReference *func = it->second;

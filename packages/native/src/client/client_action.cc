@@ -37,13 +37,18 @@ namespace ClientAction {
             auto id = json["id"].get<int64_t>();
             logger->info("Received message id: {}", id);
 
-            std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
-            
-            if (auto target = socketRequest.find(id);target != socketRequest.end()) {
-                target->second->set_value(message);
-                socketRequest.erase(target);
-            } else {
-                logger->error("id not found: {}", id);
+            std::shared_ptr<std::promise<std::string>> promise;
+            {
+                std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
+                if (auto target = socketRequest.find(id); target != socketRequest.end()) {
+                    promise = std::move(target->second);
+                    socketRequest.erase(target);
+                } else {
+                    logger->error("id not found: {}", id);
+                }
+            }
+            if (promise) {
+                promise->set_value(message);
             }
         } else if(!json["type"].empty()) {
             if (blocked) {
@@ -59,7 +64,7 @@ namespace ClientAction {
                     logger->info("callbackId found: {}", callbackId);
                     auto block = json["data"]["block"];
                     if (block.is_boolean() && block.get<bool>() == false) {
-                        ptr->tsfn.NonBlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                        ptr->tsfn.NonBlockingCall([json = std::move(json)](Napi::Env env, Napi::Function jsCallback) {
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
@@ -76,21 +81,21 @@ namespace ClientAction {
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
                             if (json.contains("id")) {
                                 logger->info("reply callback...");
-                                nlohmann::json callbackResult = {
+                                // Add newline as message delimiter
+                                client->sendMessage(nlohmann::json{
                                     {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
-                                    {"result", resultJson},
-                                };
-                                // Add newline as message delimiter
-                                client->sendMessage(callbackResult.dump());
+                                    {"result", std::move(resultJson)},
+                                }.dump());
                             }
                         });
                     } else {
-                        ptr->tsfn.BlockingCall([json](Napi::Env env, Napi::Function jsCallback) {
+                        ptr->tsfn.BlockingCall([json = std::move(json)](Napi::Env env, Napi::Function jsCallback) {
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
                             std::vector<Napi::Value> argsVec;
+                            argsVec.reserve(args.size());
                             
                             for (auto& arg : args) {
                                 argsVec.push_back(Convert::convertJson2Value(env, arg));
@@ -106,7 +111,7 @@ namespace ClientAction {
                                 client->sendMessage(nlohmann::json{
                                     {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
-                                    {"result", resultJson},
+                                    {"result", std::move(resultJson)},
                                 }.dump());
                             }
                         });
@@ -150,8 +155,6 @@ namespace ClientAction {
         logger->info("Send to server {}", id);
 
         blocked = true;
-        // Add newline as message delimiter
-        std::string message = data.dump();
 
         auto promiseObj = std::make_shared<std::promise<std::string>>();
         std::future<std::string> futureObj = promiseObj->get_future();
@@ -167,7 +170,7 @@ namespace ClientAction {
         }
 
         logger->info("Sending message to server: {}", id);
-        client->sendMessage(message);
+        client->sendMessage(std::move(data.dump()));
         logger->info("Message sent, waiting for response: {}", id);
 
         auto start = std::chrono::steady_clock::now();
@@ -185,6 +188,7 @@ namespace ClientAction {
                     auto callbackId = json["callbackId"].get<int64_t>();
                     Napi::HandleScope scope(env);
                     std::vector<Napi::Value> argsVec;
+                    argsVec.reserve(args.size());
                     
                     for (auto& arg : args) {
                         argsVec.push_back(Convert::convertJson2Value(env, arg));
@@ -199,7 +203,7 @@ namespace ClientAction {
                         client->sendMessage(nlohmann::json{
                             {"id", json["id"].get<int64_t>()},
                             {"type", "callbackReply"},
-                            {"result", resultJson},
+                            {"result", std::move(resultJson)},
                         }.dump());
                     }
                 } else {

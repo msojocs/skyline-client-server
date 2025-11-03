@@ -13,18 +13,17 @@
 
 namespace SkylineClient {
     
-
 using boost::asio::ip::tcp;
 class ClientSocket : public Client {
     public:
     void Init(Napi::Env env);
     ~ClientSocket();
-    void sendMessage(const std::string &message);
+    void sendMessage(std::string&& message);
     std::string receiveMessage();
 
     private:
     boost::asio::io_context io_context;
-    std::shared_ptr<tcp::socket> socket;
+    std::unique_ptr<tcp::socket> socket;
 };
 }
 

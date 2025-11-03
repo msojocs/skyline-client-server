@@ -14,12 +14,12 @@ namespace SkylineServer {
     public:
         void Init(const Napi::CallbackInfo &info);
         ~ServerSocket();
-        void sendMessage(const std::string &message);
+        void sendMessage(std::string&& message);
         std::string receiveMessage();
     private:
         boost::asio::io_context io_context;
-        std::shared_ptr<tcp::acceptor> acceptor;
-        std::shared_ptr<tcp::socket> socket;
+        std::unique_ptr<tcp::acceptor> acceptor;
+        std::unique_ptr<tcp::socket> socket;
     };
 }
 #endif // __SERVER_SOCKET_HH__

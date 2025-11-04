@@ -48,7 +48,7 @@ const hookCallbackArgument = (arg: any) => {
         }
         else {
             // 其他对象，直接转换为普通对象
-            const g = global as any
+            const g = global
             if (!g.clazzSet)
                 g.clazzSet = new Set()
             if (!g.clazzSet.has(name)) {

@@ -10,6 +10,7 @@ namespace ServerAction {
     void stop(const Napi::CallbackInfo &info);
     Napi::Value sendMessageSync(const Napi::CallbackInfo &info);
     Napi::Value sendMessageSingle(const Napi::CallbackInfo &info);
+    Napi::Value blockUntilNextMessage(const Napi::CallbackInfo &info);
 }
 
 #endif // __SOCKET_SERVER_HH__

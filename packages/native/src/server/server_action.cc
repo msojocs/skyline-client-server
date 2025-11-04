@@ -1,6 +1,7 @@
 #include "server_action.hh"
 #include "server_socket.hh"
 #include <boost/asio.hpp>
+#include <condition_variable>
 #include <cstdint>
 #include <thread>
 #include <queue>
@@ -20,6 +21,8 @@ namespace ServerAction {
     static bool isBlock = false;
     static int64_t requestId = 1;
     static std::shared_ptr<SkylineServer::Server> server;
+    static std::condition_variable cv_blockUntilNextMessage;
+    static std::mutex cv_blockUntilNextMessage_mtx;
 
     void processMessage(const std::string &message) {
         try {
@@ -81,6 +84,7 @@ namespace ServerAction {
                             continue;
                         }
                         processMessage(msg);
+                        cv_blockUntilNextMessage.notify_all();
                     } catch (const std::exception &e) {
                         logger->error("Error in message processing thread: {}", e.what());
                         break;
@@ -220,6 +224,14 @@ namespace ServerAction {
             throw Napi::TypeError::New(info.Env(), "First argument must be a string");
         }
         server->sendMessage(std::move(info[0].As<Napi::String>().Utf8Value()));
+        return info.Env().Undefined();
+    }
+    /**
+     * 阻塞至收到客户端消息
+     */
+    Napi::Value blockUntilNextMessage(const Napi::CallbackInfo &info) {
+        std::unique_lock<std::mutex> lock(cv_blockUntilNextMessage_mtx);
+        cv_blockUntilNextMessage.wait(lock);
         return info.Env().Undefined();
     }
 }

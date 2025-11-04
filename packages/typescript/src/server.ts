@@ -14,6 +14,7 @@ try {
   const server = require('skyline-server/skylineServer.node')
   global.sendMessageSync = server.sendMessageSync
   global.send = server.sendMessageSingle
+  global.blockUntilNextMessage = server.blockUntilNextMessage
   const g = global as any
   g.window = g
   window = g
@@ -134,6 +135,23 @@ try {
             }));
             if (req.action === 'matches' && result === true) {
               console.info('matches:', instance, params, result)
+            } else if (req.action === 'appendCompiledStyleSheets') {
+              /**
+               * 阻塞当前线程，直到有新消息到来
+               * appendCompiledStyleSheets执行后，必须立即执行appendStyleSheets，否则崩溃。
+               * 
+               * 崩溃情况：
+               * 1. appendCompiledStyleSheets执行后，还未执行appendStyleSheets
+               * 2. 渲染线程开始新一轮渲染，此时样式表存在异常，由于官方程序未做异常处理，程序崩溃
+               * 
+               * 解决方法：
+               * 1. appendCompiledStyleSheets执行后，立即阻塞当前线程
+               * 2. 由于线程阻塞，渲染线程无法开始新一轮渲染
+               * 3. 收到appendStyleSheets，解除阻塞
+               * 4. 执行appendStyleSheets，此时优先级高于渲染线程
+               * 5. 渲染线程继续渲染
+               */
+              global.blockUntilNextMessage()
             }
           }
         } else {

@@ -1,7 +1,7 @@
 import { useCustomHandle } from "./custom-handle"
 
 const clazzMap = new Map<string, any>();
-(globalThis as any).clazzMap = clazzMap
+globalThis.clazzMap = clazzMap
 export const useObjectManage = () => ({
     getClazz: (clazzName: string) => {
         return clazzMap.get(clazzName)
@@ -38,7 +38,7 @@ export const registerSkylineGlobalClazz = (g: any) => {
 }
 
 const instanceMap = new Map<number, any>();
-(globalThis as any).instanceMap = instanceMap;
+globalThis.instanceMap = instanceMap;
 let instanceId = 1;
 export const useInstanceManage = () => ({
     getInstance: (instanceId: number) => {

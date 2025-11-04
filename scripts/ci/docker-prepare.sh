@@ -9,7 +9,7 @@ cp server.js "$root_dir/packages/nodejs"
 # skyline server native
 cd "$root_dir/native-win-artifact"
 mkdir -p "$root_dir/packages/nodejs/node_modules/skyline-server"
-cp *.node "$root_dir/packages/nodejs/node_modules/skyline-server/skylineServer.node"
+cp *.node "$root_dir/packages/nodejs/node_modules/skyline-server/server.node"
 cp *.dll "$root_dir/packages/nodejs"
 
 cd "$root_dir/packages/nodejs"

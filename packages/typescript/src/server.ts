@@ -11,7 +11,7 @@ try {
     // process.exit(1)
   })
   require('skyline-addon/build/skyline.node')
-  const server = require('skyline-server/skylineServer.node')
+  const server = require('skyline-server/server.node')
   global.sendMessageSync = server.sendMessageSync
   global.send = server.sendMessageSingle
   global.blockUntilNextMessage = server.blockUntilNextMessage

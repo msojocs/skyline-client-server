@@ -16,7 +16,7 @@ if [ ! -f "$server_dir/node.dll" ]; then
     cp "$win_dir/node.dll" "$server_dir/node.dll"
 fi
 
-cp "/mnt/d/github/skyline-client-server/packages/nodejs/node_modules/skyline-server/skylineServer.node" "$server_dir/node_modules/skyline-server/skylineServer.node"
+cp "/mnt/d/github/skyline-client-server/packages/nodejs/node_modules/skyline-server/server.node" "$server_dir/node_modules/skyline-server/server.node"
 
 cd "$server_dir"
 wine node.exe server.js

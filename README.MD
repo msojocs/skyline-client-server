@@ -27,5 +27,5 @@ docker run -it \
 4. 复制`ucrtbased.dll` `vcruntime140d.dll`，放到`packages/nodejs`
 3. 下载[skyline-node](https://github.com/msojocs/skyline-node/releases/tag/v16.4.0-1)放到`packages/nodejs`
 4. 复制windows的`skyline-addon`，放到`packages/nodejs/node_modules`
-5. 复制`skylineServer.node`，放到`packages/nodejs/node_modules/skyline-server`
+5. 复制`server.node`，放到`packages/nodejs/node_modules/skyline-server`
 6. 复制`sharedMemory.node`，放到`packages/nodejs/node_modules/sharedMemory`

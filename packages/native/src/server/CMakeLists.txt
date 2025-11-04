@@ -1,5 +1,5 @@
 
-set(SERVER_NAME skylineServer)
+set(SERVER_NAME server)
 set(SERVER_DIR_LIST
     main.cc
     server_action.cc

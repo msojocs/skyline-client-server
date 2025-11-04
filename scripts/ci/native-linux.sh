@@ -10,4 +10,4 @@ cmake --build "$root_dir/build" --config Release --target skyline --
 
 mkdir -p "$root_dir/tmp/build"
 
-mv "$root_dir/packages/native/build/skyline.node" "$root_dir/tmp/build/skyline-skylineClient-linux-$arch-$tag.node"
+mv "$root_dir/packages/native/build/skyline.node" "$root_dir/tmp/build/skyline-client-linux-$arch-$tag.node"

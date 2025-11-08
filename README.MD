@@ -7,7 +7,7 @@
 ### 自动
 ```shell
 docker run -it \
-  --rm \
+  --restart=always \
   --hostname="$(hostname)" \
   -e USER_NAME="docker" \
   -e USER_UID="$(id -u)" \
@@ -18,6 +18,7 @@ docker run -it \
   --volume="/tmp/.X11-unix:/tmp/.X11-unix:ro" \
   --volume="/dev/shm:/dev/shm" \
   -p 3001:3001 \
+  --name skyline_server \
   ghcr.io/msojocs/skyline-client-server:master
 ```
 

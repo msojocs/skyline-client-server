@@ -6,3 +6,4 @@ cache
 *.lib
 log
 *-artifact
+tmp

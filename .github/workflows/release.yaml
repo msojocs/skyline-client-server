@@ -77,6 +77,7 @@ jobs:
           chmod +x pyuploadtool-x86_64.AppImage
           ./pyuploadtool-x86_64.AppImage \
           tmp/upload/*.node \
+          tmp/upload/*.dll \
           tmp/upload/*.tar.gz
 
       - name: Release
@@ -89,4 +90,5 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: |
             tmp/upload/*.node
+            tmp/upload/*.dll
             tmp/upload/*.tar.gz

@@ -9,9 +9,6 @@
 docker run -it \
   --restart=always \
   --hostname="$(hostname)" \
-  -e USER_NAME="docker" \
-  -e USER_UID="$(id -u)" \
-  -e USER_GID="$(id -g)" \
   --env="DISPLAY" \
   --platform="linux/amd64" \
   --volume="${XAUTHORITY:-${HOME}/.Xauthority}:/root/.Xauthority:ro" \

@@ -92,9 +92,9 @@ const hookArgumentItem = (action: string, arg: any) => {
             const temp: any = (...args1: any[]) => {
                 // 替换参数中的具体对象
                 hookCallbackArgument(args1)
-                log.info('callback emit', action, args1)
+                log.debug('callback emit', action, args1)
                 if (asyncCallback) {
-                    log.info('callback emit async', action, args1)
+                    log.debug('callback emit async', action, args1)
                     // 异步回调
                     global.send(JSON.stringify({
                         type: 'emitCallback',
@@ -106,7 +106,7 @@ const hookArgumentItem = (action: string, arg: any) => {
                     }))
                     return;
                 }
-                log.info('callback emit sync', action, args1)
+                log.debug('callback emit sync', action, args1)
                 // 同步回调
                 const result = global.sendMessageSync(JSON.stringify({
                     type: 'emitCallback',
@@ -116,7 +116,7 @@ const hookArgumentItem = (action: string, arg: any) => {
                         block: true,
                     },
                 }))
-                log.info('callback emit sync result:', result)
+                log.debug('callback emit sync result:', result)
                 return hookResult(`${action}_syncResult`, result)
             }
             // worklet 处理
@@ -150,7 +150,7 @@ export const hookArgument = (action: string, args: any[]) => {
     else if (action === 'notifyHttpRequestComplete') {
         // http资源替换buffer
         const sharedMemory = require('sharedMemory/sharedMemory.node')
-        log.info('notifyHttpRequestComplete', args[4])
+        log.debug('notifyHttpRequestComplete', args[4])
         const buf = sharedMemory.getMemory(args[4]) as ArrayBuffer
         args[4] = new Uint8Array(buf)
         // if (args[4] != 'resource_0') {
@@ -167,7 +167,7 @@ export const hookArgument = (action: string, args: any[]) => {
 }
 let functionDataId = 1;
 export const hookResult = (action: string, result: any) => {
-    log.info('result before:', result)
+    log.debug('result before:', result)
     if (action === 'setLoadResourceCallback_syncResult') {
         return new Uint8Array(result);
     }

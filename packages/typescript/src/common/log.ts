@@ -51,13 +51,7 @@ interface LoggerConfigType {
  */
 type InterceptorFuncType = (config: LoggerConfigType) => void
 
-const isLogEnabled = false
-
-if (!isLogEnabled) {
-  _console.info('================================日志打印已关闭！=======================================')
-}
-
-const CurrentLogLevel: LogLevel = LogLevel.Trace
+const CurrentLogLevel: LogLevel = LogLevel.Info
 
 /**
  * 日志打印工具，统一管理日志输出&上报
@@ -85,7 +79,6 @@ class Logger {
   }
 
   private _log (level: LogLevel, args: unknown[]) {
-    if (!isLogEnabled) return
     // 优先级小的不显示
     if (level < CurrentLogLevel) return
     this.beforeFuncs.forEach(e => e(this.config))
@@ -151,7 +144,7 @@ class Logger {
    * @param args 任意参数
    */
   public debug (...args: unknown[]) {
-    this._log(LogLevel.Info, args)
+    this._log(LogLevel.Debug, args)
     return this
   }
 

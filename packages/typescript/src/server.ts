@@ -19,7 +19,8 @@ try {
   g.window = g
   window = g
   registerDefaultClazz(g)
-  server.start('127.0.0.1', 3001)
+  const port = 3001
+  server.start('127.0.0.1', port)
   server.setMessageCallback((message: string) => {
     const req = JSON.parse(message) as {
       id: number
@@ -40,7 +41,7 @@ try {
       return
     }
     try {
-      log.info(`Received message => ${message}`);
+      log.debug(`Received message => ${message}`);
       if (req.type === 'constructor') {
         // 构造对象请求
         const { getClazz } = useObjectManage()
@@ -57,7 +58,7 @@ try {
         const { setInstance } = useInstanceManage()
         const params = req.data.params || []
         const instanceId = setInstance(new clazz(...params))
-        log.info('constructor end', req.clazz, instanceId)
+        log.debug('constructor end', req.clazz, instanceId)
         global.send(JSON.stringify({
           id: req.id,
           result: {
@@ -79,10 +80,10 @@ try {
         if (typeof clazz[req.action] === 'function') {
           const params = req.data.params || []
           hookArgument(req.action, params)
-          log.info('static call', req.action, params)
+          log.debug('static call', req.action, params)
           let result = clazz[req.action](...params);
           result = hookResult(`${req.action}_staticResult`, result)
-          log.info("static call result", req.action, result);
+          log.debug("static call result", req.action, result);
           global.send(JSON.stringify({
             id: req.id,
             result: {
@@ -119,12 +120,12 @@ try {
         const instance = getInstance(req.data.instanceId);
         if (instance && typeof instance[req.action] === 'function') {
           const params = req.data.params || []
-          log.info("dynamic call", instance, req.action, params);
+          log.debug("dynamic call", instance, req.action, params);
           hookArgument(req.action, params)
           let result = instance[req.action](...params);
-          log.info("dynamic call result", req.action, result);
+          log.debug("dynamic call result", req.action, result);
           result = hookResult(`${req.action}_dynamicResult`, result)
-          log.info("dynamic call result hooked", req.action, result);
+          log.debug("dynamic call result hooked", req.action, result);
 
           if (req.id) {
             global.send(JSON.stringify({
@@ -175,22 +176,22 @@ try {
         // 动态属性调用请求
         const type = req.data.propertyAction
         const params = req.data.params || []
-        log.info("dynamic property", req.action, params);
+        log.debug("dynamic property", req.action, params);
         hookArgument(req.action, params)
         let result = undefined
         if (type === 'set') {
           // 设置属性
           instance[req.action] = params[0]
-          log.info("dynamic property set", req.action, params[0]);
+          log.debug("dynamic property set", req.action, params[0]);
         }
         else if (type === 'get') {
           // 获取属性
-          log.info("dynamic property get", req.action, instance[req.action]);
+          log.debug("dynamic property get", req.action, instance[req.action]);
           result = instance[req.action];
         }
-        log.info("dynamic property result", req.action, result);
+        log.debug("dynamic property result", req.action, result);
         result = hookResult(`${req.action}_dynamicResult`, result)
-        log.info("dynamic property result hooked", req.action, result);
+        log.debug("dynamic property result hooked", req.action, result);
 
         if (req.id) {
           global.send(JSON.stringify({
@@ -218,7 +219,7 @@ try {
       }
     }
   });
-  log.info('✅ WebSocket Server listening on ws://localhost:3001');
+  log.info(`✅ WebSocket Server listening on ws://localhost:${port}`);
   log.info('end....')
 }
 catch (err) {

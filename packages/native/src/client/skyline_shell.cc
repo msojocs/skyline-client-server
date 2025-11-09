@@ -34,11 +34,14 @@ void SkylineShell::Init(Napi::Env env, Napi::Object exports) {
         // dispatchTouchOverEvent
       InstanceMethod("dispatchTouchOverEvent", &SkylineShell::dispatchTouchOverEvent),
       InstanceMethod("notifyAppLaunch", &SkylineShell::notifyAppLaunch),
-      InstanceMethod("notifyResourceLoad", &SkylineShell::notifyResourceLoad),
-      InstanceMethod("notifySwitchTab", &SkylineShell::notifySwitchTab),
-      InstanceMethod("notifyNavigateTo", &SkylineShell::notifyNavigateTo),
+      InstanceMethod("notifyAutoReLaunch", &SkylineShell::notifyAutoReLaunch),
         // notifyHttpRequestComplete
       InstanceMethod("notifyHttpRequestComplete", &SkylineShell::notifyHttpRequestComplete),
+      InstanceMethod("notifyNavigateBack", &SkylineShell::notifyNavigateBack),
+      InstanceMethod("notifyNavigateTo", &SkylineShell::notifyNavigateTo),
+      InstanceMethod("notifyReLaunch", &SkylineShell::notifyReLaunch),
+      InstanceMethod("notifyResourceLoad", &SkylineShell::notifyResourceLoad),
+      InstanceMethod("notifySwitchTab", &SkylineShell::notifySwitchTab),
       InstanceMethod("onPlatformBrightnessChanged", &SkylineShell::onPlatformBrightnessChanged),
       InstanceMethod("setNotifyBootstrapDoneCallback", &SkylineShell::setNotifyBootstrapDoneCallback),
       InstanceMethod("setNotifyWindowReadyCallback", &SkylineShell::setNotifyWindowReadyCallback),
@@ -310,6 +313,15 @@ Napi::Value SkylineShell::dispatchCharEvent(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);
 }
 Napi::Value SkylineShell::notifySwitchTab(const Napi::CallbackInfo &info) {
+  return sendToServerSync(info, __func__);
+}
+Napi::Value SkylineShell::notifyAutoReLaunch(const Napi::CallbackInfo &info) {
+  return sendToServerSync(info, __func__);
+}
+Napi::Value SkylineShell::notifyNavigateBack(const Napi::CallbackInfo &info) {
+  return sendToServerSync(info, __func__);
+}
+Napi::Value SkylineShell::notifyReLaunch(const Napi::CallbackInfo &info) {
   return sendToServerSync(info, __func__);
 }
 } // namespace SkylineShell

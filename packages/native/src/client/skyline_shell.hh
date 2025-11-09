@@ -56,11 +56,11 @@ setSendLogCallback: ƒ setSendLogCallback()
   void dispatchTouchStartEvent(const Napi::CallbackInfo &info);
   void dispatchWheelEvent(const Napi::CallbackInfo &info);
   void notifyAppLaunch(const Napi::CallbackInfo &info);
-  void notifyAutoReLaunch(const Napi::CallbackInfo &info);
+  Napi::Value notifyAutoReLaunch(const Napi::CallbackInfo &info);
   Napi::Value notifyHttpRequestComplete(const Napi::CallbackInfo &info);
-  void notifyNavigateBack(const Napi::CallbackInfo &info);
+  Napi::Value notifyNavigateBack(const Napi::CallbackInfo &info);
   Napi::Value notifyNavigateTo(const Napi::CallbackInfo &info);
-  void notifyReLaunch(const Napi::CallbackInfo &info);
+  Napi::Value notifyReLaunch(const Napi::CallbackInfo &info);
   void notifyRedirectTo(const Napi::CallbackInfo &info);
   Napi::Value notifyResourceLoad(const Napi::CallbackInfo &info);
   Napi::Value notifySwitchTab(const Napi::CallbackInfo &info);

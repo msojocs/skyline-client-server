@@ -37,7 +37,7 @@ try {
       }
     }
     if (req.action === 'disconnected') {
-      (globalThis as any).parentSource.postMessage('disconnected')
+      process.exit(1)
       return
     }
     try {

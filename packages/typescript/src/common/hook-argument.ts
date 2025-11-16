@@ -151,6 +151,7 @@ export const hookArgument = (action: string, args: any[]) => {
         // http资源替换buffer
         const sharedMemory = require('sharedMemory/sharedMemory.node')
         const buf = sharedMemory.getMemory(args[4]) as ArrayBuffer
+        // sharedMemory.removeMemory(args[4])
         args[4] = new Uint8Array(buf)
         // if (args[4] != 'resource_0') {
         //     throw new Error('break!')

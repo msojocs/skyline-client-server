@@ -18,9 +18,10 @@ namespace ServerAction {
     static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
     static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<std::string> blockQueue;
-    static bool isBlock = false;
+    static std::mutex blockQueueMutex;
     static int64_t requestId = 1;
     static std::shared_ptr<SkylineServer::Server> server;
+
     static std::condition_variable cv_blockUntilNextMessage;
     static std::mutex cv_blockUntilNextMessage_mtx;
 
@@ -34,8 +35,9 @@ namespace ServerAction {
             }
 
             nlohmann::json json = nlohmann::json::parse(message);
+            int64_t id = 0;
             if (!json["id"].empty()) {
-              auto id = json["id"].get<int64_t>();
+              id = json["id"].get<int64_t>();
               if (auto target = socketRequest.find(id); target != socketRequest.end()) {
                 logger->debug("found id: {}", id);
                 // server发出的消息的回复
@@ -44,17 +46,31 @@ namespace ServerAction {
                 return;
               }
             }
-            if (isBlock) {
+            {
+                // 丢到阻塞队列中，可能在sendMessageSync处理，也可能在下面messageHandleTsfn中处理
+                std::lock_guard<std::mutex> lock(blockQueueMutex);
                 logger->debug("blocked, push to queue... {}", message);
-                blockQueue.push(message);
-                return;
+                blockQueue.push(std::move(message));
             }
 
             // Call the JavaScript callback through the thread-safe function
-            auto callback = [message = std::move(message)](Napi::Env env, Napi::Function jsCallback) {
+            auto callback = [](Napi::Env env, Napi::Function jsCallback) {
+                // 阻塞时，此层也会阻塞
+                std::string message;
+                {
+                    std::lock_guard<std::mutex> lock(blockQueueMutex);
+                    if (blockQueue.empty()) {
+                        logger->warn("Block queue is empty when processing message");
+                        return;
+                    }
+                    message = blockQueue.front();
+                    blockQueue.pop();
+                }
 
                 try {
+                    logger->debug("Calling JS callback with message: {}", message);
                     jsCallback.Call({Napi::String::New(env, message)});
+                    logger->debug("JS callback executed successfully");
                 } catch (const std::exception &e) {
                     logger->error("Error in callback: {}", e.what());
                 } catch (...) {
@@ -62,6 +78,7 @@ namespace ServerAction {
                 }
             };
 
+            logger->debug("Invoking ThreadSafeFunction callback, id: {}", id);
             messageHandleTsfn.BlockingCall(callback);
         } catch (const std::exception &e) {
             logger->error("Error processing message: {}\noriginal message: {}", e.what(), message);
@@ -155,7 +172,6 @@ namespace ServerAction {
         throw Napi::TypeError::New(info.Env(), "First argument must be a string");
       }
       auto env = info.Env();
-      isBlock = true;
       auto message = info[0].As<Napi::String>().Utf8Value();
       logger->info("sendMessageSync: {}", message);
       // TODO：减少反序列化开销，id作为额外数据进行传递（比如拼接到message中）
@@ -180,7 +196,6 @@ namespace ServerAction {
         std::chrono::duration<double> elapsed = end - start;
         if (elapsed.count() > 3) {
           socketRequest.erase(id);
-          isBlock = false;
           throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + json.dump());
         }
         if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
@@ -206,7 +221,6 @@ namespace ServerAction {
             throw Napi::Error::New(info.Env(), "Unknown error occurred");
         }
       }
-      isBlock = false;
       std::string result = futureObj.get();
       auto resp = nlohmann::json::parse(result);
       auto v = Convert::convertJson2Value(env, resp["result"]);

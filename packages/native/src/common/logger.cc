@@ -25,7 +25,6 @@ namespace Logger {
         
         logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
         logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e.%f] [%l] %v");
-        logger->set_level(spdlog::level::err);
         logger->flush_on(spdlog::level::err);
         spdlog::register_logger(logger);
         logger->info("Logger initialized successfully.");

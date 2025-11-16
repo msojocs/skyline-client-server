@@ -1,13 +1,25 @@
-const skylineClient = require("../packages/native/build/skylineClient.node");
+const skylineClient = require("../packages/native/build/skyline.node");
+const sharedMemory = require("D:/github/skyline-shared-memory/build/sharedMemory.node");
+global.__sharedMemory = sharedMemory;
 
 console.info("1111");
 console.info("Using global.SkylineDebugInfo:");
-console.info(global.SkylineDebugInfo);
 console.info(global.SkylineDebugInfo);
 const shell = new global.SkylineShell();
 console.info(shell);
 shell.setNotifyBootstrapDoneCallback((...args) => {
   console.info("setNotifyBootstrapDoneCallback", ...args);
+  const page = new global.SkylineGlobal.PageContext(1, 1, {
+    defaultBlockLayout: true,
+    defaultContentBox: false,
+    enableImagePreload: false,
+    enableScrollViewAutoSize: false,
+    tagNameStyleIsolation: 0,
+  });
+  console.info(page.createElement)
+  global.SkylineGlobal.PageContext.prototype.createElement = function(){}
+  console.info(page.createElement)
+  process.exit(0)
 });
 shell.setSafeAreaEdgeInsets(0, 47, 0, 34);
 shell.setLoadResourceCallback((info) => {
@@ -43,9 +55,19 @@ shell.setNavigateBackDoneCallback((...args) => {
 shell.setSendLogCallback((...args) => {
   console.info("sendLogCallback", ...args);
 });
-const sharedMemory = require("D:/github/shared-memory/build/sharedMemory.node");
 const key = "test";
 const buffer = sharedMemory.setMemory(key, 21066248);
+{
+  const b = new Uint8Array(buffer);
+  b[0] = 'k'.charCodeAt(0)
+  b[1] = 'e'.charCodeAt(0)
+  b[2] = 'y'.charCodeAt(0)
+  b[3] = ':'.charCodeAt(0)
+  b[4] = 't'.charCodeAt(0)
+  b[5] = 'e'.charCodeAt(0)
+  b[6] = 's'.charCodeAt(0)
+  b[7] = 't'.charCodeAt(0)
+}
 const win = shell.createWindow(
   1,
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/bundle",
@@ -53,7 +75,7 @@ const win = shell.createWindow(
   844,
   2,
   true,
-  key,
+  buffer,
   "D:/down/nwjs-sdk-v0.54.1-win-x64/package.nw/node_modules/skyline-addon/build/skyline.node"
 );
 

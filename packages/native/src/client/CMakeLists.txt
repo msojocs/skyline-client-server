@@ -66,6 +66,11 @@ set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
 set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
+        execute_process(COMMAND
+            ${CMAKE_AR} /def:node_api.def /out:node_api.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
+            COMMAND_ERROR_IS_FATAL ANY
+        )
         target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
     else()
         message("整合 node64.lib")
@@ -89,8 +94,8 @@ target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_JS_LIB})
 message("Output env: $ENV{SKYLINE_DEV_PATH}")
 if ("$ENV{SKYLINE_DEV_PATH}" STREQUAL "")
     message("Set output path: ${PROJECT_SOURCE_DIR}/build")
-set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
-set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
+    set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
+    set_target_properties(${CLIENT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 else()
     message("Set output path: $ENV{SKYLINE_DEV_PATH}")
     set_target_properties(${CLIENT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY $ENV{SKYLINE_DEV_PATH})

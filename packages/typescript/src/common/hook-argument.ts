@@ -150,7 +150,6 @@ export const hookArgument = (action: string, args: any[]) => {
     else if (action === 'notifyHttpRequestComplete') {
         // http资源替换buffer
         const sharedMemory = require('sharedMemory/sharedMemory.node')
-        log.debug('notifyHttpRequestComplete', args[4])
         const buf = sharedMemory.getMemory(args[4]) as ArrayBuffer
         args[4] = new Uint8Array(buf)
         // if (args[4] != 'resource_0') {

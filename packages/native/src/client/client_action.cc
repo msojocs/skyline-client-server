@@ -17,12 +17,12 @@ namespace ClientAction {
     static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
     static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<nlohmann::json> callbackQueue;
-    static bool blocked = false;
+    static std::mutex callbackQueueMutex;
     static int64_t requestId = 1;
     static std::shared_ptr<SkylineClient::Client> client;
 
     void processMessage(const std::string &message) {
-        logger->debug("Received message: {}", message);
+        logger->info("Received message: {}", message);
         if (message.empty()) {
             logger->error("Received message is empty!");
             return;
@@ -51,18 +51,19 @@ namespace ClientAction {
                 promise->set_value(message);
             }
         } else if(!json["type"].empty()) {
-            if (blocked) {
-                logger->debug("blocked, push to queue...");
-                callbackQueue.push(std::move(json));
-                return;
-            }
 
             if (json["type"].get<std::string>() == "emitCallback") {
                 auto callbackId = json["callbackId"].get<int64_t>();
+                auto block = json["data"]["block"];
+                {
+                    // 直接丢进队列，可能send那边会处理，也可能是下面的tsfn处理
+                    std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                    logger->debug("blocked, push to queue...");
+                    callbackQueue.push(std::move(json));
+                }
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
                     logger->debug("callbackId found: {}", callbackId);
-                    auto block = json["data"]["block"];
                     if (block.is_boolean() && block.get<bool>() == false) {
                         ptr->tsfn.NonBlockingCall([json = std::move(json)](Napi::Env env, Napi::Function jsCallback) {
                             auto args = json["data"]["args"];
@@ -90,7 +91,17 @@ namespace ClientAction {
                             }
                         });
                     } else {
-                        ptr->tsfn.BlockingCall([json = std::move(json)](Napi::Env env, Napi::Function jsCallback) {
+                        ptr->tsfn.BlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                            nlohmann::json json;
+                            {
+                                std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                                if (callbackQueue.empty()) {
+                                    logger->warn("callbackQueue is empty when processing blocking callback.");
+                                    return;
+                                }
+                                json = callbackQueue.front();
+                                callbackQueue.pop();
+                            }
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
@@ -154,8 +165,6 @@ namespace ClientAction {
         data["id"] = id;
         logger->info("Send to server {}", id);
 
-        blocked = true;
-
         auto promiseObj = std::make_shared<std::promise<std::string>>();
         std::future<std::string> futureObj = promiseObj->get_future();
         
@@ -214,7 +223,7 @@ namespace ClientAction {
             auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>
                 (std::chrono::steady_clock::now() - start).count();
             if (delta_ms > 5000) {
-                blocked = false;
+                logger->error("Operation timed out after 5 seconds, request data:\n{}", data.dump());
                 throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
             }
             
@@ -224,7 +233,6 @@ namespace ClientAction {
         }
 
         std::string result = futureObj.get();
-        blocked = false;
         logger->info("Result: {}", result);
 
         if (result.empty()) {

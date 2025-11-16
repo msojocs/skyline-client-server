@@ -40,11 +40,12 @@ cd "$root_dir/packages/nodejs"
 # skyline module
 mkdir -p cache
 # 下载wechatdevtools
-devtools_version="1062504060"
+devtools_version="2012510241"
 if [ ! -f "devtools-$devtools_version.exe" ];then
     wget -c "https://servicewechat.com/wxa-dev-logic/download_redirect?type=win32_x64&from=mpwiki&download_version=$devtools_version&version_type=1" -O "cache/devtools-$devtools_version.exe"
 fi
 # 解压skyline-addon
+rm -rf node_modules/skyline-addon
 7z x "cache/devtools-$devtools_version.exe" -aoa -onode_modules/skyline-addon code/package.nw/node_modules/skyline-addon
 cd node_modules/skyline-addon
 mv code/package.nw/node_modules/skyline-addon/* .

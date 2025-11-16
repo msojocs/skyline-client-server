@@ -26,7 +26,7 @@ namespace ServerAction {
 
     void processMessage(const std::string &message) {
         try {
-            logger->info("Received message: {}", message);
+            logger->debug("Received message: {}", message);
             
             if (message.empty()) {
                 logger->error("Received message is empty!");
@@ -37,7 +37,7 @@ namespace ServerAction {
             if (!json["id"].empty()) {
               auto id = json["id"].get<int64_t>();
               if (auto target = socketRequest.find(id); target != socketRequest.end()) {
-                logger->info("found id: {}", id);
+                logger->debug("found id: {}", id);
                 // server发出的消息的回复
                 target->second->set_value(message);
                 socketRequest.erase(target);
@@ -45,7 +45,7 @@ namespace ServerAction {
               }
             }
             if (isBlock) {
-                logger->info("blocked, push to queue... {}", message);
+                logger->debug("blocked, push to queue... {}", message);
                 blockQueue.push(message);
                 return;
             }

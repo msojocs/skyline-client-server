@@ -22,7 +22,7 @@ namespace ClientAction {
     static std::shared_ptr<SkylineClient::Client> client;
 
     void processMessage(const std::string &message) {
-        logger->info("Received message: {}", message);
+        logger->debug("Received message: {}", message);
         if (message.empty()) {
             logger->error("Received message is empty!");
             return;
@@ -35,7 +35,7 @@ namespace ClientAction {
             // 这时找不到，浪费性能，所以用type为空排除emitCallback的id查找，提高效率
             // Response message
             auto id = json["id"].get<int64_t>();
-            logger->info("Received message id: {}", id);
+            logger->debug("Received message id: {}", id);
 
             std::shared_ptr<std::promise<std::string>> promise;
             {
@@ -52,7 +52,7 @@ namespace ClientAction {
             }
         } else if(!json["type"].empty()) {
             if (blocked) {
-                logger->info("blocked, push to queue...");
+                logger->debug("blocked, push to queue...");
                 callbackQueue.push(std::move(json));
                 return;
             }
@@ -61,7 +61,7 @@ namespace ClientAction {
                 auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
-                    logger->info("callbackId found: {}", callbackId);
+                    logger->debug("callbackId found: {}", callbackId);
                     auto block = json["data"]["block"];
                     if (block.is_boolean() && block.get<bool>() == false) {
                         ptr->tsfn.NonBlockingCall([json = std::move(json)](Napi::Env env, Napi::Function jsCallback) {
@@ -74,9 +74,9 @@ namespace ClientAction {
                             for (auto& arg : args) {
                                 argsVec.push_back(Convert::convertJson2Value(env, arg));
                             }
-                            logger->info("call callback function...");
+                            logger->debug("call callback function...");
                             auto resultValue = jsCallback.Call(argsVec);
-                            logger->info("call callback function end...");
+                            logger->debug("call callback function end...");
 
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
                             if (json.contains("id")) {
@@ -100,13 +100,13 @@ namespace ClientAction {
                             for (auto& arg : args) {
                                 argsVec.push_back(Convert::convertJson2Value(env, arg));
                             }
-                            logger->info("call callback function...");
+                            logger->debug("call callback function...");
                             auto resultValue = jsCallback.Call(argsVec);
-                            logger->info("call callback function end...");
+                            logger->debug("call callback function end...");
 
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
                             if (json.contains("id")) {
-                                logger->info("reply callback...");
+                                logger->debug("reply callback...");
                                 // Add newline as message delimiter
                                 client->sendMessage(nlohmann::json{
                                     {"id", json["id"].get<int64_t>()},

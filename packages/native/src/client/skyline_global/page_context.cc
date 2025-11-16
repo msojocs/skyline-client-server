@@ -17,7 +17,7 @@ void PageContext::Init(Napi::Env env, Napi::Object exports) {
        InstanceMethod("attach", &PageContext::attach),
        InstanceMethod("attachCustomRoute", &PageContext::attachCustomRoute),
        InstanceMethod("clearStylesheets", &PageContext::clearStylesheets),
-       InstanceMethod("createElement", &PageContext::createElement),
+       InstanceMethod("createElement", &PageContext::createElement, static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
        InstanceMethod("createFragment", &PageContext::createFragment),
        InstanceMethod("createStyleSheetIndexGroup",
                       &PageContext::createStyleSheetIndexGroup),

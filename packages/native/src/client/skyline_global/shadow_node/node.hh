@@ -5,6 +5,7 @@
 #include <vector>
 
 namespace Skyline {
+// NOTE: 修改此处配置需要手动清除cmake的编译缓存
 template<typename T>
 std::vector<Napi::ClassPropertyDescriptor<T>> GetCommonMethods() {
   std::vector<Napi::ClassPropertyDescriptor<T>> methods;
@@ -16,7 +17,7 @@ std::vector<Napi::ClassPropertyDescriptor<T>> GetCommonMethods() {
   methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("matches", &T::matches));
   methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("release", &T::release));
   methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("removeChild", &T::removeChild));
-  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setAttribute", &T::setAttribute));
+  methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setAttribute", &T::setAttribute, static_cast<napi_property_attributes>(napi_writable | napi_configurable)));
   methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setAttributes", &T::setAttributes));
   methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setClass", &T::setClass));
   methods.push_back(Napi::InstanceWrap<T>::InstanceMethod("setEventDefaultPrevented", &T::setEventDefaultPrevented));

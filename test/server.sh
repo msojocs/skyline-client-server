@@ -17,6 +17,7 @@ if [ ! -f "$server_dir/node.dll" ]; then
 fi
 
 cp "/mnt/d/github/skyline-client-server/packages/nodejs/node_modules/skyline-server/server.node" "$server_dir/node_modules/skyline-server/server.node"
-
+cp "/mnt/d/github/skyline-shared-memory/build/sharedMemory.node" "$server_dir/node_modules/sharedMemory/sharedMemory.node"
+cp "/home/msojocs/github/skyline-shared-memory/build/sharedMemory.node" "$HOME/github/wechat-web-devtools-linux/package.nw/node_modules/sharedMemory/sharedMemory.node"
 cd "$server_dir"
 wine node.exe server.js

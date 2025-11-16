@@ -110,6 +110,9 @@ namespace ServerAction {
                         break;
                     }
                 }
+                messageHandleTsfn.BlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                    jsCallback.Call({Napi::String::New(env, "{\"action\":\"disconnected\"}")});
+                });
             }).detach();
             return 0;
         } catch (std::exception& e) {

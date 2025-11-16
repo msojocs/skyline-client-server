@@ -77,8 +77,7 @@ std::string ServerSocket::receiveMessage() {
     } catch (const std::exception &e) {
         logger->error("Error receiving message: {}", e.what());
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        exit(1);
-        return "";
+        throw; // 重新抛出异常，让调用者处理
     }
 }
 }

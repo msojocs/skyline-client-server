@@ -1,5 +1,7 @@
-## v1.0.4 / 2025-11-
-- fix: 在调试器修改CSS，会导致Server崩溃
+## v1.0.4 / 2025-11-17
+- fix: 在调试器修改CSS，会导致Server崩溃。
+- fix: 部分基础库会报 `createElement` 无法修改的错误。
+- update: 更新 `sharedMemory` 版本 v1.0.3
 
 ## v1.0.3 / 2025-11-03
 - feat: nodejs支持

@@ -6,7 +6,9 @@
 #include "skyline_debug_info.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
+#ifdef _WIN32
 #include "crash_handler.hh"
+#endif
 
 using Logger::logger;
 

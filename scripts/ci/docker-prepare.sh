@@ -31,9 +31,9 @@ fi
 cd "$root_dir/packages/nodejs/node_modules"
 # SharedMemory
 mkdir -p sharedMemory
-sharedMemory_version="1.0.2"
+sharedMemory_version="v1.0.3"
 if [ ! -f sharedMemory/sharedMemory.node ];then
-    wget -c https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.2/skyline-sharedMemory-win32-x86_64-v1.0.2.node -O sharedMemory/sharedMemory.node
+    wget -c https://github.com/msojocs/skyline-shared-memory/releases/download/$sharedMemory_version/skyline-sharedMemory-win32-x86_64-$sharedMemory_version.node -O sharedMemory/sharedMemory.node
 fi
 
 cd "$root_dir/packages/nodejs"

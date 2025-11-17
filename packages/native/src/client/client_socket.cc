@@ -1,5 +1,6 @@
 #include "client_socket.hh"
 #include "../common/logger.hh"
+#include "napi.h"
 #include <boost/asio.hpp>
 #include <cstdint>
 #include <memory>
@@ -35,13 +36,45 @@ void ClientSocket::Init(Napi::Env env) {
         }
     }).detach();
 
-    uint32_t start;
-    boost::asio::read(*socket, boost::asio::buffer(&start, sizeof(start)));
-    start = ntohl(start);
-    if (start != 114514) {
-        throw std::runtime_error("Invalid handshake from server");
+    // Handshake with server
+    uint32_t handshake_value;
+    for (int i=0; i<5; i++) {
+        try  {
+            boost::asio::read(*socket, boost::asio::buffer(&handshake_value, sizeof(handshake_value)));
+            handshake_value = ntohl(handshake_value);
+            if (handshake_value != 114514) {
+                throw std::runtime_error("Invalid handshake from server: " + std::to_string(handshake_value));
+            }
+            logger->info("Successfully connected to server after handshake");
+            log.Call(env.Global(), {Napi::String::New(env, "Connected to server.")});
+            return;
+        }
+        catch(const std::exception& err) {
+            logger->error("Handshake error (attempt {}/5): {}", i+1, err.what());
+            log.Call(env.Global(), {Napi::String::New(env, std::string("Handshake error, retrying...") + err.what())});
+            
+            // Close and recreate socket for clean retry
+            if (socket && socket->is_open()) {
+                try {
+                    socket->close();
+                } catch(...) {}
+            }
+            socket = std::make_unique<tcp::socket>(io_context);
+            
+            // Wait a bit before retrying
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            
+            // Try to reconnect
+            try {
+                boost::asio::connect(*socket, endpoints);
+                socket->set_option(boost::asio::ip::tcp::no_delay(true));
+            } catch(const std::exception& connect_err) {
+                logger->error("Reconnect failed: {}", connect_err.what());
+            }
+        }
     }
-    log.Call(env.Global(), {Napi::String::New(env, "Connected to server.")});
+    
+    throw std::runtime_error("Failed to establish connection after 5 attempts");
     
 }
 void ClientSocket::sendMessage(std::string&& message) {

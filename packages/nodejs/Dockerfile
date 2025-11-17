@@ -19,6 +19,7 @@ COPY node.exe .
 COPY server.js .
 COPY *.dll .
 COPY node_modules node_modules
+COPY scripts scripts
 
 EXPOSE 3001
-CMD ["wine", "node.exe", "server.js"]
+CMD ["scripts/start-server.sh"]

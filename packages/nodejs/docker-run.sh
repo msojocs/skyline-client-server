@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-# docker build -t skyline-server .
+# docker build -t ghcr.io/msojocs/skyline-client-server:debug .
 if [ ! -f "ucrtbased.dll" ];then
   wget -c https://github.com/msojocs/skyline-client-server/releases/download/dll/ucrtbased.dll -O ucrtbased.dll.tmp
   mv ucrtbased.dll.tmp ucrtbased.dll
@@ -13,18 +13,13 @@ if [ ! -f "vcruntime140d.dll" ];then
 fi
 
 docker run -it \
-  --rm \
+  --restart=always \
   --hostname="$(hostname)" \
-  -e USER_NAME="docker" \
-  -e USER_UID="$(id -u)" \
-  -e USER_GID="$(id -g)" \
   --env="DISPLAY" \
   --platform="linux/amd64" \
   --volume="${XAUTHORITY:-${HOME}/.Xauthority}:/root/.Xauthority:ro" \
   --volume="/tmp/.X11-unix:/tmp/.X11-unix:ro" \
   --volume="/dev/shm:/dev/shm" \
-  --volume=".:/workspace" \
-  -w /workspace \
   -p 3001:3001 \
-  scottyhardy/docker-wine:latest \
-  /bin/bash -c "wine node.exe server.js"
+  --name skyline_server \
+  ghcr.io/msojocs/skyline-client-server:debug

@@ -1,6 +1,7 @@
 #include "client_socket.hh"
 #include "../common/logger.hh"
 #include <boost/asio.hpp>
+#include <cstdint>
 #include <memory>
 #include <thread>
 
@@ -11,12 +12,14 @@ namespace SkylineClient {
 static std::string serverAddress = "127.0.0.1";
 static int serverPort = 3001;
 void ClientSocket::Init(Napi::Env env) {
+    auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
 
     tcp::resolver resolver(io_context);
     auto endpoints =
         resolver.resolve(serverAddress, std::to_string(serverPort));
 
     socket = std::make_unique<tcp::socket>(io_context);
+    log.Call(env.Global(), {Napi::String::New(env, "Connecting to server...")});
     boost::asio::connect(*socket, endpoints);
     
     // Enable TCP_NODELAY to reduce latency
@@ -31,6 +34,15 @@ void ClientSocket::Init(Napi::Env env) {
             logger->error("IO context error: {}", e.what());
         }
     }).detach();
+
+    uint32_t start;
+    boost::asio::read(*socket, boost::asio::buffer(&start, sizeof(start)));
+    start = ntohl(start);
+    if (start != 114514) {
+        throw std::runtime_error("Invalid handshake from server");
+    }
+    log.Call(env.Global(), {Napi::String::New(env, "Connected to server.")});
+    
 }
 void ClientSocket::sendMessage(std::string&& message) {
     if (socket && socket->is_open()) {

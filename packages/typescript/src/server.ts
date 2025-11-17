@@ -37,6 +37,7 @@ try {
       }
     }
     if (req.action === 'disconnected') {
+      log.error('disconnected')
       process.exit(1)
       return
     }

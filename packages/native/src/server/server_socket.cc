@@ -1,5 +1,6 @@
 #include "server_socket.hh"
 #include <boost/asio.hpp>
+#include <boost/asio/write.hpp>
 #include <cstdlib>
 #include <thread>
 #include <memory>
@@ -72,6 +73,9 @@ std::string ServerSocket::receiveMessage() {
             acceptor->accept(*socket);
             boost::asio::ip::tcp::no_delay option(true);
             socket->set_option(option);
+            // 握手数据
+            uint32_t message_length = htonl(static_cast<uint32_t>(114514));
+            boost::asio::write(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
             return "";
         }
     } catch (const std::exception &e) {

@@ -40,7 +40,7 @@ cd "$root_dir/packages/nodejs"
 # skyline module
 mkdir -p cache
 # 下载wechatdevtools
-devtools_version="2012510241"
+devtools_version="2012510250"
 if [ ! -f "devtools-$devtools_version.exe" ];then
     wget -c "https://servicewechat.com/wxa-dev-logic/download_redirect?type=win32_x64&from=mpwiki&download_version=$devtools_version&version_type=1" -O "cache/devtools-$devtools_version.exe"
 fi

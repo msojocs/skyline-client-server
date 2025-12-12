@@ -98,5 +98,6 @@
     },
     // 使用Ninja，可以生成compile_commands.json
     "cmake.generator": "Ninja",
-    "editor.tabSize": 4
+    "editor.tabSize": 4,
+    "clangd.path": "clangd-18"
 }

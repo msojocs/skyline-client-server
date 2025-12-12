@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 
 RUN apt update \
-    && apt install -y fonts-noto-cjk sudo wget gnupg libgl1 \
+    && apt install -y fonts-noto-cjk fonts-noto-color-emoji fonts-symbola sudo wget gnupg libgl1 \
     && apt clean && rm -rf /var/lib/apt/lists/*
 
 # Install wine

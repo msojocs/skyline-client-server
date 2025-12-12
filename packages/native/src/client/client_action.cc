@@ -58,14 +58,27 @@ namespace ClientAction {
                 {
                     // 直接丢进队列，可能send那边会处理，也可能是下面的tsfn处理
                     std::lock_guard<std::mutex> lock(callbackQueueMutex);
-                    logger->debug("blocked, push to queue...");
+                    logger->debug("Push callback msg to queue...");
                     callbackQueue.push(std::move(json));
                 }
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
                     logger->debug("callbackId found: {}", callbackId);
                     if (block.is_boolean() && block.get<bool>() == false) {
-                        ptr->tsfn.NonBlockingCall([json = std::move(json)](Napi::Env env, Napi::Function jsCallback) {
+                        logger->debug("Block value: false...");
+                        ptr->tsfn.NonBlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                            logger->debug("NonBlockingCall...");
+                            nlohmann::json json;
+                            {
+                                std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                                if (callbackQueue.empty()) {
+                                    logger->warn("CallbackQueue is empty when processing blocking callback.");
+                                    return;
+                                }
+                                json = callbackQueue.front();
+                                callbackQueue.pop();
+                                logger->debug("Pop msg from queue...");
+                            }
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
@@ -91,16 +104,19 @@ namespace ClientAction {
                             }
                         });
                     } else {
+                        logger->debug("Block value: true...");
                         ptr->tsfn.BlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                            logger->debug("BlockingCall...");
                             nlohmann::json json;
                             {
                                 std::lock_guard<std::mutex> lock(callbackQueueMutex);
                                 if (callbackQueue.empty()) {
-                                    logger->warn("callbackQueue is empty when processing blocking callback.");
+                                    logger->warn("CallbackQueue is empty when processing blocking callback.");
                                     return;
                                 }
                                 json = callbackQueue.front();
                                 callbackQueue.pop();
+                                logger->debug("Pop msg from queue...");
                             }
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
@@ -111,9 +127,9 @@ namespace ClientAction {
                             for (auto& arg : args) {
                                 argsVec.push_back(Convert::convertJson2Value(env, arg));
                             }
-                            logger->debug("call callback function...");
+                            logger->debug("Call callback function...");
                             auto resultValue = jsCallback.Call(argsVec);
-                            logger->debug("call callback function end...");
+                            logger->debug("Call callback function end...");
 
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
                             if (json.contains("id")) {
@@ -148,6 +164,8 @@ namespace ClientAction {
                     }
                 } catch (std::exception& e) {
                     logger->error("Read message error: {}", e.what());
+                } catch (...) {
+                    logger->error("Unknown error occurred in message reading thread.");
                 }
             }).detach();
 
@@ -187,7 +205,7 @@ namespace ClientAction {
             if (!callbackQueue.empty()) {
                 auto json = callbackQueue.front();
                 callbackQueue.pop();
-                logger->info("start to handle callback.");
+                logger->debug("Pop msg from queue, start to handle callback.");
                 auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
@@ -216,7 +234,7 @@ namespace ClientAction {
                         }.dump());
                     }
                 } else {
-                    logger->error("callbackId not found: {}", callbackId);
+                    logger->error("CallbackId not found: {}", callbackId);
                 }
             }
 

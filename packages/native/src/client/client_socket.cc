@@ -2,6 +2,7 @@
 #include "../common/logger.hh"
 #include "napi.h"
 #include <boost/asio.hpp>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <thread>
@@ -28,7 +29,7 @@ void ClientSocket::Init(Napi::Env env) {
     socket->set_option(option);
 
     // Start a thread for the io_context
-    std::thread([&]() {
+    std::thread([this]() {
         try {
             io_context.run();
         } catch (std::exception &e) {
@@ -79,12 +80,13 @@ void ClientSocket::Init(Napi::Env env) {
 }
 void ClientSocket::sendMessage(std::string&& message) {
     if (socket && socket->is_open()) {
-        logger->debug("Sending message: {}", message);
+        logger->debug("Sending message with length: {}", message.size());
         uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
-        // First send the length of the message
-        boost::asio::write(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
-        // Then send the actual message
-        boost::asio::write(*socket, boost::asio::buffer(message));
+        std::array<boost::asio::const_buffer, 2> buffers = {
+            boost::asio::buffer(&message_length, sizeof(message_length)),
+            boost::asio::buffer(message)
+        };
+        boost::asio::write(*socket, buffers);
     } else {
         logger->error("Socket is not open");
     }

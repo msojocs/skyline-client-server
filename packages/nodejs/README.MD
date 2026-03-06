@@ -32,3 +32,9 @@ skyline.node
    │ 
    └─node.dll
 ```
+
+
+你是一名精通NodeNative于socket通讯开发的高级C++工程师。
+这个项目是一个跨平台的项目, `packages/native/src/server`运行在wine环境中，`packages/native/src/client`运行在linux环境中，通过socket rpc进行通信。
+现在需要你完成以下任务：
+分析项目，看能否提升通信效率。

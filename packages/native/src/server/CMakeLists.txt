@@ -18,12 +18,37 @@ add_library(${SERVER_NAME}
 set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
-        target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        if(MINGW)
+            # MinGW cross-compilation: generate import library from .def
+            find_program(DLLTOOL_EXECUTABLE NAMES x86_64-w64-mingw32-dlltool dlltool)
+            if(DLLTOOL_EXECUTABLE)
+                execute_process(COMMAND
+                    ${DLLTOOL_EXECUTABLE} -d ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.def
+                    -l ${CMAKE_BINARY_DIR}/libnode_api.a -m i386:x86-64
+                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
+                    COMMAND_ERROR_IS_FATAL ANY
+                )
+                target_link_libraries(${SERVER_NAME} PRIVATE ${CMAKE_BINARY_DIR}/libnode_api.a)
+            else()
+                message(FATAL_ERROR "dlltool not found, required for MinGW cross-compilation")
+            endif()
+        else()
+            target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        endif()
     else()
         message("整合 node64.lib")
-        target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
+        if(MINGW)
+            # MinGW cross-compilation: generate import library from node64.lib
+            # MinGW linker can use MSVC .lib files directly in many cases
+            target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
+        else()
+            target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
+        endif()
     endif()
     target_link_libraries(${SERVER_NAME} PRIVATE bcrypt)
+    if(MINGW)
+        target_link_libraries(${SERVER_NAME} PRIVATE ws2_32 wsock32)
+    endif()
 
 else()
     # Linux specific libraries

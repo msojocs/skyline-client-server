@@ -1,6 +1,7 @@
 #include "server_socket.hh"
 #include <boost/asio.hpp>
 #include <boost/asio/write.hpp>
+#include <array>
 #include <cstdlib>
 #include <thread>
 #include <memory>
@@ -33,8 +34,12 @@ void ServerSocket::Init(const Napi::CallbackInfo &info) {
 }
 ServerSocket::~ServerSocket() {
     try {
-        socket->close();
-        acceptor->close();
+        if (socket && socket->is_open()) {
+            socket->close();
+        }
+        if (acceptor && acceptor->is_open()) {
+            acceptor->close();
+        }
         io_context.stop();
         logger->info("Socket server stopped");
     } catch (const std::exception &e) {
@@ -45,14 +50,14 @@ void ServerSocket::sendMessage(std::string&& message) {
     try {
         if (socket && socket->is_open()) {
             uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
-            // First send the length of the message
-            boost::asio::write(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
-            // Then send the actual message
-            boost::asio::write(*socket, boost::asio::buffer(message));
-            logger->info("Sent message with length {}", message.size());
+            std::array<boost::asio::const_buffer, 2> buffers = {
+                boost::asio::buffer(&message_length, sizeof(message_length)),
+                boost::asio::buffer(message)
+            };
+            boost::asio::write(*socket, buffers);
+            logger->debug("Sent message with length {}", message.size());
         } else {
             logger->error("Socket is not open. Cannot send message.");
-            std::this_thread::sleep_for(std::chrono::seconds(5));
         }
     } catch (const std::exception &e) {
         logger->error("Error sending message: {}", e.what());

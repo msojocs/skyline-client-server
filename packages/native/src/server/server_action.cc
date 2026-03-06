@@ -16,6 +16,8 @@ using Logger::logger;
 namespace ServerAction {
     static Napi::ThreadSafeFunction messageHandleTsfn;
     static std::shared_ptr<Napi::FunctionReference> messageHandleRef;
+    static std::mutex socketRequestMutex;
+    static std::condition_variable socketResponseCv;
     static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<std::string> blockQueue;
     static std::mutex blockQueueMutex;
@@ -27,7 +29,7 @@ namespace ServerAction {
 
     void processMessage(const std::string &message) {
         try {
-            logger->debug("Received message: {}", message);
+            logger->debug("Received message with length: {}", message.size());
             
             if (message.empty()) {
                 logger->error("Received message is empty!");
@@ -38,11 +40,18 @@ namespace ServerAction {
             int64_t id = 0;
             if (!json["id"].empty()) {
               id = json["id"].get<int64_t>();
-              if (auto target = socketRequest.find(id); target != socketRequest.end()) {
-                logger->debug("found id: {}", id);
-                // server发出的消息的回复
-                target->second->set_value(message);
-                socketRequest.erase(target);
+              std::shared_ptr<std::promise<std::string>> promise;
+              {
+                std::lock_guard<std::mutex> lock(socketRequestMutex);
+                if (auto target = socketRequest.find(id); target != socketRequest.end()) {
+                  logger->debug("found id: {}", id);
+                  promise = target->second;
+                  socketRequest.erase(target);
+                }
+              }
+              if (promise) {
+                promise->set_value(message);
+                socketResponseCv.notify_all();
                 return;
               }
             }
@@ -79,7 +88,7 @@ namespace ServerAction {
             };
 
             logger->debug("Invoking ThreadSafeFunction callback, id: {}", id);
-            messageHandleTsfn.BlockingCall(callback);
+            messageHandleTsfn.NonBlockingCall(callback);
         } catch (const std::exception &e) {
             logger->error("Error processing message: {}\noriginal message: {}", e.what(), message);
         } catch (...) {
@@ -110,7 +119,7 @@ namespace ServerAction {
                         break;
                     }
                 }
-                messageHandleTsfn.BlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                messageHandleTsfn.NonBlockingCall([](Napi::Env env, Napi::Function jsCallback) {
                     jsCallback.Call({Napi::String::New(env, "{\"action\":\"disconnected\"}")});
                 });
             }).detach();
@@ -176,7 +185,7 @@ namespace ServerAction {
       }
       auto env = info.Env();
       auto message = info[0].As<Napi::String>().Utf8Value();
-      logger->info("sendMessageSync: {}", message);
+      logger->debug("sendMessageSync payload length: {}", message.size());
       // TODO：减少反序列化开销，id作为额外数据进行传递（比如拼接到message中）
       // 解析json字符串
       nlohmann::json json = nlohmann::json::parse(message);
@@ -189,7 +198,10 @@ namespace ServerAction {
       // 先存储，再发送
       auto promiseObj = std::make_shared<std::promise<std::string>>();
       std::future<std::string> futureObj = promiseObj->get_future();
-      socketRequest.emplace(id, promiseObj);
+      {
+        std::lock_guard<std::mutex> lock(socketRequestMutex);
+        socketRequest.emplace(id, promiseObj);
+      }
       logger->info("Sending to client: {}", id);
       server->sendMessage(json.dump());
       // 3秒超时
@@ -198,20 +210,31 @@ namespace ServerAction {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         if (elapsed.count() > 3) {
-          socketRequest.erase(id);
+          {
+            std::lock_guard<std::mutex> lock(socketRequestMutex);
+            socketRequest.erase(id);
+          }
           throw Napi::Error::New(info.Env(), "Request to client timeout, request data:\n" + json.dump());
         }
-        if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+        if (futureObj.wait_for(std::chrono::milliseconds(2)) == std::future_status::ready) {
           break;
         }
-        if (blockQueue.empty()) {
+        std::string msg;
+        {
+            std::lock_guard<std::mutex> lock(blockQueueMutex);
+            if (!blockQueue.empty()) {
+                msg = std::move(blockQueue.front());
+                blockQueue.pop();
+            }
+        }
+        if (msg.empty()) {
+            std::unique_lock<std::mutex> lock(socketRequestMutex);
+            socketResponseCv.wait_for(lock, std::chrono::milliseconds(2));
             continue;
         }
-        auto msg = blockQueue.front();
-        blockQueue.pop();
         try {
             // Client发来的消息
-            logger->info("start to handle blocked message: {}", msg);
+            logger->debug("start to handle blocked message, length: {}", msg.size());
             // Call the JavaScript callback through the thread-safe function
             messageHandleRef->Value().Call({Napi::String::New(env, msg)});
         }

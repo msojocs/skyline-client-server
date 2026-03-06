@@ -6,6 +6,7 @@
 #include <chrono>
 #include <memory>
 #include <future>
+#include <condition_variable>
 #include "client_action.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
@@ -15,6 +16,7 @@ using Logger::logger;
 
 namespace ClientAction {
     static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
+    static std::condition_variable socketEventCv;
     static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<nlohmann::json> callbackQueue;
     static std::mutex callbackQueueMutex;
@@ -22,7 +24,7 @@ namespace ClientAction {
     static std::shared_ptr<SkylineClient::Client> client;
 
     void processMessage(const std::string &message) {
-        logger->info("Received message: {}", message);
+        logger->debug("Received message length: {}", message.size());
         if (message.empty()) {
             logger->error("Received message is empty!");
             return;
@@ -49,6 +51,7 @@ namespace ClientAction {
             }
             if (promise) {
                 promise->set_value(message);
+                socketEventCv.notify_all();
             }
         } else if(!json["type"].empty()) {
 
@@ -61,6 +64,7 @@ namespace ClientAction {
                     logger->debug("Push callback msg to queue...");
                     callbackQueue.push(std::move(json));
                 }
+                socketEventCv.notify_all();
                 auto ptr = Convert::find_callback(callbackId);
                 if (ptr != nullptr) {
                     logger->debug("callbackId found: {}", callbackId);
@@ -156,7 +160,7 @@ namespace ClientAction {
             client->Init(env);
 
             // Start a thread for reading messages
-            std::thread([&]() {
+            std::thread([]() {
                 try {
                     while (true) {
                         std::string message = client->receiveMessage();
@@ -198,13 +202,21 @@ namespace ClientAction {
 
         logger->info("Sending message to server: {}", id);
         client->sendMessage(std::move(data.dump()));
-        logger->info("Message sent, waiting for response: {}", id);
+        logger->debug("Message sent, waiting for response: {}", id);
 
         auto start = std::chrono::steady_clock::now();
         while (true) {
-            if (!callbackQueue.empty()) {
-                auto json = callbackQueue.front();
-                callbackQueue.pop();
+            nlohmann::json json;
+            bool hasCallback = false;
+            {
+                std::lock_guard<std::mutex> lock(callbackQueueMutex);
+                if (!callbackQueue.empty()) {
+                    json = std::move(callbackQueue.front());
+                    callbackQueue.pop();
+                    hasCallback = true;
+                }
+            }
+            if (hasCallback) {
                 logger->debug("Pop msg from queue, start to handle callback.");
                 auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
@@ -245,13 +257,15 @@ namespace ClientAction {
                 throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
             }
             
-            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+            if (futureObj.wait_for(std::chrono::milliseconds(2)) == std::future_status::ready) {
                 break;
             }
+            std::unique_lock<std::mutex> lock(socketRequestMutex);
+            socketEventCv.wait_for(lock, std::chrono::milliseconds(2));
         }
 
         std::string result = futureObj.get();
-        logger->info("Result: {}", result);
+        logger->debug("Received response payload length: {}", result.size());
 
         if (result.empty()) {
             throw std::runtime_error("Server response is empty");

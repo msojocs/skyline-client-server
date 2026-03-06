@@ -1,4 +1,4 @@
-build
+build*
 node_modules
 vcpkg_installed
 cache
@@ -7,3 +7,4 @@ cache
 log
 *-artifact
 tmp
+.cache

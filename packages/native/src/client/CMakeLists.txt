@@ -66,17 +66,36 @@ set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
 set(IS_RUNNING_NODE false)
 if (WIN32)
     if(IS_RUNNING_NODE)
-        execute_process(COMMAND
-            ${CMAKE_AR} /def:node_api.def /out:node_api.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}
-            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
-            COMMAND_ERROR_IS_FATAL ANY
-        )
-        target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        if(MINGW)
+            # MinGW cross-compilation: generate import library from .def
+            find_program(DLLTOOL_EXECUTABLE NAMES x86_64-w64-mingw32-dlltool dlltool)
+            if(DLLTOOL_EXECUTABLE)
+                execute_process(COMMAND
+                    ${DLLTOOL_EXECUTABLE} -d ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.def
+                    -l ${CMAKE_BINARY_DIR}/libnode_api_client.a -m i386:x86-64
+                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
+                    COMMAND_ERROR_IS_FATAL ANY
+                )
+                target_link_libraries(${CLIENT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/libnode_api_client.a)
+            else()
+                message(FATAL_ERROR "dlltool not found, required for MinGW cross-compilation")
+            endif()
+        else()
+            execute_process(COMMAND
+                ${CMAKE_AR} /def:node_api.def /out:node_api.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
+                COMMAND_ERROR_IS_FATAL ANY
+            )
+            target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        endif()
     else()
         message("整合 node64.lib")
         target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
     endif()
     # target_link_libraries(${CLIENT_NAME} PRIVATE bcrypt)
+    if(MINGW)
+        target_link_libraries(${CLIENT_NAME} PRIVATE ws2_32 wsock32)
+    endif()
 
 else()
     # Linux specific libraries

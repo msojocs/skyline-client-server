@@ -20,4 +20,4 @@ cp "/mnt/d/github/skyline-client-server/packages/nodejs/node_modules/skyline-ser
 cp "/mnt/d/github/skyline-shared-memory/build/sharedMemory.node" "$server_dir/node_modules/sharedMemory/sharedMemory.node"
 cp "/home/msojocs/github/skyline-shared-memory/build/sharedMemory.node" "$HOME/github/wechat-web-devtools-linux/package.nw/node_modules/sharedMemory/sharedMemory.node"
 cd "$server_dir"
-wine node.exe server.js
+WINEDEBUG=+font wine node.exe server.js > font.log 2>&1

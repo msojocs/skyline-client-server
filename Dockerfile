@@ -50,7 +50,6 @@ FROM ubuntu:latest AS source
 ARG APP_ROOT="packages/nodejs"
 WORKDIR /workspace
 ADD https://github.com/msojocs/skyline-node/releases/download/v16.4.0-1/node.exe ./
-ADD https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll ./
 COPY --from=server-builder /build/packages/nodejs/server.js ./
 ADD https://github.com/msojocs/skyline-client-server/releases/download/dll/ucrtbased.dll ./
 ADD https://github.com/msojocs/skyline-client-server/releases/download/dll/vcruntime140d.dll ./
@@ -60,6 +59,7 @@ COPY --from=skyline-addon-builder /build/node_modules/skyline-addon ./node_modul
 FROM runtime-base AS runtime
 
 WORKDIR /workspace
+ADD https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
 COPY --from=source /workspace /workspace
 
 EXPOSE 3001

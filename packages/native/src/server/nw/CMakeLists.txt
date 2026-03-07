@@ -14,13 +14,15 @@ if(SKYLINE_USING_MINGW)
         COMMAND_ERROR_IS_FATAL ANY
     )
     set(NW_ORIGINAL_LIB ${CMAKE_BINARY_DIR}/libnw.original.a)
-else()
+elseif(MSVC)
     execute_process(COMMAND
         ${CMAKE_AR} /def:nw.original.def /out:${CMAKE_BINARY_DIR}/nw.original.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND_ERROR_IS_FATAL ANY
     )
     set(NW_ORIGINAL_LIB ${CMAKE_BINARY_DIR}/nw.original.lib)
+else()
+    message(FATAL_ERROR "Unsupported Windows compiler for nw wrapper target")
 endif()
 set(nw_DEF ${CMAKE_CURRENT_SOURCE_DIR}/nw.def)
 if(EXISTS ${nw_DEF})
@@ -30,7 +32,7 @@ if(EXISTS ${nw_DEF})
         # MinGW: add .def as source file for the shared library
         target_sources(${NW_LIB_NAME} PRIVATE ${nw_DEF})
     else()
-        target_link_options(${NW_LIB_NAME} PRIVATE "-Wl,--input-def=${nw_DEF}")
+        message(FATAL_ERROR "Unsupported compiler for nw.def handling")
     endif()
 else()
     message(FATAL_ERROR "nw.def not found")

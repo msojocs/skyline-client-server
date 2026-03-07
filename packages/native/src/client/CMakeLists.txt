@@ -80,13 +80,15 @@ if (SKYLINE_TARGET_WINDOWS)
             else()
                 message(FATAL_ERROR "dlltool not found, required for MinGW cross-compilation")
             endif()
-        else()
+        elseif(MSVC)
             execute_process(COMMAND
                 ${CMAKE_AR} /def:node_api.def /out:node_api.lib /machine:x64 ${CMAKE_STATIC_LINKER_FLAGS}
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def
                 COMMAND_ERROR_IS_FATAL ANY
             )
             target_link_libraries(${CLIENT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/node_modules/node-api-headers/def/node_api.lib)
+        else()
+            message(FATAL_ERROR "Unsupported Windows compiler for client target")
         endif()
     else()
         message("整合 node64.lib")

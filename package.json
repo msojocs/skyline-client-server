@@ -5,7 +5,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "prepare": "node scripts/prepare/nwjs.js",
+    "prepare": "node tools/prepare/nwjs.js",
     "server:start": ".\\packages\\nodejs\\node.exe packages/nodejs/server.js"
   },
   "keywords": [],

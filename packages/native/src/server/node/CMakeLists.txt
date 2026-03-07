@@ -1,6 +1,6 @@
 set(NODE_LIB_NAME node)
 add_library(${NODE_LIB_NAME} SHARED ./node.cpp)
-if(MINGW)
+if(SKYLINE_USING_MINGW)
     # MinGW cross-compilation: use dlltool to generate import library
     find_program(DLLTOOL_EXECUTABLE NAMES x86_64-w64-mingw32-dlltool dlltool)
     if(NOT DLLTOOL_EXECUTABLE)
@@ -25,7 +25,7 @@ set(node_DEF ${CMAKE_CURRENT_SOURCE_DIR}/node.def)
 if(EXISTS ${node_DEF})
     if(MSVC)
         set_target_properties(${NODE_LIB_NAME} PROPERTIES LINK_FLAGS "/DEF:${node_DEF}")
-    elseif(MINGW)
+    elseif(SKYLINE_USING_MINGW)
         # MinGW: add .def as source file for the shared library
         target_sources(${NODE_LIB_NAME} PRIVATE ${node_DEF})
     else()

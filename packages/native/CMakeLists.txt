@@ -5,6 +5,27 @@ cmake_policy(SET CMP0042 NEW)
 
 project("module_skyline")
 
+set(SKYLINE_COMPILER_MACHINE "")
+if(CMAKE_CXX_COMPILER)
+    execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
+        OUTPUT_VARIABLE SKYLINE_COMPILER_MACHINE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+endif()
+string(TOLOWER "${SKYLINE_COMPILER_MACHINE}" SKYLINE_COMPILER_MACHINE_LOWER)
+
+set(SKYLINE_TARGET_WINDOWS OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows" OR WIN32 OR SKYLINE_COMPILER_MACHINE_LOWER MATCHES "mingw|windows")
+    set(SKYLINE_TARGET_WINDOWS ON)
+endif()
+
+set(SKYLINE_USING_MINGW OFF)
+if(MINGW OR SKYLINE_COMPILER_MACHINE_LOWER MATCHES "mingw")
+    set(SKYLINE_USING_MINGW ON)
+endif()
+
 # Improve dependency scanning and header file tracking
 set(CMAKE_DEPENDS_IN_PROJECT_ONLY OFF)
 set(CMAKE_CXX_STANDARD 17)
@@ -29,6 +50,9 @@ endif()
 
 set(VCPKG_ROOT $ENV{VCPKG_ROOT})
 message("VCPKG_ROOT: " ${VCPKG_ROOT})
+message("SKYLINE_COMPILER_MACHINE: ${SKYLINE_COMPILER_MACHINE}")
+message("SKYLINE_TARGET_WINDOWS: ${SKYLINE_TARGET_WINDOWS}")
+message("SKYLINE_USING_MINGW: ${SKYLINE_USING_MINGW}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(PKG_TOOL pnpm)
@@ -37,22 +61,38 @@ if(MSVC)
     execute_process(COMMAND
         chcp 65001
     )
-    set(VCPKG_TARGET_TRIPLET x64-windows-static)
+    set(_skyline_default_triplet x64-windows-static)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
-elseif(MINGW)
+elseif(SKYLINE_USING_MINGW)
     # MinGW cross-compilation for Windows
-    set(VCPKG_TARGET_TRIPLET x64-mingw-static)
+    set(_skyline_default_triplet x64-mingw-static)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_REENTRANT")
 else()
     # Linux specific settings
+    set(_skyline_default_triplet x64-linux)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_REENTRANT")
 endif()
-set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+
+if(NOT DEFINED VCPKG_TARGET_TRIPLET)
+    set(VCPKG_TARGET_TRIPLET "${_skyline_default_triplet}" CACHE STRING "Vcpkg target triplet" FORCE)
+elseif(SKYLINE_USING_MINGW AND VCPKG_TARGET_TRIPLET STREQUAL "x64-linux")
+    message(WARNING "Detected MinGW compiler but cached VCPKG_TARGET_TRIPLET=x64-linux. Auto-correcting to x64-mingw-static.")
+    set(VCPKG_TARGET_TRIPLET x64-mingw-static CACHE STRING "Vcpkg target triplet" FORCE)
+elseif(NOT SKYLINE_TARGET_WINDOWS AND VCPKG_TARGET_TRIPLET STREQUAL "x64-mingw-static")
+    message(WARNING "Detected Linux compiler but cached VCPKG_TARGET_TRIPLET=x64-mingw-static. Auto-correcting to x64-linux.")
+    set(VCPKG_TARGET_TRIPLET x64-linux CACHE STRING "Vcpkg target triplet" FORCE)
+endif()
+if(NOT DEFINED VCPKG_HOST_TRIPLET)
+    set(VCPKG_HOST_TRIPLET x64-linux)
+endif()
+message("VCPKG_TARGET_TRIPLET: ${VCPKG_TARGET_TRIPLET}")
+message("VCPKG_HOST_TRIPLET: ${VCPKG_HOST_TRIPLET}")
+set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/tools/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
 include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
 message("LD_LIBRARY_PATH:" ${LD_LIBRARY_PATH})

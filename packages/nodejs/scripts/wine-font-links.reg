@@ -1,8 +1,0 @@
-REGEDIT4
-
-[HKEY_CURRENT_USER\Software\Wine\Fonts\Replacements]
-"Arial"="Noto Sans CJK SC"
-"Courier New"="Noto Sans Mono CJK SC"
-
-[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Fonts]
-"Segoe UI Emoji (TrueType)"="seguiemj.ttf"

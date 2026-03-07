@@ -9,6 +9,9 @@ mkdir -p "$server_dir"
 if [ ! -f "$server_dir/node.exe" ]; then
     wget -c -O "$server_dir/node.exe" "https://github.com/msojocs/skyline-node/releases/download/v16.4.0-1/node.exe"
 fi
+if [ ! -f "$server_dir/dwrite.dll" ]; then
+    wget -c -O "$server_dir/dwrite.dll" "https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll"
+fi
 if [ ! -f "$server_dir/nw.dll" ]; then
     cp "$win_dir/nw.dll" "$server_dir/nw.dll"
 fi

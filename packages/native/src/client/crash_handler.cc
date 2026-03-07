@@ -9,6 +9,10 @@
 #include <sstream>
 #include <iomanip>
 #include <tlhelp32.h>
+#include <stdexcept>
+#ifdef _MSC_VER
+#include <eh.h>
+#endif
 
 #pragma comment(lib, "dbghelp.lib")
 
@@ -174,9 +178,11 @@ namespace CrashHandler {
         SetUnhandledExceptionFilter(ExceptionHandler);
         
         // 设置结构化异常处理
+#ifdef _MSC_VER
         _set_se_translator([](unsigned int code, PEXCEPTION_POINTERS pExceptionInfo) {
             throw std::runtime_error("Structured Exception");
         });
+#endif
         
         spdlog::info("Crash handler initialized");
     }

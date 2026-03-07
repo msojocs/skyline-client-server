@@ -16,9 +16,9 @@ add_library(${SERVER_NAME}
     )
 
 set(IS_RUNNING_NODE false)
-if (WIN32)
+if (SKYLINE_TARGET_WINDOWS)
     if(IS_RUNNING_NODE)
-        if(MINGW)
+        if(SKYLINE_USING_MINGW)
             # MinGW cross-compilation: generate import library from .def
             find_program(DLLTOOL_EXECUTABLE NAMES x86_64-w64-mingw32-dlltool dlltool)
             if(DLLTOOL_EXECUTABLE)
@@ -37,7 +37,7 @@ if (WIN32)
         endif()
     else()
         message("整合 node64.lib")
-        if(MINGW)
+        if(SKYLINE_USING_MINGW)
             # MinGW cross-compilation: generate import library from node64.lib
             # MinGW linker can use MSVC .lib files directly in many cases
             target_link_libraries(${SERVER_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/thirds/nwjs/node64.lib)
@@ -46,7 +46,7 @@ if (WIN32)
         endif()
     endif()
     target_link_libraries(${SERVER_NAME} PRIVATE bcrypt)
-    if(MINGW)
+    if(SKYLINE_USING_MINGW)
         target_link_libraries(${SERVER_NAME} PRIVATE ws2_32 wsock32)
     endif()
 

@@ -67,7 +67,7 @@ jobs:
 
       - name: Pack
         run: |
-          scripts/ci/pack-linux.sh x86_64 ${{ steps.tag.outputs.tag }}
+          tools/ci/pack-linux.sh x86_64 ${{ steps.tag.outputs.tag }}
       - name: Inspect directory after downloading artifacts
         run: ls -alFR tmp/upload
 

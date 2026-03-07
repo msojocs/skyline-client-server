@@ -1,5 +1,6 @@
 
-add_subdirectory(client)
-# if (WIN32)
+if (SKYLINE_TARGET_WINDOWS)
     add_subdirectory(server)
-# endif()
+else()
+    add_subdirectory(client)
+endif()

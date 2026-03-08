@@ -3,6 +3,7 @@
 #include <boost/asio/write.hpp>
 #include <array>
 #include <cstdlib>
+#include <cstring>
 #include <thread>
 #include <memory>
 #include "../common/logger.hh"
@@ -63,11 +64,13 @@ ServerSocket::~ServerSocket() {
 void ServerSocket::sendMessage(std::string&& message, std::int64_t messageId) {
     try {
         if (socket && socket->is_open()) {
-            uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
-            uint64_t message_id = hostToNetwork64(static_cast<uint64_t>(messageId));
-            std::array<boost::asio::const_buffer, 3> buffers = {
-                boost::asio::buffer(&message_length, sizeof(message_length)),
-                boost::asio::buffer(&message_id, sizeof(message_id)),
+            std::array<uint8_t, sizeof(uint32_t) + sizeof(uint64_t)> header{};
+            const uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
+            const uint64_t message_id = hostToNetwork64(static_cast<uint64_t>(messageId));
+            std::memcpy(header.data(), &message_length, sizeof(message_length));
+            std::memcpy(header.data() + sizeof(uint32_t), &message_id, sizeof(message_id));
+            std::array<boost::asio::const_buffer, 2> buffers = {
+                boost::asio::buffer(header.data(), header.size()),
                 boost::asio::buffer(message)
             };
             boost::asio::write(*socket, buffers);
@@ -82,12 +85,15 @@ void ServerSocket::sendMessage(std::string&& message, std::int64_t messageId) {
 std::string ServerSocket::receiveMessage(std::int64_t *messageId) {
     try {
         if (socket && socket->is_open()) {
-            uint32_t message_length = 0;
-            boost::asio::read(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
-            message_length = ntohl(message_length);
+            std::array<uint8_t, sizeof(uint32_t) + sizeof(uint64_t)> header{};
+            boost::asio::read(*socket, boost::asio::buffer(header.data(), header.size()));
+
+            uint32_t message_length_net = 0;
+            std::memcpy(&message_length_net, header.data(), sizeof(message_length_net));
+            const uint32_t message_length = ntohl(message_length_net);
 
             uint64_t raw_message_id = 0;
-            boost::asio::read(*socket, boost::asio::buffer(&raw_message_id, sizeof(raw_message_id)));
+            std::memcpy(&raw_message_id, header.data() + sizeof(uint32_t), sizeof(raw_message_id));
             if (messageId != nullptr) {
                 *messageId = static_cast<int64_t>(networkToHost64(raw_message_id));
             }

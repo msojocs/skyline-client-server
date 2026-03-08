@@ -54,12 +54,8 @@ namespace ClientAction {
 
         nlohmann::json json = nlohmann::json::parse(message);
         if (!json["type"].empty() && json["type"].get<std::string>() == "emitCallback") {
-            auto block = json["data"]["block"];
-            if ((block.is_boolean() && block.get<bool>() == true) && messageId <= 0) {
-                logger->error("blocking emitCallback missing messageId in protocol header");
-                return;
-            }
                 auto callbackId = json["callbackId"].get<int64_t>();
+                auto block = json["data"]["block"];
                 {
                     // 直接丢进队列，可能send那边会处理，也可能是下面的tsfn处理
                     std::lock_guard<std::mutex> lock(callbackQueueMutex);
@@ -150,8 +146,6 @@ namespace ClientAction {
                 } else {
                     logger->error("callbackId not found: {}", callbackId);
                 }
-        } else {
-            logger->error("Received message without protocol messageId: {}", message);
         }
     }
 

@@ -9,7 +9,7 @@ namespace SkylineDebugInfo{
     // 创建一个函数，每次调用时返回最新的时间戳
     Napi::Function func = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
         try {
-            spdlog::info("Call GetVersion sub...");
+            // spdlog::info("Call GetVersion sub...");
             nlohmann::json reqData;
             auto result = ClientAction::callStaticSync("global", "SkylineDebugInfo", reqData);
             auto returnValue = result["returnValue"];

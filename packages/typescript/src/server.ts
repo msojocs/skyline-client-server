@@ -21,9 +21,11 @@ try {
   registerDefaultClazz(g)
   const port = 3001
   server.start('127.0.0.1', port)
-  server.setMessageCallback((message: string) => {
+  server.setMessageCallback((message: string, messageId: number) => {
+    const reply = (payload: any) => {
+      global.send(JSON.stringify(payload), messageId)
+    }
     const req = JSON.parse(message) as {
-      id: number
       type: 'constructor' | 'static' | 'dynamic' | 'dynamicProperty' | 'registerCallback'
       clazz: string
       action: string
@@ -49,10 +51,7 @@ try {
         const clazz = getClazz(req.clazz)
         if (!clazz) {
           log.error('Class not found', req.clazz)
-          global.send(JSON.stringify({
-            id: req.id,
-            error: 'Class not found'
-          }))
+          reply({ error: 'Class not found' })
           return
         }
         // 实例化对象
@@ -60,22 +59,14 @@ try {
         const params = req.data.params || []
         const instanceId = setInstance(new clazz(...params))
         log.debug('constructor end', req.clazz, instanceId)
-        global.send(JSON.stringify({
-          id: req.id,
-          result: {
-            instanceId: instanceId
-          }
-        }))
+        reply({ result: { instanceId: instanceId } })
       }
       else if (req.type == 'static') {
         // 静态对象调用请求
         const { getClazz } = useObjectManage()
         const clazz = getClazz(req.clazz)
         if (!clazz) {
-          global.send(JSON.stringify({
-            id: req.id,
-            error: 'Class not found'
-          }))
+          reply({ error: 'Class not found' })
           return
         }
         if (typeof clazz[req.action] === 'function') {
@@ -85,36 +76,20 @@ try {
           let result = clazz[req.action](...params);
           result = hookResult(`${req.action}_staticResult`, result)
           log.debug("static call result", req.action, result);
-          global.send(JSON.stringify({
-            id: req.id,
-            result: {
-              returnValue: result,
-            },
-          }));
+          reply({ result: { returnValue: result } });
         } else if (typeof clazz[req.action] !== 'undefined') {
           const result = clazz[req.action]
-          global.send(JSON.stringify({
-            id: req.id,
-            result: {
-              returnValue: result
-            },
-          }));
+          reply({ result: { returnValue: result } });
         } else {
           log.error('Method not found or instance invalid', req.action, clazz[req.action])
-          global.send(JSON.stringify({
-            id: req.id,
-            error: 'Method not found or instance invalid',
-          }));
+          reply({ error: 'Method not found or instance invalid' });
         }
       }
       else if (req.type == 'dynamic') {
         // 动态对象调用请求
         if (!req.data.instanceId) {
           log.error('InstanceId not found')
-          global.send(JSON.stringify({
-            id: req.id,
-            error: 'InstanceId not found'
-          }))
+          reply({ error: 'InstanceId not found' })
           return
         }
         const { getInstance } = useInstanceManage()
@@ -128,13 +103,12 @@ try {
           result = hookResult(`${req.action}_dynamicResult`, result)
           log.debug("dynamic call result hooked", req.action, result);
 
-          if (req.id) {
-            global.send(JSON.stringify({
-              id: req.id,
+          if (messageId > 0) {
+            reply({
               result: {
                 returnValue: result,
               },
-            }));
+            });
             if (req.action === 'matches' && result === true) {
               console.info('matches:', instance, params, result)
             } else if (req.action === 'appendCompiledStyleSheets') {
@@ -157,19 +131,13 @@ try {
             }
           }
         } else {
-          global.send(JSON.stringify({
-            id: req.id,
-            error: 'Method not found or instance invalid',
-          }));
+          reply({ error: 'Method not found or instance invalid' });
         }
       }
       else if (req.type == 'dynamicProperty') {
         // 动态对象调用请求
         if (!req.data.instanceId) {
-          global.send(JSON.stringify({
-            id: req.id,
-            error: 'InstanceId not found'
-          }))
+          reply({ error: 'InstanceId not found' })
           return
         }
         const { getInstance } = useInstanceManage()
@@ -194,29 +162,22 @@ try {
         result = hookResult(`${req.action}_dynamicResult`, result)
         log.debug("dynamic property result hooked", req.action, result);
 
-        if (req.id) {
-          global.send(JSON.stringify({
-            id: req.id,
+        if (messageId > 0) {
+          reply({
             result: {
               returnValue: result,
             },
-          }));
+          });
         }
       }
       else {
-        global.send(JSON.stringify({
-          id: req.id,
-          error: 'Request type not recognized',
-        }));
+        reply({ error: 'Request type not recognized' });
       }
     }
     catch (err: any) {
       log.error('Error:', err)
-      if (req.id) {
-        global.send(JSON.stringify({
-          id: req.id,
-          error: err.message,
-        }))
+      if (messageId > 0) {
+        reply({ error: err.message })
       }
     }
   });

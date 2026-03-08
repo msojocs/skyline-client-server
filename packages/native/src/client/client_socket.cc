@@ -11,6 +11,20 @@ using boost::asio::ip::tcp;
 using Logger::logger;
 
 namespace SkylineClient {
+namespace {
+uint64_t hostToNetwork64(uint64_t value) {
+  static const uint16_t one = 1;
+  if (*reinterpret_cast<const uint8_t *>(&one) == 0) {
+    return value;
+  }
+  const uint32_t high = htonl(static_cast<uint32_t>(value >> 32));
+  const uint32_t low = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFULL));
+  return (static_cast<uint64_t>(low) << 32) | high;
+}
+
+uint64_t networkToHost64(uint64_t value) { return hostToNetwork64(value); }
+} // namespace
+
 static std::string serverAddress = "127.0.0.1";
 static int serverPort = 3001;
 void ClientSocket::Init(Napi::Env env) {
@@ -78,12 +92,14 @@ void ClientSocket::Init(Napi::Env env) {
     throw std::runtime_error("Failed to establish connection after 5 attempts");
     
 }
-void ClientSocket::sendMessage(std::string&& message) {
+void ClientSocket::sendMessage(std::string&& message, std::int64_t messageId) {
     if (socket && socket->is_open()) {
         logger->debug("Sending message with length: {}", message.size());
         uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
-        std::array<boost::asio::const_buffer, 2> buffers = {
+        uint64_t message_id = hostToNetwork64(static_cast<uint64_t>(messageId));
+        std::array<boost::asio::const_buffer, 3> buffers = {
             boost::asio::buffer(&message_length, sizeof(message_length)),
+            boost::asio::buffer(&message_id, sizeof(message_id)),
             boost::asio::buffer(message)
         };
         boost::asio::write(*socket, buffers);
@@ -91,11 +107,17 @@ void ClientSocket::sendMessage(std::string&& message) {
         logger->error("Socket is not open");
     }
 }
-std::string ClientSocket::receiveMessage() {
+std::string ClientSocket::receiveMessage(std::int64_t *messageId) {
     if (socket && socket->is_open()) {
         uint32_t message_length = 0;
         boost::asio::read(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
         message_length = ntohl(message_length);
+
+        uint64_t raw_message_id = 0;
+        boost::asio::read(*socket, boost::asio::buffer(&raw_message_id, sizeof(raw_message_id)));
+        if (messageId != nullptr) {
+            *messageId = static_cast<int64_t>(networkToHost64(raw_message_id));
+        }
 
         // Then read the actual message
         std::string message(message_length, '\0');

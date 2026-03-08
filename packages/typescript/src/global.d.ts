@@ -1,6 +1,6 @@
 declare global {
     var sendMessageSync: (message: string) => string
-    var send: (message: string) => void
+    var send: (message: string, messageId?: number) => void
     var blockUntilNextMessage: () => void
     var clazzSet: Set<string>
     var clazzMap: Map<string, any>

@@ -15,15 +15,19 @@
 using Logger::logger;
 
 namespace ClientAction {
+    struct CallbackQueueItem {
+        nlohmann::json payload;
+        int64_t messageId;
+    };
     static std::mutex socketRequestMutex;  // Add mutex for thread synchronization
     static std::condition_variable socketEventCv;
     static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
-    static std::queue<nlohmann::json> callbackQueue;
+    static std::queue<CallbackQueueItem> callbackQueue;
     static std::mutex callbackQueueMutex;
     static int64_t requestId = 1;
     static std::shared_ptr<SkylineClient::Client> client;
 
-    void processMessage(const std::string &message) {
+    void processMessage(const std::string &message, int64_t messageId = 0) {
         logger->debug("Received message length: {}", message.size());
         if (message.empty()) {
             logger->error("Received message is empty!");
@@ -31,38 +35,44 @@ namespace ClientAction {
         }
 
         nlohmann::json json = nlohmann::json::parse(message);
-        if (json["type"].empty() && json.contains("id")) {
-            // 响应体一定没有type，只有id
-            // 但是不能用包含id就去查找请求，因为服务器的emitCallback请求也是包含id的
-            // 这时找不到，浪费性能，所以用type为空排除emitCallback的id查找，提高效率
-            // Response message
-            auto id = json["id"].get<int64_t>();
-            logger->debug("Received message id: {}", id);
-
+        if (json["type"].empty()) {
             std::shared_ptr<std::promise<std::string>> promise;
             {
-                std::lock_guard<std::mutex> lock(socketRequestMutex);  // Lock during map access
-                if (auto target = socketRequest.find(id); target != socketRequest.end()) {
+                std::lock_guard<std::mutex> lock(socketRequestMutex);
+                if (auto target = socketRequest.find(messageId); target != socketRequest.end()) {
                     promise = std::move(target->second);
                     socketRequest.erase(target);
                 } else {
-                    logger->error("id not found: {}", id);
+                    logger->error("response messageId not found: {}", messageId);
                 }
             }
             if (promise) {
                 promise->set_value(message);
                 socketEventCv.notify_all();
             }
-        } else if(!json["type"].empty()) {
-
-            if (json["type"].get<std::string>() == "emitCallback") {
+        } else if (!json["type"].empty() && json["type"].get<std::string>() == "emitCallback") {
+            if (messageId <= 0) {
+                logger->error("emitCallback missing messageId in protocol header");
+                return;
+            }
+            {
+                std::shared_ptr<std::promise<std::string>> promise;
+                std::lock_guard<std::mutex> lock(socketRequestMutex);
+                if (auto target = socketRequest.find(messageId); target != socketRequest.end()) {
+                    promise = std::move(target->second);
+                    socketRequest.erase(target);
+                }
+                if (promise) {
+                    logger->error("messageId collision with request map: {}", messageId);
+                }
+            }
                 auto callbackId = json["callbackId"].get<int64_t>();
                 auto block = json["data"]["block"];
                 {
                     // 直接丢进队列，可能send那边会处理，也可能是下面的tsfn处理
                     std::lock_guard<std::mutex> lock(callbackQueueMutex);
                     logger->debug("Push callback msg to queue...");
-                    callbackQueue.push(std::move(json));
+                    callbackQueue.push(CallbackQueueItem{std::move(json), messageId});
                 }
                 socketEventCv.notify_all();
                 auto ptr = Convert::find_callback(callbackId);
@@ -72,17 +82,18 @@ namespace ClientAction {
                         logger->debug("Block value: false...");
                         ptr->tsfn.NonBlockingCall([](Napi::Env env, Napi::Function jsCallback) {
                             logger->debug("NonBlockingCall...");
-                            nlohmann::json json;
+                            CallbackQueueItem item;
                             {
                                 std::lock_guard<std::mutex> lock(callbackQueueMutex);
                                 if (callbackQueue.empty()) {
                                     logger->warn("CallbackQueue is empty when processing blocking callback.");
                                     return;
                                 }
-                                json = callbackQueue.front();
+                                item = std::move(callbackQueue.front());
                                 callbackQueue.pop();
                                 logger->debug("Pop msg from queue...");
                             }
+                            auto &json = item.payload;
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
@@ -97,31 +108,30 @@ namespace ClientAction {
                             logger->debug("call callback function end...");
 
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
-                            if (json.contains("id")) {
+                            if (item.messageId > 0) {
                                 logger->info("reply callback...");
-                                // Add newline as message delimiter
                                 client->sendMessage(nlohmann::json{
-                                    {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
                                     {"result", std::move(resultJson)},
-                                }.dump());
+                                }.dump(), item.messageId);
                             }
                         });
                     } else {
                         logger->debug("Block value: true...");
                         ptr->tsfn.BlockingCall([](Napi::Env env, Napi::Function jsCallback) {
                             logger->debug("BlockingCall...");
-                            nlohmann::json json;
+                            CallbackQueueItem item;
                             {
                                 std::lock_guard<std::mutex> lock(callbackQueueMutex);
                                 if (callbackQueue.empty()) {
                                     logger->warn("CallbackQueue is empty when processing blocking callback.");
                                     return;
                                 }
-                                json = callbackQueue.front();
+                                item = std::move(callbackQueue.front());
                                 callbackQueue.pop();
                                 logger->debug("Pop msg from queue...");
                             }
+                            auto &json = item.payload;
                             auto args = json["data"]["args"];
                             auto callbackId = json["callbackId"].get<int64_t>();
                             Napi::HandleScope scope(env);
@@ -136,21 +146,20 @@ namespace ClientAction {
                             logger->debug("Call callback function end...");
 
                             auto resultJson = Convert::convertValue2Json(env, resultValue);
-                            if (json.contains("id")) {
+                            if (item.messageId > 0) {
                                 logger->debug("reply callback...");
-                                // Add newline as message delimiter
                                 client->sendMessage(nlohmann::json{
-                                    {"id", json["id"].get<int64_t>()},
                                     {"type", "callbackReply"},
                                     {"result", std::move(resultJson)},
-                                }.dump());
+                                }.dump(), item.messageId);
                             }
                         });
                     }
                 } else {
                     logger->error("callbackId not found: {}", callbackId);
                 }
-            }
+        } else {
+            logger->error("Received message without protocol messageId: {}", message);
         }
     }
 
@@ -163,8 +172,9 @@ namespace ClientAction {
             std::thread([]() {
                 try {
                     while (true) {
-                        std::string message = client->receiveMessage();
-                        processMessage(message);
+                        int64_t messageId = 0;
+                        std::string message = client->receiveMessage(&messageId);
+                        processMessage(message, messageId);
                     }
                 } catch (std::exception& e) {
                     logger->error("Read message error: {}", e.what());
@@ -184,7 +194,6 @@ namespace ClientAction {
             requestId = 1;
         }
         auto id = requestId++;
-        data["id"] = id;
         logger->info("Send to server {}", id);
 
         auto promiseObj = std::make_shared<std::promise<std::string>>();
@@ -201,22 +210,23 @@ namespace ClientAction {
         }
 
         logger->info("Sending message to server: {}", id);
-        client->sendMessage(std::move(data.dump()));
+        client->sendMessage(std::move(data.dump()), id);
         logger->debug("Message sent, waiting for response: {}", id);
 
         auto start = std::chrono::steady_clock::now();
         while (true) {
-            nlohmann::json json;
+            CallbackQueueItem item;
             bool hasCallback = false;
             {
                 std::lock_guard<std::mutex> lock(callbackQueueMutex);
                 if (!callbackQueue.empty()) {
-                    json = std::move(callbackQueue.front());
+                    item = std::move(callbackQueue.front());
                     callbackQueue.pop();
                     hasCallback = true;
                 }
             }
             if (hasCallback) {
+                auto &json = item.payload;
                 logger->debug("Pop msg from queue, start to handle callback.");
                 auto callbackId = json["callbackId"].get<int64_t>();
                 auto ptr = Convert::find_callback(callbackId);
@@ -236,14 +246,12 @@ namespace ClientAction {
                     auto resultValue = funcRef->Value().Call(argsVec);
 
                     auto resultJson = Convert::convertValue2Json(env, resultValue);
-                    if (json.contains("id")) {
+                    if (item.messageId > 0) {
                         logger->info("reply callback...");
-                        // Add newline as message delimiter
                         client->sendMessage(nlohmann::json{
-                            {"id", json["id"].get<int64_t>()},
                             {"type", "callbackReply"},
                             {"result", std::move(resultJson)},
-                        }.dump());
+                        }.dump(), item.messageId);
                     }
                 } else {
                     logger->error("CallbackId not found: {}", callbackId);
@@ -280,14 +288,8 @@ namespace ClientAction {
     }
 
     void sendMessageAsync(nlohmann::json& data) {
-        if (requestId >= INT64_MAX) {
-            requestId = 1;
-        }
-        auto id = requestId++;
-        data["id"] = id;
-        logger->info("send to server {}", id);
-
-        client->sendMessage(data.dump());
+        logger->info("send to server async");
+        client->sendMessage(data.dump(), 0);
     }
 
     void callDynamicAsync(int64_t instanceId, const std::string& action, nlohmann::json& args) {

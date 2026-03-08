@@ -18,8 +18,8 @@ class ClientSocket : public Client {
     public:
     void Init(Napi::Env env);
     ~ClientSocket();
-    void sendMessage(std::string&& message);
-    std::string receiveMessage();
+    void sendMessage(std::string&& message, std::int64_t messageId = 0);
+    std::string receiveMessage(std::int64_t *messageId = nullptr);
 
     private:
     boost::asio::io_context io_context;

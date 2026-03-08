@@ -14,8 +14,8 @@ namespace SkylineServer {
     public:
         void Init(const Napi::CallbackInfo &info);
         ~ServerSocket();
-        void sendMessage(std::string&& message);
-        std::string receiveMessage();
+        void sendMessage(std::string&& message, std::int64_t messageId = 0);
+        std::string receiveMessage(std::int64_t *messageId = nullptr);
     private:
         boost::asio::io_context io_context;
         std::unique_ptr<tcp::acceptor> acceptor;

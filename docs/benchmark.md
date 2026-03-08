@@ -1,11 +1,12 @@
-## json
+$ node tools/benchmark.js
+## original
 [2026-03-08 18:46:32.935] [info] Starting Skyline Client...
 Connecting to server...
 Connected to server.
 Time taken: 7868ms
 
-## msgpack
-[2026-03-08 18:45:00.507] [info] Starting Skyline Client...
+## msgId move to header
+[2026-03-08 19:52:12.523] [info] Starting Skyline Client...
 Connecting to server...
 Connected to server.
-Time taken: 8197ms
+Time taken: 8086ms

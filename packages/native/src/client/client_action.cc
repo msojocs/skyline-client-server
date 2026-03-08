@@ -7,6 +7,7 @@
 #include <memory>
 #include <future>
 #include <condition_variable>
+#include <algorithm>
 #include "client_action.hh"
 #include "../common/logger.hh"
 #include "../common/convert.hh"
@@ -201,48 +202,55 @@ namespace ClientAction {
         logger->debug("Message sent, waiting for response: {}", id);
 
         auto start = std::chrono::steady_clock::now();
-        while (true) {
+        auto handleOneCallback = [&]() {
             CallbackQueueItem item;
-            bool hasCallback = false;
             {
                 std::lock_guard<std::mutex> lock(callbackQueueMutex);
-                if (!callbackQueue.empty()) {
-                    item = std::move(callbackQueue.front());
-                    callbackQueue.pop();
-                    hasCallback = true;
+                if (callbackQueue.empty()) {
+                    return false;
                 }
+                item = std::move(callbackQueue.front());
+                callbackQueue.pop();
             }
-            if (hasCallback) {
-                auto &json = item.payload;
-                logger->debug("Pop msg from queue, start to handle callback.");
-                auto callbackId = json["callbackId"].get<int64_t>();
-                auto ptr = Convert::find_callback(callbackId);
-                if (ptr != nullptr) {
-                    logger->info("callbackId found: {}", callbackId);
-                    auto env = ptr->funcRef->Env();
-                    auto args = json["data"]["args"];
-                    auto callbackId = json["callbackId"].get<int64_t>();
-                    Napi::HandleScope scope(env);
-                    std::vector<Napi::Value> argsVec;
-                    argsVec.reserve(args.size());
-                    
-                    for (auto& arg : args) {
-                        argsVec.push_back(Convert::convertJson2Value(env, arg));
-                    }
-                    std::shared_ptr<Napi::FunctionReference> funcRef = ptr->funcRef;
-                    auto resultValue = funcRef->Value().Call(argsVec);
 
-                    auto resultJson = Convert::convertValue2Json(env, resultValue);
-                    if (item.messageId > 0) {
-                        logger->info("reply callback...");
-                        client->sendMessage(nlohmann::json{
-                            {"type", "callbackReply"},
-                            {"result", std::move(resultJson)},
-                        }.dump(), item.messageId);
-                    }
-                } else {
-                    logger->error("CallbackId not found: {}", callbackId);
+            auto &json = item.payload;
+            logger->debug("Pop msg from queue, start to handle callback.");
+            auto callbackId = json["callbackId"].get<int64_t>();
+            auto ptr = Convert::find_callback(callbackId);
+            if (ptr != nullptr) {
+                logger->info("callbackId found: {}", callbackId);
+                auto env = ptr->funcRef->Env();
+                auto args = json["data"]["args"];
+                Napi::HandleScope scope(env);
+                std::vector<Napi::Value> argsVec;
+                argsVec.reserve(args.size());
+
+                for (auto &arg : args) {
+                    argsVec.push_back(Convert::convertJson2Value(env, arg));
                 }
+                std::shared_ptr<Napi::FunctionReference> funcRef = ptr->funcRef;
+                auto resultValue = funcRef->Value().Call(argsVec);
+
+                auto resultJson = Convert::convertValue2Json(env, resultValue);
+                if (item.messageId > 0) {
+                    logger->info("reply callback...");
+                    client->sendMessage(nlohmann::json{
+                        {"type", "callbackReply"},
+                        {"result", std::move(resultJson)},
+                    }.dump(), item.messageId);
+                }
+            } else {
+                logger->error("CallbackId not found: {}", callbackId);
+            }
+            return true;
+        };
+
+        while (true) {
+            while (handleOneCallback()) {
+            }
+
+            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                break;
             }
 
             auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>
@@ -251,12 +259,20 @@ namespace ClientAction {
                 logger->error("Operation timed out after 5 seconds, request data:\n{}", data.dump());
                 throw std::runtime_error("Operation timed out after 5 seconds, request data:\n" + data.dump());
             }
-            
-            if (futureObj.wait_for(std::chrono::milliseconds(2)) == std::future_status::ready) {
+
+            auto remain_ms = 5000 - delta_ms;
+            auto wait_ms = std::min<int64_t>(remain_ms, 50);
+            std::unique_lock<std::mutex> lock(socketRequestMutex);
+            socketEventCv.wait_for(lock, std::chrono::milliseconds(wait_ms), [&]() {
+                if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                    return true;
+                }
+                std::lock_guard<std::mutex> qLock(callbackQueueMutex);
+                return !callbackQueue.empty();
+            });
+            if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
                 break;
             }
-            std::unique_lock<std::mutex> lock(socketRequestMutex);
-            socketEventCv.wait_for(lock, std::chrono::milliseconds(2));
         }
 
         std::string result = futureObj.get();

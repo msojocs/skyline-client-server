@@ -6,6 +6,7 @@
 #include <thread>
 #include <queue>
 #include <memory>
+#include <algorithm>
 #include "../common/logger.hh"
 #include "../common/convert.hh"
 #include "server.hh"
@@ -63,6 +64,7 @@ namespace ServerAction {
                 logger->debug("blocked, push to queue... {}", message);
                 blockQueue.push(BlockQueueItem{std::move(message), messageId});
             }
+            socketResponseCv.notify_all();
 
             // Call the JavaScript callback through the thread-safe function
             auto callback = [](Napi::Env env, Napi::Function jsCallback) {
@@ -209,50 +211,62 @@ namespace ServerAction {
       server->sendMessage(std::move(message), id);
       // 3秒超时
       auto start = std::chrono::high_resolution_clock::now();
+      auto handleOneBlockedMessage = [&]() {
+        BlockQueueItem msg;
+        {
+          std::lock_guard<std::mutex> lock(blockQueueMutex);
+          if (blockQueue.empty()) {
+            return false;
+          }
+          msg = std::move(blockQueue.front());
+          blockQueue.pop();
+        }
+        try {
+          logger->debug("start to handle blocked message, length: {}", msg.message.size());
+          messageHandleRef->Value().Call({
+            Napi::String::New(env, msg.message),
+            Napi::Number::New(env, msg.messageId)
+          });
+        } catch (const std::exception &e) {
+          logger->error("Error parsing JSON: {}", e.what());
+          throw Napi::Error::New(info.Env(), e.what());
+        } catch (...) {
+          logger->error("Unknown error occurred");
+          throw Napi::Error::New(info.Env(), "Unknown error occurred");
+        }
+        return true;
+      };
+
       while (true) {
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = end - start;
-        if (elapsed.count() > 3) {
+        while (handleOneBlockedMessage()) {
+        }
+
+        if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+          break;
+        }
+
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::high_resolution_clock::now() - start).count();
+        if (elapsed_ms > 3000) {
           {
             std::lock_guard<std::mutex> lock(socketRequestMutex);
             socketRequest.erase(id);
           }
           throw Napi::Error::New(info.Env(), "Request to client timeout, request id: " + std::to_string(id));
         }
-        if (futureObj.wait_for(std::chrono::milliseconds(2)) == std::future_status::ready) {
+
+        auto remain_ms = 3000 - elapsed_ms;
+        auto wait_ms = std::min<int64_t>(remain_ms, 50);
+        std::unique_lock<std::mutex> lock(socketRequestMutex);
+        socketResponseCv.wait_for(lock, std::chrono::milliseconds(wait_ms), [&]() {
+          if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+            return true;
+          }
+          std::lock_guard<std::mutex> qLock(blockQueueMutex);
+          return !blockQueue.empty();
+        });
+        if (futureObj.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
           break;
-        }
-        BlockQueueItem msg;
-        bool hasMsg = false;
-        {
-            std::lock_guard<std::mutex> lock(blockQueueMutex);
-            if (!blockQueue.empty()) {
-                msg = std::move(blockQueue.front());
-                blockQueue.pop();
-                hasMsg = true;
-            }
-        }
-        if (!hasMsg) {
-            std::unique_lock<std::mutex> lock(socketRequestMutex);
-            socketResponseCv.wait_for(lock, std::chrono::milliseconds(2));
-            continue;
-        }
-        try {
-            // Client发来的消息
-            logger->debug("start to handle blocked message, length: {}", msg.message.size());
-            // Call the JavaScript callback through the thread-safe function
-            messageHandleRef->Value().Call({
-                Napi::String::New(env, msg.message),
-                Napi::Number::New(env, msg.messageId)
-            });
-        }
-        catch (const std::exception &e) {
-            logger->error("Error parsing JSON: {}", e.what());
-            throw Napi::Error::New(info.Env(), e.what());
-        }
-        catch (...) {
-            logger->error("Unknown error occurred");
-            throw Napi::Error::New(info.Env(), "Unknown error occurred");
         }
       }
       std::string result = futureObj.get();

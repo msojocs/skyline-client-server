@@ -34,8 +34,7 @@ namespace ClientAction {
             return;
         }
 
-        nlohmann::json json = nlohmann::json::parse(message);
-        if (json["type"].empty()) {
+        if (messageId > 0 && (messageId & 1LL) == 1LL) {
             std::shared_ptr<std::promise<std::string>> promise;
             {
                 std::lock_guard<std::mutex> lock(socketRequestMutex);
@@ -50,24 +49,17 @@ namespace ClientAction {
                 promise->set_value(message);
                 socketEventCv.notify_all();
             }
-        } else if (!json["type"].empty() && json["type"].get<std::string>() == "emitCallback") {
-            if (messageId <= 0) {
-                logger->error("emitCallback missing messageId in protocol header");
+            return;
+        }
+
+        nlohmann::json json = nlohmann::json::parse(message);
+        if (!json["type"].empty() && json["type"].get<std::string>() == "emitCallback") {
+            auto block = json["data"]["block"];
+            if ((block.is_boolean() && block.get<bool>() == true) && messageId <= 0) {
+                logger->error("blocking emitCallback missing messageId in protocol header");
                 return;
             }
-            {
-                std::shared_ptr<std::promise<std::string>> promise;
-                std::lock_guard<std::mutex> lock(socketRequestMutex);
-                if (auto target = socketRequest.find(messageId); target != socketRequest.end()) {
-                    promise = std::move(target->second);
-                    socketRequest.erase(target);
-                }
-                if (promise) {
-                    logger->error("messageId collision with request map: {}", messageId);
-                }
-            }
                 auto callbackId = json["callbackId"].get<int64_t>();
-                auto block = json["data"]["block"];
                 {
                     // 直接丢进队列，可能send那边会处理，也可能是下面的tsfn处理
                     std::lock_guard<std::mutex> lock(callbackQueueMutex);
@@ -190,10 +182,11 @@ namespace ClientAction {
     }
 
     nlohmann::json sendMessageSync(nlohmann::json& data) {
-        if (requestId >= INT64_MAX) {
+        if (requestId >= INT64_MAX - 1) {
             requestId = 1;
         }
-        auto id = requestId++;
+        auto id = requestId;
+        requestId += 2;
         logger->info("Send to server {}", id);
 
         auto promiseObj = std::make_shared<std::promise<std::string>>();

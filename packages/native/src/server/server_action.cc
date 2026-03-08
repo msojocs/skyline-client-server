@@ -25,7 +25,7 @@ namespace ServerAction {
     static std::unordered_map<int64_t, std::shared_ptr<std::promise<std::string>>> socketRequest;
     static std::queue<BlockQueueItem> blockQueue;
     static std::mutex blockQueueMutex;
-    static int64_t requestId = 1;
+    static int64_t requestId = 2;
     static std::shared_ptr<SkylineServer::Server> server;
 
     static std::condition_variable cv_blockUntilNextMessage;
@@ -192,10 +192,11 @@ namespace ServerAction {
       auto env = info.Env();
       auto message = info[0].As<Napi::String>().Utf8Value();
       logger->debug("sendMessageSync payload length: {}", message.size());
-      if (requestId >= INT64_MAX) {
-        requestId = 1;
+      if (requestId >= INT64_MAX - 1) {
+        requestId = 2;
       }
-      auto id = requestId++;
+      auto id = requestId;
+      requestId += 2;
 
       // 先存储，再发送
       auto promiseObj = std::make_shared<std::promise<std::string>>();

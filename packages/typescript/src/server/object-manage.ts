@@ -38,29 +38,79 @@ export const registerSkylineGlobalClazz = (g: any) => {
 }
 
 const instanceMap = new Map<number, any>();
+const instanceObjectIdMap = new WeakMap<object, number>();
+const instancePrimitiveIdMap = new Map<any, number>();
 globalThis.instanceMap = instanceMap;
 let instanceId = 1;
+
+const isWeakMapKey = (value: any): value is object => {
+    return (typeof value === 'object' && value !== null) || typeof value === 'function'
+}
 export const useInstanceManage = () => ({
     getInstance: (instanceId: number) => {
         return instanceMap.get(instanceId)
     },
     getInstanceId: (instance: any) => {
-        for (const [key, value] of instanceMap.entries()) {
-            if (value === instance) {
-                return key
-            }
+        if (isWeakMapKey(instance)) {
+            return instanceObjectIdMap.get(instance) ?? null
         }
-        return null
+        return instancePrimitiveIdMap.get(instance) ?? null
     },
     setInstance: (instance: any) => {
         const id = instanceId++
         instanceMap.set(id, instance)
+        if (isWeakMapKey(instance)) {
+            if (!instanceObjectIdMap.has(instance)) {
+                instanceObjectIdMap.set(instance, id)
+            }
+        } else if (!instancePrimitiveIdMap.has(instance)) {
+            instancePrimitiveIdMap.set(instance, id)
+        }
         return id
     },
     removeInstance: (instanceId: number) => {
-        instanceMap.delete(instanceId)
+        const instance = instanceMap.get(instanceId)
+        if (!instanceMap.delete(instanceId)) {
+            return
+        }
+
+        if (isWeakMapKey(instance)) {
+            const mappedId = instanceObjectIdMap.get(instance)
+            if (mappedId === instanceId) {
+                let fallbackId: number | null = null
+                for (const [key, value] of instanceMap.entries()) {
+                    if (value === instance) {
+                        fallbackId = key
+                        break
+                    }
+                }
+                if (fallbackId === null) {
+                    instanceObjectIdMap.delete(instance)
+                } else {
+                    instanceObjectIdMap.set(instance, fallbackId)
+                }
+            }
+            return
+        }
+
+        const mappedId = instancePrimitiveIdMap.get(instance)
+        if (mappedId === instanceId) {
+            let fallbackId: number | null = null
+            for (const [key, value] of instanceMap.entries()) {
+                if (value === instance) {
+                    fallbackId = key
+                    break
+                }
+            }
+            if (fallbackId === null) {
+                instancePrimitiveIdMap.delete(instance)
+            } else {
+                instancePrimitiveIdMap.set(instance, fallbackId)
+            }
+        }
     },
     clearInstance: () => {
         instanceMap.clear()
+        instancePrimitiveIdMap.clear()
     },
 })

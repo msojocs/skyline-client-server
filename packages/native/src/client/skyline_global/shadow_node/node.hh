@@ -2,6 +2,7 @@
 #define __SHADOW_NODE__HH__
 #include "../../base_client.hh"
 #include <napi.h>
+#include <unordered_set>
 #include <vector>
 
 namespace Skyline {
@@ -185,7 +186,7 @@ public:
   private:
   int styleScope;
   std::string id;
-  std::vector<std::string> classList;
+  std::unordered_set<std::string> classList;
 };
 } // namespace Skyline
 #endif // __SHADOW_NODE__HH__

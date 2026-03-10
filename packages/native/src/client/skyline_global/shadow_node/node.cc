@@ -32,7 +32,7 @@ Napi::Value ShadowNode::addClass(const Napi::CallbackInfo &info) {
     throw Napi::TypeError::New(info.Env(), "addClass: First argument must be a string");
   }
   // className
-  classList.push_back(std::move(info[0].As<Napi::String>().Utf8Value()));
+  classList.insert(std::move(info[0].As<Napi::String>().Utf8Value()));
   return sendToServerSync(info, __func__);
 }
 Napi::Value ShadowNode::setStyle(const Napi::CallbackInfo &info) {

@@ -2,7 +2,7 @@
 #define __BASE_CLIENT_HH__
 #include <napi.h>
 
-namespace Skyline {
+namespace HTML {
 
 class BaseClient {
 public:
@@ -38,6 +38,6 @@ protected:
   Napi::Value getProperty(const Napi::CallbackInfo &info, const std::string &propertyName);
 };
 
-} // namespace Skyline
+} // namespace HTML
 
 #endif

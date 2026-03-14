@@ -1,25 +1,20 @@
 #include "convert.hh"
-#include "../client/skyline_global/async_style_sheets.hh"
-#include "../client/skyline_global/fragment_binding.hh"
-#include "../client/skyline_global/mutable_value.hh"
-#include "../client/skyline_global/shadow_node/list_view.hh"
-#include "../client/skyline_global/shadow_node/grid_view.hh"
-#include "../client/skyline_global/shadow_node/scroll_view.hh"
-#include "../client/skyline_global/shadow_node/sticky_header.hh"
-#include "../client/skyline_global/shadow_node/sticky_section.hh"
-#include "../client/skyline_global/shadow_node/text.hh"
-#include "../client/skyline_global/shadow_node/image.hh"
-#include "../client/skyline_global/shadow_node/swiper.hh"
-#include "../client/skyline_global/shadow_node/swiper_item.hh"
-#include "../client/skyline_global/shadow_node/view.hh"
-#include "../client/skyline_global/shadow_node/hero.hh"
-#include "../client/skyline_global/shadow_node/input.hh"
-#include "../client/client_action.hh"
 #include "napi.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
+
+#ifdef _SKYLINE_CLIENT_
+#include "../client/html/css_style_declaration.hh"
+#include "../client/html/controller.hh"
+#include "../client/html/event.hh"
+#include "../client/html/webview_element.hh"
+#include "../client/html/web_request_event.hh"
+#include "../client/html/request_message_event.hh"
+#include "../client/html/request_rule.hh"
+#include "../client/client_action.hh"
+#endif
 
 namespace Convert {
 static int64_t callbackId = 1;
@@ -40,22 +35,14 @@ CallbackData * find_callback(int64_t callbackId)
 }
 void RegisteInstanceType(Napi::Env &env) {
   // 注册实例类型和对应的构造函数
-  clazzMap["AsyncStylesheets"] = Skyline::AsyncStyleSheets::GetClazz(env);
-  clazzMap["TextShadowNode"] = Skyline::TextShadowNode::GetClazz(env);
-  clazzMap["InputShadowNode"] = Skyline::InputShadowNode::GetClazz(env);
-  clazzMap["ImageShadowNode"] = Skyline::ImageShadowNode::GetClazz(env);
-  clazzMap["SwiperShadowNode"] = Skyline::SwiperShadowNode::GetClazz(env);
-  // SwiperItemShadoNode就是少了一个w
-  clazzMap["SwiperItemShadoNode"] = Skyline::SwiperItemShadowNode::GetClazz(env);
-  clazzMap["ViewShadowNode"] = Skyline::ViewShadowNode::GetClazz(env);
-  clazzMap["GridViewShadowNode"] = Skyline::GridViewShadowNode::GetClazz(env);
-  clazzMap["ScrollViewShadowNode"] = Skyline::ScrollViewShadowNode::GetClazz(env);
-  clazzMap["ListViewShadowNode"] = Skyline::ListViewShadowNode::GetClazz(env);
-  clazzMap["StickySectionShadowNode"] = Skyline::StickySectionShadowNode::GetClazz(env);
-  clazzMap["StickyHeaderShadowNode"] = Skyline::StickyHeaderShadowNode::GetClazz(env);
-  clazzMap["FragmentBinding"] = Skyline::FragmentBinding::GetClazz(env);
-  clazzMap["MutableValue"] = Skyline::MutableValue::GetClazz(env);
-  clazzMap["HeroShadowNode"] = Skyline::HeroShadowNode::GetClazz(env);
+  clazzMap["CSSStyleDeclaration"] = HTML::CSSStyleDeclaration::GetClazz(env);
+  clazzMap["ChromeWebViewElement"] = HTML::WebviewElement::GetClazz(env);
+  clazzMap["WebRequestEvent"] = HTML::WebRequestEvent::GetClazz(env);
+  clazzMap["RequestMessageEvent"] = HTML::RequestMessageEvent::GetClazz(env);
+  clazzMap["RequestRule"] = HTML::RequestRule::GetClazz(env);
+  clazzMap["Event"] = HTML::Event::GetClazz(env);
+  clazzMap["Controller"] = HTML::Controller::GetClazz(env);
+
 }
 #endif
 
@@ -94,7 +81,13 @@ nlohmann::json convertValue2Json(Napi::Env &env, const Napi::Value &value) {
     if (callbackId >= INT64_MAX) {
       callbackId = 1;
     }
-    auto cId = callbackId++;
+    auto cId = 0;
+    if (func.Get("__callbackId").IsNumber()) {
+      cId = func.Get("__callbackId").As<Napi::Number>().Int64Value();
+    } else {
+      cId = callbackId++;
+      func.Set("__callbackId", Napi::Number::New(env, cId));
+    }
     bool isAsync = func.Get(Napi::String::New(env, "__asyncCallback")).IsBoolean();
     if (isAsync) {
       isAsync = func.Get(Napi::String::New(env, "__asyncCallback")).As<Napi::Boolean>().Value();
@@ -171,10 +164,21 @@ Napi::Value convertJson2Value(Napi::Env &env, const nlohmann::json &data) {
         for (int i = 0; i < info.Length(); i++) {
           args[i] = convertValue2Json(env, info[i]);
         }
-        auto result = ClientAction::callStaticSync("functionData", std::to_string(data["instanceId"].get<int64_t>()), args);
-        auto returnValue = result["returnValue"];
+        try {
+          auto result = ClientAction::callStaticSync("functionData", std::to_string(data["instanceId"].get<int64_t>()), args);
+          auto returnValue = result["returnValue"];
+          return Convert::convertJson2Value(env, returnValue);
+        } catch (const std::exception &e) {
+          Napi::Error::New(env,
+                           std::string("Error calling function: ") + e.what())
+              .ThrowAsJavaScriptException();
+          return env.Undefined();
+        } catch (...) {
+          Napi::Error::New(env, "Unknown error calling function")
+              .ThrowAsJavaScriptException();
+          return env.Undefined();
+        }
 
-        return Convert::convertJson2Value(env, returnValue);
       });
     }
 #endif

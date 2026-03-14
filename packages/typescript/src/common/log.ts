@@ -51,7 +51,7 @@ interface LoggerConfigType {
  */
 type InterceptorFuncType = (config: LoggerConfigType) => void
 
-const CurrentLogLevel: LogLevel = LogLevel.Info
+const CurrentLogLevel: LogLevel = LogLevel.Debug
 
 /**
  * 日志打印工具，统一管理日志输出&上报

@@ -4,10 +4,13 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/node_modules/.pnpm/node-api-headers@1.1.0/node_modules/node-api-headers/include"
+                "${workspaceFolder}/node_modules/.pnpm/node-addon-api@7.1.1/node_modules/node-addon-api",
+                "${workspaceFolder}/node_modules/.pnpm/node-api-headers@1.7.0/node_modules/node-api-headers/include",
+                "${workspaceFolder}/build/vcpkg_installed/x64-windows-static/include",
+                "${workspaceFolder}/packages/native/src/**/*"
             ],
             "defines": [],
-            "cStandard": "c17",
+            "cStandard": "c23",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64"
         }

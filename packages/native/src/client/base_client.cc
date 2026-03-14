@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include "../common/convert.hh"
 
-namespace Skyline {
+namespace HTML {
 
   Napi::Value BaseClient::getInstanceId(const Napi::CallbackInfo &info) {
     return Napi::Number::New(info.Env(), m_instanceId);

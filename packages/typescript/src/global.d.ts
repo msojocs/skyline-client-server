@@ -1,7 +1,10 @@
+import { Controller } from "./server/controller"
+
 declare global {
     var sendMessageSync: (message: string) => string
     var send: (message: string, messageId?: number) => void
     var blockUntilNextMessage: () => void
+    var controller: Controller
     var clazzSet: Set<string>
     var clazzMap: Map<string, any>
     var instanceMap: Map<number, any>

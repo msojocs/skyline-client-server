@@ -17,7 +17,7 @@ Napi::FunctionReference *FragmentBinding::GetClazz(Napi::Env env) {
           InstanceMethod("getParentNode", &FragmentBinding::getParentNode),
           InstanceMethod("insertChild", &FragmentBinding::insertChild),
           InstanceMethod("release", &FragmentBinding::release),
-          InstanceMethod("removeChild", &FragmentBinding::removeChild),
+          InstanceMethod("reload", &FragmentBinding::removeChild),
           InstanceMethod("replaceChild", &FragmentBinding::replaceChild),
           InstanceMethod("splice", &FragmentBinding::splice),
       });

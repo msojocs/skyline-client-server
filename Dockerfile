@@ -72,13 +72,12 @@ RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sourc
     rm -rf cache
 COPY --from=server-builder /build/packages/nwjs/server.js ./
 COPY packages/nwjs nwjs/package.nw
-COPY packages/nwjs/node_modules/sharedMemory/sharedMemory.node nwjs/package.nw/node_modules/sharedMemory/sharedMemory.node
+ADD --chmod=644 https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node nwjs/package.nw/node_modules/sharedMemory/sharedMemory.node
 COPY --from=skyline-addon-builder /build/node_modules/skyline-addon nwjs/package.nw/node_modules/skyline-addon
 
 FROM runtime-base AS runtime
 WORKDIR /workspace
-ADD https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
-RUN chmod 644 /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
+ADD --chmod=644 https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
 COPY --from=source /workspace/nwjs /workspace
 COPY packages/nwjs/node_modules/skyline-server /workspace/package.nw/node_modules/
 COPY packages/nwjs/documentstart/index.js /workspace/package.nw/documentstart/

@@ -7,7 +7,6 @@ README.MD
 CHANGELOG.MD
 docs
 test
-tools
 
 build
 build-win
@@ -21,6 +20,9 @@ node_modules
 packages/*/node_modules
 !packages/nodejs/node_modules
 !packages/nodejs/node_modules/**
+!packages/nwjs/node_modules/sharedMemory
+!packages/nwjs/node_modules/skyline-server
+!packages/nwjs/node_modules/skyline-server/**
 
 packages/nodejs/cache
 packages/nodejs/data

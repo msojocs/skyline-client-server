@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 root_dir=$(cd "$(dirname "$0")/../.." && pwd -P)
-package_dir="$root_dir/packages/nodejs"
+package_dir="$root_dir/packages/nwjs"
 node_modules_dir="$package_dir/node_modules"
 cache_dir="$package_dir/cache"
 

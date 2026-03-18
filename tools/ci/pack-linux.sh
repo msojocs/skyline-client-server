@@ -20,8 +20,6 @@ mv server.js "$root_dir/packages/nwjs"
 cd "$root_dir/native-win-artifact"
 mkdir -p "$root_dir/packages/nwjs/node_modules/skyline-server"
 mv *.node "$root_dir/packages/nwjs/node_modules/skyline-server/server.node"
-cp *.dll "$root_dir/packages/nwjs"
-cp *.dll "$root_dir/tmp/upload"
 
 #pack
 cd "$root_dir/packages"

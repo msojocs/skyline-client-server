@@ -56,7 +56,9 @@ RUN mkdir -p cache node_modules/skyline-addon && \
     wget -c "https://servicewechat.com/wxa-dev-logic/download_redirect?type=win32_x64&from=mpwiki&download_version=${DEVTOOLS_VERSION}&version_type=1" -O "cache/devtools-${DEVTOOLS_VERSION}.exe" && \
     7z x "cache/devtools-${DEVTOOLS_VERSION}.exe" -aoa -onode_modules/skyline-addon code/package.nw/node_modules/skyline-addon && \
     mv node_modules/skyline-addon/code/package.nw/node_modules/skyline-addon/* node_modules/skyline-addon/ && \
-    rm -rf node_modules/skyline-addon/code cache
+    7z x "cache/devtools-${DEVTOOLS_VERSION}.exe" -aoa -odocumentstart code/package.nw/js/extensions/inject/documentstart/index.js && \
+    mv documentstart/code/package.nw/js/extensions/inject/documentstart/index.js documentstart/ && \
+    rm -rf node_modules/skyline-addon/code documentstart/code cache
 
 FROM ubuntu:22.04 AS source
 
@@ -80,7 +82,6 @@ WORKDIR /workspace
 ADD --chmod=644 https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
 COPY --from=source /workspace/nwjs /workspace
 COPY packages/nwjs/node_modules/skyline-server /workspace/package.nw/node_modules/
-COPY packages/nwjs/documentstart/index.js /workspace/package.nw/documentstart/
 COPY tools/xvfb-startup.sh xvfb-startup.sh
 
 EXPOSE 9222

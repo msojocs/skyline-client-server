@@ -8,7 +8,7 @@ namespace ClientAction {
     /**
      * 初始化Socket，并连接到服务器
      */
-    void initSocket(Napi::Env &env);
+    void initSocket(std::string &address, int port);
     nlohmann::json callConstructorSync(const std::string& clazz, nlohmann::json& data);
     nlohmann::json callStaticSync(const std::string& clazz, const std::string& action, nlohmann::json& data);
     nlohmann::json callDynamicSync(int64_t instanceId, const std::string& action, nlohmann::json& data);

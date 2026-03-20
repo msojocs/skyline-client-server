@@ -150,42 +150,35 @@ namespace ClientAction {
         }
     }
 
-    void initSocket(Napi::Env &env) {
-        try {
-            if (client && client->IsConnected()) {
-                logger->info("Already connected to server.");
-                return;
-            }
-            client = std::make_shared<SkylineClient::ClientSocket>();
-            logger->info("Connecting to server...");
-            std::string address = "127.0.0.1";
-            client->Init(address, 3001);
-            logger->info("Connected to server, starting handshake...");
-
-            // Copy the shared_ptr into a local variable so the thread lambda
-            // can capture it by value (static variables cannot be captured).
-            // This keeps the ref count > 0 while the thread is running,
-            // preventing ~ClientSocket() from resetting the vtable to the
-            // abstract base (which would cause "pure virtual method called").
-            auto clientLocal = client;
-            std::thread([clientLocal]() {
-                try {
-                    while (true) {
-                        int64_t messageId = 0;
-                        std::string message = clientLocal->receiveMessage(&messageId);
-                        processMessage(message, messageId);
-                    }
-                } catch (std::exception& e) {
-                    logger->error("Read message error: {}", e.what());
-                } catch (...) {
-                    logger->error("Unknown error occurred in message reading thread.");
-                }
-            }).detach();
-
-        } catch (std::exception& e) {
-            logger->error("Connection error: {}", e.what());
-            throw Napi::Error::New(env, std::string("Socket connection failed: ") + e.what());
+    void initSocket(std::string &address, int port) {
+        if (client && client->IsConnected()) {
+            logger->info("Already connected to server.");
+            return;
         }
+        client = std::make_shared<SkylineClient::ClientSocket>();
+        logger->info("Connecting to server...");
+        client->Init(address, port);
+        logger->info("Connected to server, starting handshake...");
+
+        // Copy the shared_ptr into a local variable so the thread lambda
+        // can capture it by value (static variables cannot be captured).
+        // This keeps the ref count > 0 while the thread is running,
+        // preventing ~ClientSocket() from resetting the vtable to the
+        // abstract base (which would cause "pure virtual method called").
+        auto clientLocal = client;
+        std::thread([clientLocal]() {
+            try {
+                while (true) {
+                    int64_t messageId = 0;
+                    std::string message = clientLocal->receiveMessage(&messageId);
+                    processMessage(message, messageId);
+                }
+            } catch (std::exception& e) {
+                logger->error("Read message error: {}", e.what());
+            } catch (...) {
+                logger->error("Unknown error occurred in message reading thread.");
+            }
+        }).detach();
     }
 
     nlohmann::json sendMessageSync(nlohmann::json& data) {

@@ -37,9 +37,33 @@ Controller::Controller(const Napi::CallbackInfo &info)
   logger->info("Controller instanceId: {}", m_instanceId);
 }
 Napi::Value Controller::connect(const Napi::CallbackInfo &info) {
-  auto env = info.Env();
-  ClientAction::initSocket(env);
-  return env.Undefined();
+  try {
+    auto env = info.Env();
+    std::string address = "127.0.0.1";
+    int port = 3001;
+    if (info.Length() > 0 && !info[0].IsString()) {
+      throw Napi::TypeError::New(env, "connect: Argument 0 must be a string");
+    }
+    if (info.Length() > 1 && !info[1].IsNumber()) {
+      throw Napi::TypeError::New(env, "connect: Argument 1 must be a number");
+    }
+    if (info.Length() > 0) {
+      address = info[0].As<Napi::String>().Utf8Value();
+    }
+    if (info.Length() > 1) {
+      port = info[1].As<Napi::Number>().Int32Value();
+    }
+
+    ClientAction::initSocket(address, port);
+    return env.Undefined();
+  } catch (const std::exception &e) {
+    logger->error("Error in connect: {}", e.what());
+    throw Napi::Error::New(info.Env(), e.what());
+  }
+  catch (...) {
+    logger->error("Unknown error occurred in connect");
+    throw Napi::Error::New(info.Env(), "Unknown error occurred");
+  }
 }
 Napi::Value Controller::getWebview(const Napi::CallbackInfo &info) {
   return getProperty(info, "webview");

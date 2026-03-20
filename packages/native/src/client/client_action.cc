@@ -152,15 +152,27 @@ namespace ClientAction {
 
     void initSocket(Napi::Env &env) {
         try {
+            if (client && client->IsConnected()) {
+                logger->info("Already connected to server.");
+                return;
+            }
             client = std::make_shared<SkylineClient::ClientSocket>();
-            client->Init(env);
+            logger->info("Connecting to server...");
+            std::string address = "127.0.0.1";
+            client->Init(address, 3001);
+            logger->info("Connected to server, starting handshake...");
 
-            // Start a thread for reading messages
-            std::thread([]() {
+            // Copy the shared_ptr into a local variable so the thread lambda
+            // can capture it by value (static variables cannot be captured).
+            // This keeps the ref count > 0 while the thread is running,
+            // preventing ~ClientSocket() from resetting the vtable to the
+            // abstract base (which would cause "pure virtual method called").
+            auto clientLocal = client;
+            std::thread([clientLocal]() {
                 try {
                     while (true) {
                         int64_t messageId = 0;
-                        std::string message = client->receiveMessage(&messageId);
+                        std::string message = clientLocal->receiveMessage(&messageId);
                         processMessage(message, messageId);
                     }
                 } catch (std::exception& e) {
@@ -177,6 +189,9 @@ namespace ClientAction {
     }
 
     nlohmann::json sendMessageSync(nlohmann::json& data) {
+        if (!client || !client->IsConnected()) {
+            throw std::runtime_error("Not connected to server. Call connect() first.");
+        }
         if (requestId >= INT64_MAX - 1) {
             requestId = 1;
         }
@@ -291,6 +306,9 @@ namespace ClientAction {
     }
 
     void sendMessageAsync(nlohmann::json& data) {
+        if (!client || !client->IsConnected()) {
+            throw std::runtime_error("Not connected to server. Call connect() first.");
+        }
         logger->info("send to server async");
         client->sendMessage(data.dump(), 0);
     }

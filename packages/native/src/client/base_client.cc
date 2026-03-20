@@ -3,9 +3,13 @@
 #include "client_action.hh"
 #include <spdlog/spdlog.h>
 #include "../common/convert.hh"
+#include "../common/logger.hh"
+
+using Logger::logger;
 
 namespace HTML {
-
+  std::shared_ptr<Napi::FunctionReference> errorCallbackRef;
+  
   Napi::Value BaseClient::getInstanceId(const Napi::CallbackInfo &info) {
     return Napi::Number::New(info.Env(), m_instanceId);
   }
@@ -20,9 +24,16 @@ namespace HTML {
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        logger->error("Error in sendToServerSync: {}", e.what());
+        errorCallbackRef->Call({Napi::String::New(env, e.what())});
+      }
       throw Napi::Error::New(env, e.what());
     }
     catch (...) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, "Unknown error occurred")});
+      }
       throw Napi::Error::New(env, "Unknown error occurred");
     }
   }
@@ -36,9 +47,15 @@ namespace HTML {
       ClientAction::callDynamicAsync(m_instanceId, methodName, args);
       return env.Undefined();
     } catch (const std::exception &e) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, e.what())});
+      }
       throw Napi::Error::New(env, e.what());
     }
     catch (...) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, "Unknown error occurred")});
+      }
       throw Napi::Error::New(env, "Unknown error occurred");
     }
   }
@@ -55,9 +72,18 @@ namespace HTML {
       }
       return result["instanceId"].get<int64_t>();
     } catch (const std::exception &e) {
+      logger->error("Error in sendConstructorToServerSync: {}", e.what());
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        logger->info("callback");
+        errorCallbackRef->Call({Napi::String::New(env, e.what())});
+      }
       throw Napi::Error::New(env, e.what());
     }
     catch (...) {
+      logger->error("Unknown error occurred in sendConstructorToServerSync");
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, "Unknown error occurred")});
+      }
       throw Napi::Error::New(env, "Unknown error occurred");
     }
   }
@@ -68,9 +94,15 @@ namespace HTML {
     try {
       auto result = ClientAction::callDynamicPropertySetSync(m_instanceId, propertyName, args);
     } catch (const std::exception &e) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, e.what())});
+      }
       throw Napi::Error::New(env, e.what());
     }
     catch (...) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, "Unknown error occurred")});
+      }
       throw Napi::Error::New(env, "Unknown error occurred");
     }
   }
@@ -83,9 +115,15 @@ namespace HTML {
       auto returnValue = result["returnValue"];
       return Convert::convertJson2Value(env, returnValue);
     } catch (const std::exception &e) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, e.what())});
+      }
       throw Napi::Error::New(env, e.what());
     }
     catch (...) {
+      if (errorCallbackRef && !errorCallbackRef->IsEmpty()) {
+        errorCallbackRef->Call({Napi::String::New(env, "Unknown error occurred")});
+      }
       throw Napi::Error::New(env, "Unknown error occurred");
     }
   }

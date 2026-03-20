@@ -24,9 +24,6 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     spdlog::info("Starting webview client...");
     
     Logger::Init();
-    logger->info("initSocket start");
-    ClientAction::initSocket(env);
-    logger->info("initSocket end");
     Webview::Init(env, exports);
     Convert::RegisteInstanceType(env);
     // exports.Set("setConsole", Napi::Function::New(env, Logger::set_console));

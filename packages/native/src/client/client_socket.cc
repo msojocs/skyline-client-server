@@ -1,11 +1,11 @@
 #include "client_socket.hh"
 #include "../common/logger.hh"
-#include "napi.h"
 #include <boost/asio.hpp>
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <string>
 #include <thread>
 
 using boost::asio::ip::tcp;
@@ -26,17 +26,14 @@ uint64_t hostToNetwork64(uint64_t value) {
 uint64_t networkToHost64(uint64_t value) { return hostToNetwork64(value); }
 } // namespace
 
-static std::string serverAddress = "127.0.0.1";
-static int serverPort = 3001;
-void ClientSocket::Init(Napi::Env env) {
-    auto log = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-
+void ClientSocket::Init(std::string &address, int port) {
+    this->server_address = address;
+    this->server_port = port;
     tcp::resolver resolver(io_context);
     auto endpoints =
-        resolver.resolve(serverAddress, std::to_string(serverPort));
+        resolver.resolve(address, std::to_string(port));
 
     socket = std::make_unique<tcp::socket>(io_context);
-    log.Call(env.Global(), {Napi::String::New(env, "Connecting to server...")});
     boost::asio::connect(*socket, endpoints);
     
     // Enable TCP_NODELAY to reduce latency
@@ -62,12 +59,11 @@ void ClientSocket::Init(Napi::Env env) {
                 throw std::runtime_error("Invalid handshake from server: " + std::to_string(handshake_value));
             }
             logger->info("Successfully connected to server after handshake");
-            log.Call(env.Global(), {Napi::String::New(env, "Connected to server.")});
+            this->is_connected = true;
             return;
         }
         catch(const std::exception& err) {
             logger->error("Handshake error (attempt {}/5): {}", i+1, err.what());
-            log.Call(env.Global(), {Napi::String::New(env, std::string("Handshake error, retrying...") + err.what())});
             
             // Close and recreate socket for clean retry
             if (socket && socket->is_open()) {
@@ -93,8 +89,13 @@ void ClientSocket::Init(Napi::Env env) {
     throw std::runtime_error("Failed to establish connection after 5 attempts");
     
 }
+
+bool ClientSocket::IsConnected() {
+    return socket && socket->is_open() && this->is_connected;
+}
+
 void ClientSocket::sendMessage(std::string&& message, std::int64_t messageId) {
-    if (socket && socket->is_open()) {
+    if (socket && socket->is_open() && this->is_connected) {
         logger->debug("Sending message with length: {}", message.size());
         std::array<uint8_t, sizeof(uint32_t) + sizeof(uint64_t)> header{};
         const uint32_t message_length = htonl(static_cast<uint32_t>(message.size()));
@@ -105,13 +106,19 @@ void ClientSocket::sendMessage(std::string&& message, std::int64_t messageId) {
             boost::asio::buffer(header.data(), header.size()),
             boost::asio::buffer(message)
         };
-        boost::asio::write(*socket, buffers);
+        try {
+            boost::asio::write(*socket, buffers);
+        } catch (const std::exception &e) {
+            logger->error("Error sending message: {}", e.what());
+            this->is_connected = false;
+            throw e;
+        }
     } else {
-        logger->error("Socket is not open");
+        logger->error("Socket is not open or not connected");
     }
 }
 std::string ClientSocket::receiveMessage(std::int64_t *messageId) {
-    if (socket && socket->is_open()) {
+    if (socket && socket->is_open() && this->is_connected) {
         std::array<uint8_t, sizeof(uint32_t) + sizeof(uint64_t)> header{};
         boost::asio::read(*socket, boost::asio::buffer(header.data(), header.size()));
 
@@ -130,10 +137,19 @@ std::string ClientSocket::receiveMessage(std::int64_t *messageId) {
         boost::asio::read(*socket, boost::asio::buffer(message.data(), message_length));
         return message;
     } else {
-        logger->error("Socket is not open");
+        logger->error("Socket is not open or not connected");
         return "";
     }
 }
 
-ClientSocket::~ClientSocket() {}
+ClientSocket::~ClientSocket() {
+    logger->info("ClientSocket destructor called, closing socket if open");
+    if (socket) {
+        try {
+            socket->close();
+        } catch (const std::exception &e) {
+            logger->error("Error closing socket: {}", e.what());
+        }
+    }
+}
 } // namespace SkylineClient

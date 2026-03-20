@@ -1,0 +1,4 @@
+CompileFlags:
+  CompilationDatabase: .
+  Add:
+    - "-D_SKYLINE_CLIENT_"

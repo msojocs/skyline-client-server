@@ -4,47 +4,27 @@ set(CLIENT_DIR_LIST
     client_action.cc
     client_action.hh
     client_socket.cc
-    skyline_debug_info.hh
-    skyline_debug_info.cc
-    skyline_shell.hh
-    skyline_shell.cc
-    skyline_global.hh
-    skyline_global.cc
+    controller.cc
     crash_handler.cc
     base_client.cc
     base_client.hh
-    skyline_global/page_context.hh
-    skyline_global/page_context.cc
     ../common/convert.cc
     ../common/logger.cc
-    skyline_global/runtime.cc
-    skyline_global/mutable_value.cc
-    skyline_global/gesture_handler_module.cc
-    skyline_global/worklet_module.cc
-    skyline_global/async_style_sheets.cc
-    skyline_global/shadow_node/node.hh
-    skyline_global/shadow_node/node.cc
-    skyline_global/shadow_node/view.cc
-    skyline_global/shadow_node/input.cc
-    skyline_global/shadow_node/scroll_view.cc
-    skyline_global/shadow_node/list_view.cc
-    skyline_global/shadow_node/sticky_section.cc
-    skyline_global/shadow_node/sticky_header.cc
-    skyline_global/shadow_node/text.cc
-    skyline_global/shadow_node/image.cc
-    skyline_global/shadow_node/swiper.cc
-    skyline_global/shadow_node/swiper_item.cc
-    skyline_global/shadow_node/grid_view.cc
-    skyline_global/shadow_node/hero.cc
-    skyline_global/fragment_binding.hh
-    skyline_global/fragment_binding.cc
+    html/node.cc
+    html/controller.cc
+    html/css_style_declaration.cc
+    html/event.cc
+    html/webview_element.cc
+    html/web_request_event.cc
+    html/request_rule.cc
+    html/request_message_event.cc
 )
 
 # Set the HEADER_DEPENDENCY_CHECK property to force rebuilding when headers change
 set_source_files_properties(
-    skyline_global/shadow_node/node.cc
+    html/node.cc
     PROPERTIES
-    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node/node.hh;${CMAKE_CURRENT_SOURCE_DIR}/base_client.hh"
+    OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/html/node.hh;${CMAKE_CURRENT_SOURCE_DIR}/html/webview_element.hh;${CMAKE_CURRENT_SOURCE_DIR}/base_client.hh"
 )
 
 add_library(${CLIENT_NAME}
@@ -54,7 +34,7 @@ add_library(${CLIENT_NAME}
     )
 target_include_directories(${CLIENT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/skyline_global/shadow_node>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/html>
 )
 
 # Enable unity builds for better header dependency tracking

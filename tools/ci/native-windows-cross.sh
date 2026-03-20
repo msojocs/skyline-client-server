@@ -20,6 +20,6 @@ cmake --build "$root_dir/build-win" --config Release --target node --
 
 mkdir -p "$root_dir/tmp/build"
 
-mv "$root_dir/packages/nodejs/node_modules/skyline-server/server.node" "$root_dir/tmp/build/skyline-server-win32-${arch}-${tag}.node"
-mv "$root_dir/packages/nodejs/node.dll" "$root_dir/tmp/build/node.dll"
-mv "$root_dir/packages/nodejs/nw.dll" "$root_dir/tmp/build/nw.dll"
+mv "$root_dir/packages/nwjs/node_modules/skyline-server/server.node" "$root_dir/tmp/build/skyline-server-win32-${arch}-${tag}.node"
+mv "$root_dir/packages/nwjs/node.dll" "$root_dir/tmp/build/node.dll"
+mv "$root_dir/packages/nwjs/nw.dll" "$root_dir/tmp/build/nw.dll"

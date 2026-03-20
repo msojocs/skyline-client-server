@@ -35,7 +35,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
       - name: Docker prepare
-        run: scripts/ci/docker-prepare.sh
+        run: tools/ci/docker-prepare.sh
       
       - name: Install cosign
         if: github.event_name != 'pull_request'
@@ -71,7 +71,7 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          context: ./packages/nodejs
+          context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

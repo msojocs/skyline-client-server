@@ -16,7 +16,8 @@ namespace SkylineClient {
 using boost::asio::ip::tcp;
 class ClientSocket : public Client {
     public:
-    void Init(Napi::Env env);
+    void Init(std::string &, int);
+    bool IsConnected();
     ~ClientSocket();
     void sendMessage(std::string&& message, std::int64_t messageId = 0);
     std::string receiveMessage(std::int64_t *messageId = nullptr);
@@ -24,6 +25,9 @@ class ClientSocket : public Client {
     private:
     boost::asio::io_context io_context;
     std::unique_ptr<tcp::socket> socket;
+    bool is_connected = false;
+    std::string server_address;
+    int server_port;
 };
 }
 

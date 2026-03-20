@@ -16,7 +16,7 @@ namespace Logger {
     void Init() {
         std::vector<spdlog::sink_ptr> sinks;
         auto stdout_log = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        stdout_log->set_level(spdlog::level::err);
+        stdout_log->set_level(spdlog::level::debug);
         sinks.push_back(stdout_log);
 
         auto file_log = std::make_shared<spdlog::sinks::daily_file_sink_mt>(LOG_FILE, 0, 0, true);

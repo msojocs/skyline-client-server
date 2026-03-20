@@ -121,15 +121,18 @@ namespace ServerAction {
                         cv_blockUntilNextMessage.notify_all();
                     } catch (const std::exception &e) {
                         logger->error("Error in message processing thread: {}", e.what());
-                        break;
+                        // 通知 JS 客户端断开，然后继续等待新连接
+                        messageHandleTsfn.NonBlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                            jsCallback.Call({Napi::String::New(env, "{\"action\":\"disconnected\"}")});
+                        });
                     } catch (...) {
                         logger->error("Unknown error occurred in message processing thread");
-                        break;
+                        messageHandleTsfn.NonBlockingCall([](Napi::Env env, Napi::Function jsCallback) {
+                            jsCallback.Call({Napi::String::New(env, "{\"action\":\"disconnected\"}")});
+                        });
                     }
                 }
-                messageHandleTsfn.NonBlockingCall([](Napi::Env env, Napi::Function jsCallback) {
-                    jsCallback.Call({Napi::String::New(env, "{\"action\":\"disconnected\"}")});
-                });
+                // 线程正常退出（理论上不会到达此处）
             }).detach();
             return 0;
         } catch (std::exception& e) {

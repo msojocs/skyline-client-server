@@ -8,7 +8,8 @@
         "DOM",
     ],
     "module": "ES2020",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "types": ["node"]
   },
   "include": [
       "src/**/*.ts",

@@ -2,12 +2,14 @@
 #define __CLIENT_HH__
 
 #include <cstdint>
-#include "napi.h"
+#include <string>
 namespace SkylineClient {
 
 class Client {
 public:
-    virtual void Init(Napi::Env env) = 0;
+    virtual void Init(std::string &address, int port) = 0;
+
+    virtual bool IsConnected() = 0;
     
     // Send a message to the shared memory
     virtual void sendMessage(std::string &&message, std::int64_t messageId = 0) = 0;

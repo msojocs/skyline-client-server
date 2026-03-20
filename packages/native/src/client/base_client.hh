@@ -2,8 +2,8 @@
 #define __BASE_CLIENT_HH__
 #include <napi.h>
 
-namespace Skyline {
-
+namespace HTML {
+extern std::shared_ptr<Napi::FunctionReference> errorCallbackRef;
 class BaseClient {
 public:
   Napi::Value getInstanceId(const Napi::CallbackInfo &info);
@@ -36,8 +36,9 @@ protected:
    * 设置property
    */
   Napi::Value getProperty(const Napi::CallbackInfo &info, const std::string &propertyName);
+  
 };
 
-} // namespace Skyline
+} // namespace HTML
 
 #endif

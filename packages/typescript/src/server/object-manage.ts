@@ -1,3 +1,4 @@
+import { Controller } from "./controller";
 import { useCustomHandle } from "./custom-handle"
 
 const clazzMap = new Map<string, any>();
@@ -21,20 +22,12 @@ export const useObjectManage = () => ({
 })
 
 export const registerDefaultClazz = (g: any) => {
-    clazzMap.set('SkylineShell', g.SkylineShell)
+    clazzMap.set('Controller', Controller)
     // SkylineDebugInfo使用
     clazzMap.set('global', g)
     const customHandle = useCustomHandle()
     clazzMap.set('customHandle', customHandle)
     clazzMap.set('functionData', {})
-}
-
-export const registerSkylineGlobalClazz = (g: any) => {
-    clazzMap.set('SkylineGlobal', g.SkylineGlobal)
-    clazzMap.set('PageContext', g.SkylineGlobal.PageContext)
-    clazzMap.set('SkylineRuntime', g.SkylineGlobal.runtime)
-    clazzMap.set('SkylineWorkletModule', g.SkylineGlobal.workletModule)
-    clazzMap.set('SkylineGestureModule', g.SkylineGlobal.gestureHandlerModule)
 }
 
 const instanceMap = new Map<number, any>();
@@ -106,6 +99,24 @@ export const useInstanceManage = () => ({
                 instancePrimitiveIdMap.delete(instance)
             } else {
                 instancePrimitiveIdMap.set(instance, fallbackId)
+            }
+        }
+    },
+    removeInstanceOfType: (type: string) => {
+        for (const [id, instance] of instanceMap.entries()) {
+            if (instance?.constructor?.name === type) {
+                instanceMap.delete(id)
+                if (isWeakMapKey(instance)) {
+                    const mappedId = instanceObjectIdMap.get(instance)
+                    if (mappedId === id) {
+                        instanceObjectIdMap.delete(instance)
+                    }
+                } else {
+                    const mappedId = instancePrimitiveIdMap.get(instance)
+                    if (mappedId === id) {
+                        instancePrimitiveIdMap.delete(instance)
+                    }
+                }
             }
         }
     },

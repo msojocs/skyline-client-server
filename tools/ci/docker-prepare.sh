@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 root_dir=$(cd "$(dirname "$0")/../.." && pwd -P)
-package_dir="$root_dir/packages/nodejs"
+package_dir="$root_dir/packages/nwjs"
 node_modules_dir="$package_dir/node_modules"
 cache_dir="$package_dir/cache"
 
@@ -15,4 +15,3 @@ cp "$root_dir/ts-linux-artifact/server.js" "$package_dir/server.js"
 # skyline server native
 mkdir -p "$node_modules_dir/skyline-server"
 cp "$root_dir/native-win-artifact"/*.node "$node_modules_dir/skyline-server/server.node"
-cp "$root_dir/native-win-artifact"/*.dll "$package_dir"

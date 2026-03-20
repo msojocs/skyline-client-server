@@ -103,9 +103,17 @@ std::string ServerSocket::receiveMessage(std::int64_t *messageId) {
             boost::asio::read(*socket, boost::asio::buffer(message.data(), message_length));
             return message;
         } else {
+            // 关闭上一次连接残留的 socket，重新创建后再 accept
+            if (socket) {
+                boost::system::error_code ec;
+                socket->close(ec);
+            }
+            socket = std::make_unique<tcp::socket>(io_context);
+            logger->info("Waiting for client connection...");
             acceptor->accept(*socket);
             boost::asio::ip::tcp::no_delay option(true);
             socket->set_option(option);
+            logger->info("Client connected");
             // 握手数据
             uint32_t message_length = htonl(static_cast<uint32_t>(114514));
             boost::asio::write(*socket, boost::asio::buffer(&message_length, sizeof(message_length)));
@@ -113,6 +121,11 @@ std::string ServerSocket::receiveMessage(std::int64_t *messageId) {
         }
     } catch (const std::exception &e) {
         logger->error("Error receiving message: {}", e.what());
+        // 关闭 socket，使下次调用进入 accept 分支等待新连接
+        if (socket) {
+            boost::system::error_code ec;
+            socket->close(ec);
+        }
         std::this_thread::sleep_for(std::chrono::seconds(1));
         throw; // 重新抛出异常，让调用者处理
     }

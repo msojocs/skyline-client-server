@@ -150,33 +150,41 @@ namespace ClientAction {
         }
     }
 
-    void initSocket(Napi::Env &env) {
-        try {
-            client = std::make_shared<SkylineClient::ClientSocket>();
-            client->Init(env);
-
-            // Start a thread for reading messages
-            std::thread([]() {
-                try {
-                    while (true) {
-                        int64_t messageId = 0;
-                        std::string message = client->receiveMessage(&messageId);
-                        processMessage(message, messageId);
-                    }
-                } catch (std::exception& e) {
-                    logger->error("Read message error: {}", e.what());
-                } catch (...) {
-                    logger->error("Unknown error occurred in message reading thread.");
-                }
-            }).detach();
-
-        } catch (std::exception& e) {
-            logger->error("Connection error: {}", e.what());
-            throw Napi::Error::New(env, std::string("Socket connection failed: ") + e.what());
+    void initSocket(std::string &address, int port) {
+        if (client && client->IsConnected()) {
+            logger->info("Already connected to server.");
+            return;
         }
+        client = std::make_shared<SkylineClient::ClientSocket>();
+        logger->info("Connecting to server...");
+        client->Init(address, port);
+        logger->info("Connected to server, starting handshake...");
+
+        // Copy the shared_ptr into a local variable so the thread lambda
+        // can capture it by value (static variables cannot be captured).
+        // This keeps the ref count > 0 while the thread is running,
+        // preventing ~ClientSocket() from resetting the vtable to the
+        // abstract base (which would cause "pure virtual method called").
+        auto clientLocal = client;
+        std::thread([clientLocal]() {
+            try {
+                while (true) {
+                    int64_t messageId = 0;
+                    std::string message = clientLocal->receiveMessage(&messageId);
+                    processMessage(message, messageId);
+                }
+            } catch (std::exception& e) {
+                logger->error("Read message error: {}", e.what());
+            } catch (...) {
+                logger->error("Unknown error occurred in message reading thread.");
+            }
+        }).detach();
     }
 
     nlohmann::json sendMessageSync(nlohmann::json& data) {
+        if (!client || !client->IsConnected()) {
+            throw std::runtime_error("Not connected to server. Call connect() first.");
+        }
         if (requestId >= INT64_MAX - 1) {
             requestId = 1;
         }
@@ -291,6 +299,9 @@ namespace ClientAction {
     }
 
     void sendMessageAsync(nlohmann::json& data) {
+        if (!client || !client->IsConnected()) {
+            throw std::runtime_error("Not connected to server. Call connect() first.");
+        }
         logger->info("send to server async");
         client->sendMessage(data.dump(), 0);
     }

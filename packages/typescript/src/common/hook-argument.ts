@@ -1,23 +1,13 @@
+import { useCallback } from "../server/callback";
 import { useInstanceManage, useObjectManage } from "../server/object-manage";
 import { useLogger } from "./log";
 
 const clazzList = [
-    'AsyncStylesheets',
-    'ViewShadowNode',
-    'GridViewShadowNode',
-    'ScrollViewShadowNode',
-    'ListViewShadowNode',
-    'StickySectionShadowNode',
-    'StickyHeaderShadowNode',
-    'FragmentBinding',
-    'TextShadowNode',
-    'InputShadowNode',
-    'ImageShadowNode',
-    'SwiperShadowNode',
-    // 就是少了一个w
-    'SwiperItemShadoNode',
-    'HeroShadowNode',
-    'MutableValue',
+    'CSSStyleDeclaration',
+    'ChromeWebViewElement',
+    'WebRequestEvent',
+    'Event',
+    'Controller',
 ]
 const log = useLogger('HookArgument')
 /**
@@ -127,7 +117,8 @@ const hookArgumentItem = (action: string, arg: any) => {
                 temp.__worklet = arg.__worklet
                 temp._closure = hookArgumentItem(action, arg._closure)
             }
-            arg = temp
+            const { getCallback } = useCallback()
+            arg = getCallback(callbackId, temp)
         }
         else {
             for (const k in arg) {
@@ -209,12 +200,37 @@ export const hookResult = (action: string, result: any) => {
                 instanceType: name,
             }
         }
-        else {
+        else if (action === 'request_propertyResult') {
+            const t = result
+            result = {}
+            for (const k in t) {
+                result[k] = hookResult(`${action}_${k}_propertyResult`, t[k])
+            }
+        } else if (action === 'request_propertyResult_onMessage_propertyResult') {
+            const { setInstance } = useInstanceManage()
+            result = {
+                instanceId: setInstance(result),
+                instanceType: 'RequestMessageEvent',
+            }
+            
+        } else if (action === 'request_propertyResult_onRequest_propertyResult') {
+            const { setInstance } = useInstanceManage()
+            result = {
+                instanceId: setInstance(result),
+                instanceType: 'RequestRule',
+            }
+            
+        } else {
             const g = global as any
             if (!g.clazzSet)
                 g.clazzSet = new Set()
             if (!g.clazzSet.has(name)) {
                 g.clazzSet.add(name)
+            }
+            const t = result
+            result = {}
+            for (const k in t) {
+                result[k] = hookResult(`${action}_${k}_propertyResult`, t[k])
             }
         }
     }

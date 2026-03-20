@@ -1,6 +1,7 @@
 import { useLogger } from "./common/log"
 import { registerDefaultClazz, useInstanceManage, useObjectManage } from "./server/object-manage"
 import { hookArgument, hookResult } from "./common/hook-argument"
+import { Controller } from "./server/controller"
 const log = useLogger('Server')
 try {
   log.info('Hi rpc server!')
@@ -10,11 +11,12 @@ try {
     log.error('unhandledRejection:', err)
     // process.exit(1)
   })
-  require('skyline-addon/build/skyline.node')
   const server = require('skyline-server/server.node')
   global.sendMessageSync = server.sendMessageSync
   global.send = server.sendMessageSingle
   global.blockUntilNextMessage = server.blockUntilNextMessage
+  global.controller = new Controller()
+
   const g = global as any
   g.window = g
   window = g
@@ -40,7 +42,6 @@ try {
     }
     if (req.action === 'disconnected') {
       log.error('disconnected')
-      process.exit(1)
       return
     }
     try {
@@ -76,6 +77,10 @@ try {
           let result = clazz[req.action](...params);
           result = hookResult(`${req.action}_staticResult`, result)
           log.debug("static call result", req.action, result);
+          reply({ result: { returnValue: result } });
+        } else if (typeof clazz[req.action] === 'object') {
+          let result = clazz[req.action]
+          result = hookResult(`${req.action}_staticResult`, result)
           reply({ result: { returnValue: result } });
         } else if (typeof clazz[req.action] !== 'undefined') {
           const result = clazz[req.action]
@@ -159,7 +164,7 @@ try {
           result = instance[req.action];
         }
         log.debug("dynamic property result", req.action, result);
-        result = hookResult(`${req.action}_dynamicResult`, result)
+        result = hookResult(`${req.action}_propertyResult`, result)
         log.debug("dynamic property result hooked", req.action, result);
 
         if (messageId > 0) {

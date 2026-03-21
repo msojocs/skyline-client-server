@@ -7,11 +7,12 @@ ENV WINEDLLOVERRIDES="mscoree,mshtml="
 # Force Mesa software rasterizer — no GPU in container
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV GALLIUM_DRIVER=llvmpipe
+ADD --chmod=644 https://github.com/msojocs/skyline-client-server/releases/download/dll/seguiemj.ttf /usr/share/fonts/truetype/segoe/seguiemj.ttf
 
 RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
     apt update && \
-    apt install -y fonts-noto-cjk fonts-symbola sudo wget gnupg libgl1 && \
+    apt install -y fonts-noto-cjk sudo wget gnupg libgl1 && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -27,7 +28,8 @@ RUN wget -nv -O- https://dl.winehq.org/wine-builds/winehq.key | APT_KEY_DONT_WAR
 RUN useradd -m docker && \
     echo "docker:docker" | chpasswd && \
     adduser docker sudo && \
-    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    chmod -R a+X /usr/share/fonts
 
 FROM node:20-bookworm AS server-builder
 

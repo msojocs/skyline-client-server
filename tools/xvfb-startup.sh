@@ -11,7 +11,6 @@ HOST_GID=${HOST_GID:-1000}
 # Remap the docker user to match host UID/GID so shared memory has correct ownership
 groupmod -g "$HOST_GID" docker 2>/dev/null || true
 usermod -u "$HOST_UID" docker 2>/dev/null || true
-chown -R docker /home/docker 2>/dev/null || true
 chown -R docker /workspace 2>/dev/null || true
 
 rm -rf /tmp/.X99-lock

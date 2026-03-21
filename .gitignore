@@ -1,4 +1,5 @@
-build*
+build
+build-win
 node_modules
 vcpkg_installed
 cache

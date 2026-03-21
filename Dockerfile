@@ -44,7 +44,7 @@ RUN pnpm --filter ./packages/typescript build
 
 FROM ubuntu:22.04 AS skyline-addon-builder
 
-ARG DEVTOOLS_VERSION="2012510280"
+ARG DEVTOOLS_VERSION
 WORKDIR /build
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \

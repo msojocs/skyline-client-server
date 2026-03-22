@@ -1,29 +1,28 @@
 # Skyline
 
-这是微信开发者工具的Skyine通信项目。
+这是[微信开发者工具](https://github.com/msojocs/wechat-web-devtools-linux)的Skyine通信项目。
 
 ## 使用说明
 
-### 自动
+### 手动
+1. 下载nwjs 0.54.1 win x64
+2. 下载release中的skyline-server-win32-x86_64.tar.gz
+3. 解压后将skyline-server-win32-x86_64中的文件复制到nwjs的根目录，改名package.nw
+4. 使用wine运行nwjs中的nw.exe
+
+### Docker
+> [!WARNING]
+> Docker存在字体渲染问题，暂未解决。
+
 ```shell
-docker run -it \
-  --restart=always \
-  --hostname="$(hostname)" \
-  --env="DISPLAY" \
-  --platform="linux/amd64" \
-  --volume="${XAUTHORITY:-${HOME}/.Xauthority}:/root/.Xauthority:ro" \
-  --volume="/tmp/.X11-unix:/tmp/.X11-unix:ro" \
-  --volume="/dev/shm:/dev/shm" \
+docker run -d \
+  --network host \
+  -p 9222:9222 \
   -p 3001:3001 \
+  -e HOST_UID=$(id -u) \
+  -e HOST_GID=$(id -g) \
+  --platform="linux/amd64" \
+  --volume="/dev/shm:/dev/shm" \
   --name skyline_server \
   ghcr.io/msojocs/skyline-client-server:master
 ```
-
-### 手动
-1. 编译全部项目，client.node/server.node/server.js/nw.dll/node.dll
-4. 复制`node.dll` `nw.dll` `server.js`，放到`packages/nodejs`
-4. 复制`ucrtbased.dll` `vcruntime140d.dll`，放到`packages/nodejs`
-3. 下载[skyline-node](https://github.com/msojocs/skyline-node/releases/tag/v16.4.0-1)放到`packages/nodejs`
-4. 复制windows的`skyline-addon`，放到`packages/nodejs/node_modules`
-5. 复制`server.node`，放到`packages/nodejs/node_modules/skyline-server`
-6. 复制`sharedMemory.node`，放到`packages/nodejs/node_modules/sharedMemory`

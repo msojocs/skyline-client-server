@@ -8,7 +8,20 @@ chmod 1777 /tmp/.X11-unix
 HOST_UID=${HOST_UID:-1000}
 HOST_GID=${HOST_GID:-1000}
 
-# Remap the docker user to match host UID/GID so shared memory has correct ownership
+# Remap the docker user to match host UID/GID so shared memory has correct ownership.
+# If the target GID/UID is already taken by another user/group, relocate it first
+# to avoid a silent failure (e.g. host UID=1000 collides with the 'ubuntu' user inside
+# the container).
+CONFLICT_GROUP=$(getent group "$HOST_GID" | cut -d: -f1)
+if [ -n "$CONFLICT_GROUP" ] && [ "$CONFLICT_GROUP" != "docker" ]; then
+    groupmod -g "$(( HOST_GID + 60000 ))" "$CONFLICT_GROUP" 2>/dev/null || true
+fi
+
+CONFLICT_USER=$(getent passwd "$HOST_UID" | cut -d: -f1)
+if [ -n "$CONFLICT_USER" ] && [ "$CONFLICT_USER" != "docker" ]; then
+    usermod -u "$(( HOST_UID + 60000 ))" "$CONFLICT_USER" 2>/dev/null || true
+fi
+
 groupmod -g "$HOST_GID" docker 2>/dev/null || true
 usermod -u "$HOST_UID" docker 2>/dev/null || true
 chown -R docker /workspace 2>/dev/null || true

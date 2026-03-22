@@ -2,6 +2,7 @@
 const args = process.argv.slice(2);
 const { exit } = require("process");
 const pkg = require("../package.json");
+const config = require("../config/config.json");
 
 
 // 16.17.0后可以使用util.parseArgs，目前是16.11.0
@@ -10,6 +11,9 @@ const options = {
         type: 'boolean',
     },
     '--get-image-version': {
+        type: 'boolean',
+    },
+    '--get-shared-memory-version': {
         type: 'boolean',
     },
 }
@@ -45,5 +49,9 @@ if (configArg['get-devtools-version']) {
 }
 if (configArg['get-image-version']) {
     console.log(pkg.version);
+    exit(0);
+}
+if (configArg['get-shared-memory-version']) {
+    console.log(config['shared-memory']);
     exit(0);
 }

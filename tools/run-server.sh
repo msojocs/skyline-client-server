@@ -3,7 +3,8 @@ set -ex
 
 root_dir=$(cd "$(dirname "$0")/.." && pwd -P)
 
-docker run --rm -it \
+docker run -d \
+    --network host \
     -p 9222:9222 \
     -e HOST_UID=$(id -u) \
     -e HOST_GID=$(id -g) \
@@ -11,4 +12,4 @@ docker run --rm -it \
     -v $HOME/github/wechat-web-devtools-linux/package.nw/js/ideplugin:/workspace/inspector \
     -v "/dev/shm:/dev/shm" \
     --name wechat_devtools_server \
-    test:latest
+    devtools-server:2.01.2510280-2

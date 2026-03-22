@@ -1,6 +1,7 @@
 FROM ubuntu:22.04 AS runtime-base
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
 ENV XVFB_RES="1280x720x24"
 ENV XVFB_ARGS=""
 ENV WINEDLLOVERRIDES="mscoree,mshtml="

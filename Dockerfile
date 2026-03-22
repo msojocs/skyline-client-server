@@ -2,7 +2,7 @@ FROM ubuntu:24.04 AS runtime-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
-ENV XVFB_RES="1280x720x24"
+ENV XVFB_RES="800x600x24"
 ENV XVFB_ARGS=""
 ENV WINEDLLOVERRIDES="mscoree,mshtml="
 # Force Mesa software rasterizer — no GPU in container
@@ -75,9 +75,9 @@ RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sourc
     mkdir -p cache && \
     wget -c "https://dl.nwjs.io/v0.54.1/nwjs-sdk-v0.54.1-win-x64.zip" -O "cache/nwjs-sdk-v0.54.1-win-x64.zip" && \
     unzip "cache/nwjs-sdk-v0.54.1-win-x64.zip" && \
-    mv nwjs-*-win-x64 nwjs && \
+    mv nwjs-*-win-x64/* nwjs && \
     rm -rf cache && \
-    chmod a+X nwjs/package.nw/node_modules/sharedMemory
+    chmod -R a+X nwjs
 COPY --from=server-builder /build/packages/nwjs/server.js ./
 COPY packages/nwjs nwjs/package.nw
 COPY --from=skyline-addon-builder /build/node_modules/skyline-addon nwjs/package.nw/node_modules/skyline-addon

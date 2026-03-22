@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS runtime-base
+FROM ubuntu:24.04 AS runtime-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
@@ -10,20 +10,21 @@ ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV GALLIUM_DRIVER=llvmpipe
 ADD --chmod=644 https://github.com/msojocs/skyline-client-server/releases/download/dll/seguiemj.ttf /usr/share/fonts/truetype/segoe/seguiemj.ttf
 
-RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
-    sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+RUN sed -i 's|http://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
+    sed -i 's|http://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
     apt update && \
     apt install -y fonts-noto-cjk sudo wget gnupg libgl1 && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
 ARG WINE_BRANCH="staging"
-RUN wget -nv -O- https://dl.winehq.org/wine-builds/winehq.key | APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1 apt-key add - && \
-    echo "deb https://dl.winehq.org/wine-builds/ubuntu/ $(grep VERSION_CODENAME= /etc/os-release | cut -d= -f2) main" >> /etc/apt/sources.list && \
+RUN mkdir -pm755 /etc/apt/keyrings && \
+    wget -nv -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
+    echo "deb [signed-by=/etc/apt/keyrings/winehq-archive.key] https://dl.winehq.org/wine-builds/ubuntu/ $(grep VERSION_CODENAME= /etc/os-release | cut -d= -f2) main" > /etc/apt/sources.list.d/winehq.list && \
     dpkg --add-architecture i386 && \
     apt update && \
     apt install -y --install-recommends winehq-${WINE_BRANCH} && \
-    apt install -y --no-install-recommends xvfb libegl1-mesa libegl-mesa0 libglx-mesa0 mesa-vulkan-drivers mesa-utils gosu && \
+    apt install -y --no-install-recommends xvfb libegl1 libegl-mesa0 libglx-mesa0 mesa-vulkan-drivers mesa-utils gosu && \
     rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m docker && \
@@ -67,6 +68,7 @@ FROM ubuntu:22.04 AS source
 
 ARG APP_ROOT="packages/nodejs"
 WORKDIR /workspace
+ADD --chmod=644 https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node nwjs/package.nw/node_modules/sharedMemory/sharedMemory.node
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     apt update && apt install -y wget unzip && \
@@ -74,10 +76,10 @@ RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sourc
     wget -c "https://dl.nwjs.io/v0.54.1/nwjs-sdk-v0.54.1-win-x64.zip" -O "cache/nwjs-sdk-v0.54.1-win-x64.zip" && \
     unzip "cache/nwjs-sdk-v0.54.1-win-x64.zip" && \
     mv nwjs-*-win-x64 nwjs && \
-    rm -rf cache
+    rm -rf cache && \
+    chmod a+X nwjs/package.nw/node_modules/sharedMemory
 COPY --from=server-builder /build/packages/nwjs/server.js ./
 COPY packages/nwjs nwjs/package.nw
-ADD --chmod=644 https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node nwjs/package.nw/node_modules/sharedMemory/sharedMemory.node
 COPY --from=skyline-addon-builder /build/node_modules/skyline-addon nwjs/package.nw/node_modules/skyline-addon
 
 FROM runtime-base AS runtime

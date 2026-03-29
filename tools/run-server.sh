@@ -7,9 +7,6 @@ docker run --rm -it \
     --network host \
     -e HOST_UID=$(id -u) \
     -e HOST_GID=$(id -g) \
-    -e LANG=C.UTF-8 \
-    -v $HOME/.config/wechat-devtools/WeappPlugin:/workspace/WeappPlugin \
-    -v $HOME/github/wechat-web-devtools-linux/package.nw/js/ideplugin:/workspace/inspector \
     -v "/dev/shm:/dev/shm" \
     --name wechat_devtools_server \
-    devtools-server:2.01.2510280-2
+    devtools-server:2.01.2510290-1

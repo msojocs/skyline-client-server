@@ -31,8 +31,12 @@ Xvfb :99 -ac -screen 0 "$XVFB_RES" -nolisten tcp $XVFB_ARGS &
 XVFB_PROC=$!
 sleep 1
 export DISPLAY=:99
+export LANG=zh_CN.UTF-8
+export LC_ALL=zh_CN.UTF-8
+export LANGUAGE=zh_CN.UTF-8
+
 cd /workspace
-gosu docker wine nw.exe --remote-debugging-port=9222 "--load-extension=/workspace/WeappPlugin" "--custom-devtools-frontend=/workspace/inspector"
+gosu docker wine nw.exe --remote-debugging-port=9222
 WINE_EXIT=$?
 kill $XVFB_PROC
 exit $WINE_EXIT

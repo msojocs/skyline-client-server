@@ -36,7 +36,7 @@ export LC_ALL=zh_CN.UTF-8
 export LANGUAGE=zh_CN.UTF-8
 
 cd /workspace
-gosu docker wine nw.exe --remote-debugging-port=9222
+gosu docker wine electron.exe --remote-debugging-port=9222 app
 WINE_EXIT=$?
 kill $XVFB_PROC
 exit $WINE_EXIT

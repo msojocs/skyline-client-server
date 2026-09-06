@@ -1,26 +1,11 @@
 #!/bin/bash
 root_dir=$(cd `dirname $0`/.. && pwd -P)
 
-server_dir="$root_dir/packages/nodejs"
-win_dir="/mnt/d/github/skyline-client-server/packages/nodejs"
+server_dir="$root_dir/packages/electron"
 
 mkdir -p "$server_dir"
-# 复制更新server文件
-if [ ! -f "$server_dir/node.exe" ]; then
-    wget -c -O "$server_dir/node.exe" "https://github.com/msojocs/skyline-node/releases/download/v16.4.0-1/node.exe"
-fi
-if [ ! -f "$server_dir/dwrite.dll" ]; then
-    wget -c -O "$server_dir/dwrite.dll" "https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll"
-fi
-if [ ! -f "$server_dir/nw.dll" ]; then
-    cp "$win_dir/nw.dll" "$server_dir/nw.dll"
-fi
-if [ ! -f "$server_dir/node.dll" ]; then
-    cp "$win_dir/node.dll" "$server_dir/node.dll"
-fi
-
-cp "/mnt/d/github/skyline-client-server/packages/nodejs/node_modules/skyline-server/server.node" "$server_dir/node_modules/skyline-server/server.node"
-cp "/mnt/d/github/skyline-shared-memory/build/sharedMemory.node" "$server_dir/node_modules/sharedMemory/sharedMemory.node"
-cp "/home/msojocs/github/skyline-shared-memory/build/sharedMemory.node" "$HOME/github/wechat-web-devtools-linux/package.nw/node_modules/sharedMemory/sharedMemory.node"
-cd "$server_dir"
-WINEDEBUG=+font wine node.exe server.js > font.log 2>&1
+mkdir -p "$server_dir/node_modules/skyline-server" "$server_dir/node_modules/sharedMemory"
+cp "$root_dir/native-win-artifact"/*.node "$server_dir/node_modules/skyline-server/server.node"
+cp "/home/msojocs/github/skyline-shared-memory/build/sharedMemory.node" "$server_dir/node_modules/sharedMemory/sharedMemory.node"
+cd "$root_dir"
+pnpm exec electron packages/electron > font.log 2>&1

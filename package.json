@@ -5,8 +5,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "prepare": "node tools/prepare/nwjs.js",
-    "server:start": ".\\packages\\nodejs\\node.exe packages/nodejs/server.js",
+    "prepare": "node tools/prepare/electron.js",
+    "electron:start": "electron packages/electron",
+    "server:start": "pnpm run electron:start",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -14,6 +15,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "electron": "36.6.0",
     "vitest": "^4.1.0"
   },
   "packageManager": "pnpm@9.11.0+sha512.0a203ffaed5a3f63242cd064c8fb5892366c103e328079318f78062f24ea8c9d50bc6a47aa3567cabefd824d170e78fa2745ed1f16b132e16436146b7688f19b",

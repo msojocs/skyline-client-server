@@ -15,8 +15,8 @@ const options: RollupOptions[] = [
     input: 'src/server.ts',
     output: {
       strict: false,
-      dir: '../nwjs',
-      // dir: '../nwjs/webview',
+      dir: '../electron',
+      // dir: '../electron/webview',
       // file: 'server.js',
       format: 'cjs',
       // banner: (chunk) => {
@@ -50,7 +50,7 @@ const options: RollupOptions[] = [
       !isDev ? terser() : null,
     ],
     // 指出哪些模块应该视为外部模块
-    external: ['nw', 'module'],
+    external: ['electron', 'module'],
   },
 ];
 export default options

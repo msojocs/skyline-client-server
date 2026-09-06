@@ -5,6 +5,8 @@ root_dir=$(cd `dirname $0`/../.. && pwd -P)
 arch=$1
 tag=$2
 
+mkdir -p "$root_dir/packages/electron/node_modules/skyline-server"
+
 # Cross-compile for Windows using MinGW-w64 toolchain
 cmake --no-warn-unused-cli \
     -DCMAKE_BUILD_TYPE:STRING=Release \
@@ -15,11 +17,7 @@ cmake --no-warn-unused-cli \
     -G Ninja
 
 cmake --build "$root_dir/build-win" --config Release --target server --
-cmake --build "$root_dir/build-win" --config Release --target nw --
-cmake --build "$root_dir/build-win" --config Release --target node --
 
 mkdir -p "$root_dir/tmp/build"
 
-mv "$root_dir/packages/nwjs/node_modules/skyline-server/server.node" "$root_dir/tmp/build/skyline-server-win32-${arch}-${tag}.node"
-mv "$root_dir/packages/nwjs/node.dll" "$root_dir/tmp/build/node.dll"
-mv "$root_dir/packages/nwjs/nw.dll" "$root_dir/tmp/build/nw.dll"
+mv "$root_dir/packages/electron/node_modules/skyline-server/server.node" "$root_dir/tmp/build/skyline-server-win32-${arch}-${tag}.node"

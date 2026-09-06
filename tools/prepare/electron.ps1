@@ -1,14 +1,15 @@
 # Create directories if they don't exist
 $thirdsDir = Join-Path -Path (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) -ChildPath "packages/native/thirds"
-$nwjsDir = Join-Path -Path $thirdsDir -ChildPath "nwjs"
+$electronDir = Join-Path -Path $thirdsDir -ChildPath "electron"
 
-if (-not (Test-Path -Path $nwjsDir)) {
-    New-Item -Path $nwjsDir -ItemType Directory -Force
+if (-not (Test-Path -Path $electronDir)) {
+    New-Item -Path $electronDir -ItemType Directory -Force
 }
 
 # Define the URL and download destination
-$nodeLibUrl = "https://dl.nwjs.io/v0.54.1/x64/node.lib"
-$nodeLibDest = Join-Path -Path $nwjsDir -ChildPath "node64.lib"
+$electronVersion = if ($env:ELECTRON_VERSION) { $env:ELECTRON_VERSION } else { "36.6.0" }
+$nodeLibUrl = "https://artifacts.electronjs.org/headers/dist/v$electronVersion/win-x64/node.lib"
+$nodeLibDest = Join-Path -Path $electronDir -ChildPath "node.lib"
 
 Write-Host "Downloading node.lib from $nodeLibUrl to $nodeLibDest..."
 

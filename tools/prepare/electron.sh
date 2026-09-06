@@ -8,11 +8,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." &> /dev/null && pwd )"
 
 # Create directories if they don't exist
-mkdir -p "$PROJECT_ROOT/packages/native/thirds/nwjs"
+mkdir -p "$PROJECT_ROOT/packages/native/thirds/electron"
 
 # Define the URL and download destination
-NODE_LIB_URL="https://dl.nwjs.io/v0.54.1/x64/node.lib"
-NODE_LIB_DEST="$PROJECT_ROOT/packages/native/thirds/nwjs/node64.lib"
+ELECTRON_VERSION="${ELECTRON_VERSION:-36.6.0}"
+NODE_LIB_URL="https://artifacts.electronjs.org/headers/dist/v${ELECTRON_VERSION}/win-x64/node.lib"
+NODE_LIB_DEST="$PROJECT_ROOT/packages/native/thirds/electron/node.lib"
 
 echo "Downloading node.lib from $NODE_LIB_URL to $NODE_LIB_DEST..."
 

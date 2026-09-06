@@ -16,14 +16,14 @@ $root_dir/tools/prepare.sh
 
 # skyline server ts
 cd "$root_dir/ts-linux-artifact"
-mv server.js "$root_dir/packages/nwjs"
+mv server.js "$root_dir/packages/electron"
 
 # skyline server native
 cd "$root_dir/native-win-artifact"
-mkdir -p "$root_dir/packages/nwjs/node_modules/skyline-server"
-mv *.node "$root_dir/packages/nwjs/node_modules/skyline-server/server.node"
+mkdir -p "$root_dir/packages/electron/node_modules/skyline-server"
+mv *.node "$root_dir/packages/electron/node_modules/skyline-server/server.node"
 
 #pack
 cd "$root_dir/packages"
-rm -rf nwjs/.gitignore nwjs/README.MD nwjs/log nwjs/cache nwjs/run*
-tar -zcf "$root_dir/tmp/upload/skyline-server-win32-$arch-$tag.tar.gz" nwjs
+rm -rf electron/.gitignore electron/README.MD electron/log electron/cache electron/run*
+tar -zcf "$root_dir/tmp/upload/skyline-server-win32-$arch-$tag.tar.gz" electron

@@ -1,1 +1,0 @@
-"D:/down/nwjs-sdk-v0.54.1-win-x64/nw.exe" . --remote-debugging-port=9222 "--load-extension=C:/Users/msojocs/AppData/Local/微信开发者工具/User Data/3e5d725bf5abbd2bfd7bc047ee989e46/WeappPlugin" "--custom-devtools-frontend=D:/Program Files (x86)/Tencent/微信web开发者工具/code/package.nw/js/ideplugin/inspector"

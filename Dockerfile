@@ -66,27 +66,27 @@ RUN mkdir -p cache node_modules/skyline-addon && \
 
 FROM ubuntu:22.04 AS source
 
-ARG APP_ROOT="packages/nodejs"
+ARG APP_ROOT="packages/electron"
 WORKDIR /workspace
-ADD --chmod=644 https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node nwjs/package.nw/node_modules/sharedMemory/sharedMemory.node
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     apt update && apt install -y wget unzip && \
+    mkdir -p electron/app/node_modules/sharedMemory && \
+    wget -c "https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node" -O electron/app/node_modules/sharedMemory/sharedMemory.node && \
     mkdir -p cache && \
-    wget -c "https://dl.nwjs.io/v0.54.1/nwjs-sdk-v0.54.1-win-x64.zip" -O "cache/nwjs-sdk-v0.54.1-win-x64.zip" && \
-    unzip "cache/nwjs-sdk-v0.54.1-win-x64.zip" && \
-    mv nwjs-*-win-x64/* nwjs && \
+    wget -c "https://github.com/electron/electron/releases/download/v36.6.0/electron-v36.6.0-win32-x64.zip" -O "cache/electron-win32-x64.zip" && \
+    mkdir -p electron && unzip "cache/electron-win32-x64.zip" -d electron && \
     rm -rf cache && \
-    chmod -R a+X nwjs
-COPY --from=server-builder /build/packages/nwjs/server.js ./
-COPY packages/nwjs nwjs/package.nw
-COPY --from=skyline-addon-builder /build/node_modules/skyline-addon nwjs/package.nw/node_modules/skyline-addon
+    chmod -R a+X electron
+COPY --from=server-builder /build/packages/electron/server.js electron/app/
+COPY packages/electron electron/app
+COPY --from=skyline-addon-builder /build/node_modules/skyline-addon electron/app/node_modules/skyline-addon
 
 FROM runtime-base AS runtime
 WORKDIR /workspace
 ADD --chmod=644 https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
-COPY --from=source /workspace/nwjs /workspace
-COPY packages/nwjs/node_modules/skyline-server /workspace/package.nw/node_modules/
+COPY --from=source /workspace/electron /workspace
+COPY packages/electron/node_modules/skyline-server /workspace/app/node_modules/skyline-server
 COPY tools/xvfb-startup.sh xvfb-startup.sh
 
 EXPOSE 9222

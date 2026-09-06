@@ -5,10 +5,12 @@
 ## 使用说明
 
 ### 手动
-1. 下载nwjs 0.54.1 win x64
-2. 下载release中的skyline-server-win32-x86_64.tar.gz
-3. 解压后将skyline-server-win32-x86_64中的文件复制到nwjs的根目录，改名package.nw
-4. 使用wine运行nwjs中的nw.exe
+1. 安装 Electron 36.6.0（或使用发布包中附带的 Electron 运行时）。
+2. 下载 release 中的 `skyline-server-win32-x86_64.tar.gz` 并解压。
+3. 在解压后的 `electron` 目录中放入 `server.js`、`node_modules` 和原生 `.node` 模块。
+4. 运行 `electron electron`（Windows 使用 `electron.exe electron`）。
+
+Electron 主进程会在 `9222` 端口开启远程调试；可通过 `REMOTE_DEBUGGING_PORT` 覆盖端口。
 
 ### Docker
 > [!WARNING]

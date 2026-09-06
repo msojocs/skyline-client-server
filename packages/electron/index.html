@@ -10,7 +10,7 @@
     <div style="display: flex;flex-direction: column;height:100vh">
         <div style="height: 10%;min-height: 80px;">
             <p>Welcome to Skyline appservice.</p>
-            <button onclick="chrome.runtime.reload()">Reload</button>
+            <button type="button" onclick="location.reload()">Reload</button>
         </div>
         <div id="container" style="border: 1px #eee solid;height: 50%"></div>
         <webview id="devtool" partition="trusted" style="border: 1px #eee solid;display: block;margin-top: 50px;height: 40%;"></webview>
@@ -20,5 +20,6 @@
     window.devtools = document.getElementById("devtool");
     
 </script>
+<script src="./electron-compat.js"></script>
 <script src="./server.js"></script>
 </html>

@@ -62,6 +62,7 @@ export const useInstanceManage = () => ({
         return id
     },
     removeInstance: (instanceId: number) => {
+        console.debug('[object-manage] removeInstance:', instanceId)
         const instance = instanceMap.get(instanceId)
         if (!instanceMap.delete(instanceId)) {
             return

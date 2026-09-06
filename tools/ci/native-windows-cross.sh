@@ -1,23 +1,13 @@
 #!/bin/bash
-set -ex
-root_dir=$(cd `dirname $0`/../.. && pwd -P)
+set -euo pipefail
+root_dir=$(cd "$(dirname "$0")/../.." && pwd -P)
+arch=${1:-x86_64}
+tag=${2:-continuous}
+[[ "$arch" == x86_64 ]] || { echo "Unsupported architecture: $arch" >&2; exit 1; }
 
-arch=$1
-tag=$2
-
-mkdir -p "$root_dir/packages/electron/node_modules/skyline-server"
-
-# Cross-compile for Windows using MinGW-w64 toolchain
-cmake --no-warn-unused-cli \
-    -DCMAKE_BUILD_TYPE:STRING=Release \
-    -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE \
-    -DCMAKE_TOOLCHAIN_FILE="$root_dir/packages/native/cmake/x86_64-w64-mingw32.cmake" \
-    -S"$root_dir/packages/native" \
-    -B"$root_dir/build-win" \
-    -G Ninja
-
-cmake --build "$root_dir/build-win" --config Release --target server --
-
+node "$root_dir/packages/native/build.js" --target x86_64-pc-windows-gnu
 mkdir -p "$root_dir/tmp/build"
-
-mv "$root_dir/packages/electron/node_modules/skyline-server/server.node" "$root_dir/tmp/build/skyline-server-win32-${arch}-${tag}.node"
+cp "$root_dir/packages/native/build/x86_64-pc-windows-gnu/server.node" \
+  "$root_dir/tmp/build/skyline-server-win32-$arch-$tag.node"
+cp "$root_dir/packages/native/build/x86_64-pc-windows-gnu/skyline.node" \
+  "$root_dir/tmp/build/skyline-client-win32-$arch-$tag.node"

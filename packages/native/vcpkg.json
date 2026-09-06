@@ -1,8 +1,0 @@
-{
-  "dependencies": [
-    "boost-asio",
-    "nlohmann-json",
-    "spdlog",
-    "boost-thread"
-  ]
-}

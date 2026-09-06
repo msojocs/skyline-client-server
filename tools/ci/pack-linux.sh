@@ -21,7 +21,8 @@ mv server.js "$root_dir/packages/electron"
 # skyline server native
 cd "$root_dir/native-win-artifact"
 mkdir -p "$root_dir/packages/electron/node_modules/skyline-server"
-mv *.node "$root_dir/packages/electron/node_modules/skyline-server/server.node"
+mv skyline-server-win32-*.node "$root_dir/packages/electron/node_modules/skyline-server/server.node"
+mv skyline-client-win32-*.node "$root_dir/tmp/upload"
 
 #pack
 cd "$root_dir/packages"

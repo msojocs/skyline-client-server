@@ -1,13 +1,11 @@
 #!/bin/bash
-set -ex
-root_dir=$(cd `dirname $0`/../.. && pwd -P)
+set -euo pipefail
+root_dir=$(cd "$(dirname "$0")/../.." && pwd -P)
+arch=${1:-x86_64}
+tag=${2:-continuous}
+[[ "$arch" == x86_64 ]] || { echo "Unsupported architecture: $arch" >&2; exit 1; }
 
-arch=$1
-tag=$2
-
-cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -S"$root_dir/packages/native" -B"$root_dir/build" -G Ninja
-cmake --build "$root_dir/build" --config Release --target skyline --
-
+node "$root_dir/packages/native/build.js" --target x86_64-unknown-linux-gnu
 mkdir -p "$root_dir/tmp/build"
-
-mv "$root_dir/packages/native/build/skyline.node" "$root_dir/tmp/build/skyline-client-linux-$arch-$tag.node"
+cp "$root_dir/packages/native/build/x86_64-unknown-linux-gnu/skyline.node" \
+  "$root_dir/tmp/build/skyline-client-linux-$arch-$tag.node"

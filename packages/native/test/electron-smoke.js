@@ -1,0 +1,11 @@
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const directory = process.env.SKYLINE_NATIVE_TEST_DIR || path.resolve(__dirname, '../build/x86_64-pc-windows-gnu');
+assert.equal(process.versions.electron, '36.6.0');
+const { Controller } = require(path.join(directory, 'skyline.node'));
+const server = require(path.join(directory, 'server.node'));
+assert.equal(typeof Controller.connect, 'function');
+assert.equal(server.start('127.0.0.1', 0), 0);
+server.stop();
+Controller.disconnect();
+console.log('Electron 36.6.0 loaded both Rust modules');

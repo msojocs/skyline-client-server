@@ -2,14 +2,20 @@ import { useCallback } from "../server/callback";
 import { useInstanceManage, useObjectManage } from "../server/object-manage";
 import { useLogger } from "./log";
 
-const clazzList = [
-    'CSSStyleDeclaration',
-    'ChromeWebViewElement',
-    'WebRequestEvent',
-    'Event',
-    'Controller',
-]
+const remoteInstanceTypes: Record<string, string> = {
+    CSSStyleDeclaration: 'CSSStyleDeclaration',
+    ChromeWebViewElement: 'ChromeWebViewElement',
+    // Electron exposes the same remote API under this constructor name.
+    WebViewElement: 'ChromeWebViewElement',
+    WebRequestEvent: 'WebRequestEvent',
+    Event: 'Event',
+    Controller: 'Controller',
+}
 const log = useLogger('HookArgument')
+
+const getRemoteInstanceType = (instance: any) => {
+    return remoteInstanceTypes[instance?.constructor?.name]
+}
 /**
  * 处理Callback的参数
  * 
@@ -27,13 +33,14 @@ const hookCallbackArgument = (arg: any) => {
     else if (typeof arg === 'object') {
         // 对象处理
         const name = arg?.constructor?.name
+        const instanceType = getRemoteInstanceType(arg)
         // 特定实例，转换为自定义对象
-        if (clazzList.includes(name)) {
+        if (instanceType) {
             const { getInstanceId, setInstance } = useInstanceManage()
             const instanceId = getInstanceId(arg) || setInstance(arg);
             arg = {
                 instanceId: instanceId,
-                instanceType: name,
+                instanceType,
             }
         }
         else {
@@ -175,10 +182,11 @@ export const hookResult = (action: string, result: any) => {
         for (let i = 0; i < result.length; i++) {
             const element = result[i];
             const name = element?.constructor?.name
-            if (clazzList.includes(name)) {
+            const instanceType = getRemoteInstanceType(element)
+            if (instanceType) {
                 result[i] = {
                     instanceId: setInstance(element),
-                    instanceType: name,
+                    instanceType,
                 }
             }
             else {
@@ -193,11 +201,12 @@ export const hookResult = (action: string, result: any) => {
     }
     else if (typeof result === 'object') {
         const name = result?.constructor?.name
-        if (clazzList.includes(name)) {
+        const instanceType = getRemoteInstanceType(result)
+        if (instanceType) {
             const { setInstance } = useInstanceManage()
             result = {
                 instanceId: setInstance(result),
-                instanceType: name,
+                instanceType,
             }
         }
         else if (action === 'request_propertyResult') {

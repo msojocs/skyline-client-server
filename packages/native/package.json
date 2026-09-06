@@ -2,19 +2,15 @@
   "name": "nt-native",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "build/skyline.node",
   "scripts": {
-    "compile": "cmake-js compile"
+    "compile": "node build.js",
+    "compile:windows": "node build.js --target x86_64-pc-windows-gnu",
+    "test": "node --test test/native.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "bindings": "^1.5.0",
-    "cmake-js": "^7.3.0",
-    "node-addon-api": "^7.1.0",
-    "node-api-headers": "^1.5.0"
-  },
   "binary": {
     "napi_versions": [
       7

@@ -1,61 +1,91 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
-name: Build Windows
+name: Build Windows From Linux
 
 on:
   workflow_dispatch:
   workflow_call:
 
 jobs:
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-
-    strategy:
-      matrix:
-        arch: ['x86_64']
-
+  cross-build:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          submodules: 'recursive'
-      - uses: pnpm/action-setup@v3
-        name: Install pnpm
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          version: latest
-          run_install: false
-
-      - name: Generate TAG
-        id: Tag
-        run: |
-          $tag="continuous"
-          $name="Continuous Build"
-          if ( "true" -eq "${{ startsWith(github.ref, 'refs/tags/') }}" ) {
-            $tag="${{ github.ref_name }}"
-            $name='${{ github.ref_name }}'
-          }
-          echo "tag result: $tag - $name"
-          echo "::set-output name=tag::$tag"
-          echo "::set-output name=name::$name"
-         
-      - name: run-vcpkg
-        uses: lukka/run-vcpkg@v11.5  # Option 2: specify 'latest' or 'latestrc' in the input version arguments:
-
-      - uses: TheMrMilchmann/setup-msvc-dev@v3
+          targets: x86_64-pc-windows-gnu
+      - uses: Swatinem/rust-cache@v2
         with:
-          arch: ${{ matrix.arch }}
-
-      - name: Prepare
+          workspaces: packages/native
+      - name: Install MinGW
         run: |
-          pnpm install --no-frozen-lockfile
-          pnpm run prepare
-          
-      - name: Build
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+      - name: Cross Compile
+        env:
+          BUILD_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'continuous' }}
+        run: bash tools/ci/native-windows-cross.sh x86_64 "$BUILD_TAG"
+      - name: Check Windows Libraries
         run: |
-          powershell tools/ci/native-windows.ps1 ${{ matrix.arch }} ${{ steps.tag.outputs.tag }}
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+          file packages/native/build/x86_64-pc-windows-gnu/*.node
+          for module in packages/native/build/x86_64-pc-windows-gnu/*.node; do
+            x86_64-w64-mingw32-objdump -p "$module" | sed -n '/DLL Name:/p; /napi_register_module_v1/p'
+          done
+      - uses: actions/upload-artifact@v4
         with:
           name: native-win-artifact
-          path: tmp/build
+          path: tmp/build/*.node
+          if-no-files-found: error
+
+  test-windows:
+    needs: cross-build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-win-artifact
+          path: tmp/windows-artifact
+      - name: Test Cross Compiled Modules
+        shell: pwsh
+        run: |
+          $destination = "packages/native/build/x86_64-pc-windows-gnu"
+          New-Item -ItemType Directory -Force $destination | Out-Null
+          Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-client-*.node" | Select-Object -First 1).FullName "$destination/skyline.node"
+          Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-server-*.node" | Select-Object -First 1).FullName "$destination/server.node"
+          node --test packages/native/test/native.test.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test Electron 36.6.0 Loading
+        shell: pwsh
+        run: |
+          npm install --prefix tmp/electron-test --ignore-scripts electron@36.6.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tmp/electron-test/node_modules/electron/install.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:ELECTRON_RUN_AS_NODE = "1"
+          & tmp/electron-test/node_modules/electron/dist/electron.exe packages/native/test/electron-smoke.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  build-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/native
+      - name: Build And Test MSVC
+        shell: pwsh
+        run: |
+          & tools/ci/native-windows.ps1 x86_64 continuous
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:SKYLINE_NATIVE_TEST_DIR = (Resolve-Path "packages/native/build/x86_64-pc-windows-msvc").Path
+          node --test packages/native/test/native.test.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -1,5 +1,4 @@
 {
-    "cmake.sourceDirectory": "${workspaceFolder}/packages/native",
     "clangd.arguments": [
         // 让 Clangd 生成更详细的日志
         // "--log=verbose",
@@ -97,7 +96,6 @@
         "*.inc": "cpp"
     },
     // 使用Ninja，可以生成compile_commands.json
-    "cmake.generator": "Ninja",
     "editor.tabSize": 4,
     "clangd.path": "clangd"
 }

@@ -24,7 +24,11 @@ try {
   const port = 3001
   server.start('127.0.0.1', port)
   server.setMessageCallback((message: string, messageId: number) => {
+    let replied = false
     const reply = (payload: any) => {
+      if (replied || messageId <= 0) return
+      replied = true
+      console.info('Reply message <====', payload, messageId)
       global.send(JSON.stringify(payload), messageId)
     }
     const req = JSON.parse(message) as {
@@ -45,7 +49,7 @@ try {
       return
     }
     try {
-      log.debug(`Received message => ${message}`);
+      log.info(`Received message => ${message}`);
       if (req.type === 'constructor') {
         // 构造对象请求
         const { getClazz } = useObjectManage()
@@ -136,17 +140,20 @@ try {
             }
           }
         } else {
+          console.error('Method not found or instance invalid', req.action, instance[req.action])
           reply({ error: 'Method not found or instance invalid' });
         }
       }
       else if (req.type == 'dynamicProperty') {
         // 动态对象调用请求
         if (!req.data.instanceId) {
+          console.error('InstanceId not found')
           reply({ error: 'InstanceId not found' })
           return
         }
         const { getInstance } = useInstanceManage()
         const instance = getInstance(req.data.instanceId);
+        console.debug("dynamic property", req.action, instance, req.data)
         // 动态属性调用请求
         const type = req.data.propertyAction
         const params = req.data.params || []
@@ -181,7 +188,7 @@ try {
     }
     catch (err: any) {
       log.error('Error:', err)
-      if (messageId > 0) {
+      if (messageId > 0 && !replied) {
         reply({ error: err.message })
       }
     }

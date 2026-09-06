@@ -17,20 +17,7 @@ importers:
 
   packages/electron: {}
 
-  packages/native:
-    dependencies:
-      bindings:
-        specifier: ^1.5.0
-        version: 1.5.0
-      cmake-js:
-        specifier: ^7.3.0
-        version: 7.4.0
-      node-addon-api:
-        specifier: ^7.1.0
-        version: 7.1.1
-      node-api-headers:
-        specifier: ^1.5.0
-        version: 1.7.0
+  packages/native: {}
 
   packages/typescript:
     dependencies:

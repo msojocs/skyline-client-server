@@ -1,15 +1,10 @@
-param($arch, $tag)
-$root_dir = Resolve-Path (Join-Path $PSScriptRoot "../../")
+param($arch = "x86_64", $tag = "continuous")
+$ErrorActionPreference = "Stop"
+$root_dir = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+if ($arch -ne "x86_64") { throw "Unsupported architecture: $arch" }
 
-cd $root_dir
-try
-{
-    New-Item -ItemType Directory -Force "$root_dir/packages/electron/node_modules/skyline-server" | Out-Null
-    cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -S"$root_dir/packages/native" -B"$root_dir/build" -G Ninja
-    cmake --build "$root_dir/build" --config Release --target server --
-    mkdir "$root_dir/tmp/build"
-    Write-Host "$root_dir/build"
-    mv "$root_dir/packages/electron/node_modules/skyline-server/server.node" "$root_dir/tmp/build/skyline-server-win32-$arch-$tag.node"
-}catch{
-    exit 1
-}
+node "$root_dir/packages/native/build.js" --target x86_64-pc-windows-msvc
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+New-Item -ItemType Directory -Force "$root_dir/tmp/build" | Out-Null
+Copy-Item "$root_dir/packages/native/build/x86_64-pc-windows-msvc/server.node" "$root_dir/tmp/build/skyline-server-win32-$arch-$tag.node"
+Copy-Item "$root_dir/packages/native/build/x86_64-pc-windows-msvc/skyline.node" "$root_dir/tmp/build/skyline-client-win32-$arch-$tag.node"

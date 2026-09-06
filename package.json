@@ -5,7 +5,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "prepare": "node tools/prepare/electron.js",
+    "native:build": "pnpm --filter nt-native compile",
+    "native:build:windows": "pnpm --filter nt-native compile:windows",
+    "native:test": "pnpm --filter nt-native test",
     "electron:start": "electron packages/electron",
     "server:start": "pnpm run electron:start",
     "test": "vitest",

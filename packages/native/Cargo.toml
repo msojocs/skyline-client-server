@@ -1,0 +1,23 @@
+[package]
+name = "skyline-native"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["client"]
+client = []
+server = []
+
+[dependencies]
+napi = { version = "2.16.17", default-features = false, features = ["napi7", "dyn-symbols", "compat-mode"] }
+napi-derive = "2.16.13"
+serde_json = "1.0"
+
+[profile.release]
+lto = "thin"
+strip = "symbols"

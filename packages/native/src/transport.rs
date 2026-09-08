@@ -274,6 +274,30 @@ pub struct Pending {
 }
 
 impl Pending {
+    pub fn wait(&self, deadline: Instant) -> io::Result<String> {
+        let mut inbox = self.endpoint.inbox.lock().unwrap();
+        loop {
+            if let Some(body) = inbox.pending.get_mut(&self.id).and_then(Option::take) {
+                return Ok(body);
+            }
+            if inbox.stopped || !inbox.connected || inbox.generation != self.generation {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotConnected,
+                    "Peer disconnected",
+                ));
+            }
+            let remaining = deadline
+                .checked_duration_since(Instant::now())
+                .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "RPC request timed out"))?;
+            inbox = self
+                .endpoint
+                .changed
+                .wait_timeout(inbox, remaining)
+                .unwrap()
+                .0;
+        }
+    }
+
     pub fn poll(&self, deadline: Instant) -> io::Result<Option<String>> {
         let mut inbox = self.endpoint.inbox.lock().unwrap();
         loop {

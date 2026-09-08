@@ -1,6 +1,14 @@
 import { Controller } from "./server/controller"
 
 declare global {
+    var __skylineResolveDialog: ((response: {
+        requestId: string
+        result?: unknown
+        error?: string
+    }) => void) | undefined
+}
+
+declare global {
     var sendMessageSync: (message: string) => string
     var send: (message: string, messageId?: number) => void
     var blockUntilNextMessage: () => void

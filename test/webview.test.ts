@@ -115,16 +115,16 @@ describe('Webview API', () => {
     beforeAll(() => {
         skylineClient.Controller.connect()
     })
-    it('executeScript', async () => {
+    it('executeJavaScript', async () => {
         const controller = new skylineClient.Controller(console.error)
         const wv = controller.webview
-        expect(wv.executeScript).toBeDefined()
+        expect(wv.executeJavaScript).toBeDefined()
         wv.src = 'https://www.baidu.com'
         controller.mount()
 
         await new Promise(resolve => setTimeout(resolve, 1000))
-        const result = wv.executeScript({ code: 'console.log("Hello from Webview")' })
-        expect(result).toBe(true)
+        const result = await wv.executeJavaScript('console.log("Hello from Webview")')
+        expect(result).toBeUndefined()
     })
     it('reload', async () => {
         const controller = new skylineClient.Controller(console.error)
@@ -150,15 +150,8 @@ describe('Webview API', () => {
         await new Promise(resolve => setTimeout(resolve, 1000))
         expect(result).toBe(true)
         expect(wv.getUserAgent()).toBe('MyCustomUserAgent/1.0')
-        const code = new Promise((resolve, reject) => {
-            const code = wv.executeScript({ code: `document.body.textContent.includes('MyCustomUserAgent/1.0')`, mainWorld: true }, (result: Array<boolean>) => {
-                resolve(result?.[0])
-            })
-            if (!code) {
-                reject(new Error('executeScript failed'))
-            }
-        })
-        expect(await code).toBe(true)
+        const code = await wv.executeJavaScript(`document.body.textContent.includes('MyCustomUserAgent/1.0')`)
+        expect(code).toBe(true)
     })
     it('eventListener', async () => {
         const controller = new skylineClient.Controller(console.error)
@@ -218,10 +211,9 @@ describe('dialog', () => {
         controller.mount()
 
         await new Promise(resolve => setTimeout(resolve, 500))
-        wv.executeScript({ code: `prompt('请输入内容')`, mainWorld: true }, (result: Array<any>) => {
-            console.log('prompt result:', result)
-        })
+        const promptResult = wv.executeJavaScript(`prompt('请输入内容')`)
         const result = await promise
+        console.log('prompt result:', await promptResult)
         expect(result?.type).toBe('dialog')
         expect(result?.dialog).toBeDefined()
         expect(result?.messageText).toBe('请输入内容')

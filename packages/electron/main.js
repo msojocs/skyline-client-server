@@ -2,6 +2,7 @@
 
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
+console.info('Electron version', process.versions.electron, 'Chrome version', process.versions.chrome, 'Node.js version', process.versions.node);
 
 // These switches were previously supplied through NW.js package.json.
 const chromiumSwitches = [
@@ -21,6 +22,103 @@ const chromiumSwitches = [
 for (const [name, value] of chromiumSwitches) {
   app.commandLine.appendSwitch(name, value);
 }
+
+const dialogTimeoutMs = Math.max(
+  1000,
+  Number.parseInt(process.env.SKYLINE_DIALOG_TIMEOUT_MS || '30000', 10) || 30000,
+);
+let dialogRequestId = 0;
+const pendingDialogs = new Map();
+
+function completeDialog(requestId, value, reason) {
+  const pending = pendingDialogs.get(requestId);
+  if (!pending || pending.completed) return false;
+  const senderDestroyed = pending.sender && pending.sender.isDestroyed();
+  const error = reason ? String(reason) : '';
+  pending.completed = true;
+  pendingDialogs.delete(requestId);
+  clearTimeout(pending.timeout);
+  if (pending.sender && !senderDestroyed) {
+    pending.sender.removeListener('destroyed', pending.onDestroyed);
+  }
+
+  if (error) {
+    console.error(`[dialog ${requestId}] ${error}`);
+  } else {
+    console.info(`[dialog ${requestId}] response`, value);
+  }
+  if (senderDestroyed) {
+    return true;
+  }
+  pending.event.returnValue = value;
+  return true;
+}
+
+function sendDeferredDialog(event, type, args) {
+  const requestId = `dialog-${Date.now()}-${++dialogRequestId}`;
+  const guest = event.sender;
+  const host = guest && guest.hostWebContents;
+  const pending = {
+    event,
+    type,
+    sender: guest,
+    hostWebContentsId: host && host.id,
+    guestWebContentsId: guest && guest.id,
+    completed: false,
+    timeout: null,
+    onDestroyed: () => completeDialog(requestId, undefined, 'guest webContents was destroyed'),
+  };
+  pending.timeout = setTimeout(() => {
+    completeDialog(requestId, undefined, `request timed out after ${dialogTimeoutMs}ms`);
+  }, dialogTimeoutMs);
+  pendingDialogs.set(requestId, pending);
+  if (guest && typeof guest.once === 'function') guest.once('destroyed', pending.onDestroyed);
+
+  console.info(`[dialog ${requestId}] request`, {
+    type,
+    args,
+    guestWebContentsId: pending.guestWebContentsId,
+    hostWebContentsId: pending.hostWebContentsId,
+  });
+
+  if (!host || typeof host.send !== 'function' || host.isDestroyed()) {
+    completeDialog(requestId, undefined, 'host webContents is unavailable');
+    return;
+  }
+  host.send('skyline-dialog-request', {
+    requestId,
+    type,
+    args,
+    guestWebContentsId: pending.guestWebContentsId,
+  });
+}
+
+ipcMain.on('prompt', (event, type, ...args) => {
+  console.info('[dialog] received renderer request', { type: 'prompt', args: [type, ...args] });
+  sendDeferredDialog(event, 'prompt', [type, ...args]);
+});
+
+ipcMain.on('alert', (event, type, ...args) => {
+  console.info('[dialog] received renderer request', { type: 'alert', args: [type, ...args] });
+  sendDeferredDialog(event, 'alert', [type, ...args]);
+});
+
+ipcMain.on('confirm', (event, type, ...args) => {
+  console.info('[dialog] received renderer request', { type: 'confirm', args: [type, ...args] });
+  sendDeferredDialog(event, 'confirm', [type, ...args]);
+});
+
+ipcMain.on('skyline-dialog-response', (event, response) => {
+  console.info('[dialog] received renderer response', response);
+  if (!response || typeof response.requestId !== 'string') return;
+  const pending = pendingDialogs.get(response.requestId);
+  if (!pending) return;
+  if (pending.hostWebContentsId !== undefined && pending.hostWebContentsId !== event.sender.id) {
+    console.error(`[dialog ${response.requestId}] response came from an unexpected renderer`);
+    return;
+  }
+  completeDialog(response.requestId, response.result, response.error);
+});
 
 const eventNames = [
   'onBeforeRequest',

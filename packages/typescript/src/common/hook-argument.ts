@@ -85,7 +85,10 @@ const hookArgumentItem = (action: string, arg: any) => {
         else if (arg.hasOwnProperty('callbackId')) {
             // 回调替换
             const callbackId = arg.callbackId
-            const asyncCallback = arg.asyncCallback
+            // Dialog callbacks may resolve a later synchronous dialog request.
+            // Marking this callback asynchronous avoids a nested sendSync deadlock
+            // when the callback calls controller.resolveDialog().
+            const asyncCallback = arg.asyncCallback || action === 'setDialogCallback'
             const temp: any = (...args1: any[]) => {
                 // 替换参数中的具体对象
                 hookCallbackArgument(args1)
@@ -125,7 +128,9 @@ const hookArgumentItem = (action: string, arg: any) => {
                 temp._closure = hookArgumentItem(action, arg._closure)
             }
             const { getCallback } = useCallback()
-            arg = getCallback(callbackId, temp)
+            // A dialog handler is a replaceable singleton. Reusing a wrapper by
+            // callbackId can retain a disconnected native process after reconnect.
+            arg = action === 'setDialogCallback' ? temp : getCallback(callbackId, temp)
         }
         else {
             for (const k in arg) {

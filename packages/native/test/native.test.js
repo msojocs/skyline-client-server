@@ -56,6 +56,35 @@ test('exports, argument validation, and idle environment cleanup', { timeout: 10
   } finally { server.stop(); }
 });
 
+test('Controller dialog callback forwards type and arguments through a nested RPC', { timeout: 10000 }, async t => {
+  const port = await fixture(t);
+  const { Controller } = require(clientPath);
+  t.after(() => Controller.disconnect());
+  Controller.connect('127.0.0.1', port);
+  const controller = new Controller(() => {});
+  const webview = controller.webview;
+  const dialogCallbackResult = new Promise((resolve, reject) => {
+    const callback = (target, requestId, type, ...args) => {
+      try {
+        assert.equal(target, webview);
+        assert.equal(requestId, 'dialog-1');
+        assert.equal(type, 'alert');
+        assert.deepEqual(args, ['customer service']);
+        assert.equal(controller.resolveDialog(requestId, ''), true);
+        resolve(requestId);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    callback.__asyncCallback = true;
+    assert.equal(controller.setDialogCallback(callback), undefined);
+  });
+  assert.equal(controller.dialog(webview, {
+    requestId: 'dialog-1', type: 'alert', args: ['customer service'],
+  }), true);
+  assert.equal(await dialogCallbackResult, 'dialog-1');
+});
+
 test('Rust client/server RPC, objects, callbacks, and nested synchronous calls', { timeout: 30000 }, async t => {
   const port = await fixture(t);
   const { Controller } = require(clientPath);
@@ -80,7 +109,9 @@ test('Rust client/server RPC, objects, callbacks, and nested synchronous calls',
   assert.equal(controller.mount(), undefined);
   assert.equal(webview.reload(), true);
   assert.throws(() => webview.showDevTools(), /Not implemented/);
-  assert.throws(() => webview.executeScript({ error: true }), /fixture remote error/);
+  const rejectedExecution = webview.executeJavaScript({ error: true });
+  assert.equal(typeof rejectedExecution.then, 'function');
+  await assert.rejects(rejectedExecution, /fixture remote error/);
   assert.ok(errors.includes('fixture remote error'));
 
   const callback = value => value;
@@ -97,50 +128,56 @@ test('Rust client/server RPC, objects, callbacks, and nested synchronous calls',
   rules.removeRules();
   assert.deepEqual(rules.getRules(), []);
 
-  const echo = value => webview.executeScript({ echo: true, value });
-  assert.deepEqual(echo({ text: '中文', array: [1, true, null], buffer: Buffer.from([0, 128, 255]),
+  const echo = value => webview.executeJavaScript({ echo: true, value });
+  assert.deepEqual(await echo({ text: '中文', array: [1, true, null], buffer: Buffer.from([0, 128, 255]),
     arrayBuffer: Uint8Array.from([1, 2, 3]).buffer }),
   { text: '中文', array: [1, true, undefined], buffer: [0, 128, 255], arrayBuffer: [1, 2, 3] });
-  assert.deepEqual(echo(Buffer.alloc(0)), []);
-  assert.deepEqual(echo(new ArrayBuffer(0)), []);
-  assert.deepEqual(echo({ target: webview }), { target: { instanceId: webview.instanceId } });
+  assert.deepEqual(await echo(Buffer.alloc(0)), []);
+  assert.deepEqual(await echo(new ArrayBuffer(0)), []);
+  assert.deepEqual(await echo({ target: webview }), { target: { instanceId: webview.instanceId } });
   const circular = {}; circular.self = circular;
-  assert.throws(() => echo(circular), /circular/);
+  await assert.rejects(echo(circular), /circular/);
   const repeated = {};
-  assert.deepEqual(echo([repeated, repeated]), [{}, {}]);
-  const protoKey = echo(JSON.parse('{"__proto__":{"safe":true}}'));
+  assert.deepEqual(await echo([repeated, repeated]), [{}, {}]);
+  const protoKey = await echo(JSON.parse('{"__proto__":{"safe":true}}'));
   assert.equal(Object.getPrototypeOf(protoKey), Object.prototype);
   assert.deepEqual(protoKey.__proto__, { safe: true });
 
   const worklet = () => 1;
   Object.assign(worklet, { __worklet: true, __workletHash: 123, __location: 'test', asString: '() => 1', _closure: { value: 5 } });
-  assert.deepEqual(echo(worklet), { callbackId: worklet.__callbackId, asyncCallback: false, __worklet: true,
+  assert.deepEqual(await echo(worklet), { callbackId: worklet.__callbackId, asyncCallback: false, __worklet: true,
     __workletHash: 123, __location: 'test', asString: '() => 1', _closure: { value: 5 } });
-  const remoteFunction = webview.executeScript({ function: true });
+  const remoteFunction = await webview.executeJavaScript({ function: true });
   assert.deepEqual(remoteFunction('value', 5), { called: '71', params: ['value', 5] });
-  const returnedController = webview.executeScript({ controller: true });
+  const returnedController = await webview.executeJavaScript({ controller: true });
   assert.equal(returnedController instanceof Controller, true);
 
-  const nested = webview.executeScript({ args: [3] }, value => {
+  const nested = await webview.executeJavaScript({ args: [3] }, value => {
     assert.equal(webview.src, 'https://example.com/');
-    return webview.executeScript({ args: [value + 1] }, inner => inner * 2);
+    assert.equal(webview.reload(), true);
+    return value * 2;
   });
-  assert.equal(nested, 8);
-  assert.equal(webview.executeScript({ args: [7] }, Object.freeze(value => value + 1)), 8);
+  assert.equal(nested, 6);
+  assert.equal(await webview.executeJavaScript({ args: [7] }, Object.freeze(value => value + 1)), 8);
   let invoked = 0;
+  let asyncExecution;
   const asyncResult = new Promise(resolve => {
     const callback = value => { invoked++; resolve(value); };
     callback.__asyncCallback = true;
-    assert.equal(webview.executeScript({ later: true, args: ['async'] }, callback), undefined);
+    asyncExecution = webview.executeJavaScript({ later: true, args: ['async'] }, callback);
   });
+  assert.equal(typeof asyncExecution.then, 'function');
+  assert.equal(await asyncExecution, undefined);
   assert.equal(await asyncResult, 'async');
   await new Promise(resolve => setTimeout(resolve, 25));
   assert.equal(invoked, 1);
+  let syncExecution;
   const syncResult = new Promise(resolve => {
-    webview.executeScript({ later: true, args: ['idle-sync'] }, value => { resolve(value); return 'reply'; });
+    syncExecution = webview.executeJavaScript({ later: true, args: ['idle-sync'] }, value => { resolve(value); return 'reply'; });
   });
+  assert.equal(await syncExecution, undefined);
   assert.equal(await syncResult, 'idle-sync');
-  assert.equal(webview.executeScript({ blockUntilNext: true }), true);
+  assert.equal(await webview.executeJavaScript({ blockUntilNext: true }), true);
   assert.equal(webview.getUserAgent(), 'Fixture');
 
   Controller.disconnect();

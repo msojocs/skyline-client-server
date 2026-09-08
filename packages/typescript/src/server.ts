@@ -2,6 +2,7 @@ import { useLogger } from "./common/log"
 import { registerDefaultClazz, useInstanceManage, useObjectManage } from "./server/object-manage"
 import { hookArgument, hookResult } from "./common/hook-argument"
 import { Controller } from "./server/controller"
+import { ipcRenderer } from 'electron'
 const log = useLogger('Server')
 try {
   log.info('Hi rpc server!')
@@ -16,6 +17,49 @@ try {
   global.send = server.sendMessageSingle
   global.blockUntilNextMessage = server.blockUntilNextMessage
   global.controller = new Controller()
+  global.__skylineResolveDialog = (response) => {
+    log.info('Sending dialog response', response)
+    ipcRenderer.send('skyline-dialog-response', response)
+  }
+
+  type ElectronWebviewElement = HTMLElement & { getWebContentsId(): number }
+
+  const findWebviewForDialog = (guestWebContentsId: number) => {
+    for (const webview of Array.from(document.querySelectorAll<ElectronWebviewElement>('webview'))) {
+      try {
+        if (webview.getWebContentsId() === guestWebContentsId) return webview
+      } catch {
+        // The webview can be detached while a navigation is being replaced.
+      }
+    }
+    return undefined
+  }
+
+  ipcRenderer.on('skyline-dialog-request', (_event, request) => {
+    log.info('Received dialog request', request)
+    try {
+      const webview = findWebviewForDialog(request?.guestWebContentsId)
+      if (!webview) {
+        ipcRenderer.send('skyline-dialog-response', {
+          requestId: request?.requestId,
+          error: 'Skyline dialog target webview is unavailable',
+        })
+        return
+      }
+      const handled = global.controller.dialog(webview, request)
+      if (!handled) {
+        ipcRenderer.send('skyline-dialog-response', {
+          requestId: request.requestId,
+          error: 'Skyline dialog callback is not registered',
+        })
+      }
+    } catch (error: any) {
+      ipcRenderer.send('skyline-dialog-response', {
+        requestId: request?.requestId,
+        error: error?.message || String(error),
+      })
+    }
+  })
 
   const g = global as any
   g.window = g
@@ -45,6 +89,7 @@ try {
       }
     }
     if (req.action === 'disconnected') {
+      global.controller.setDialogCallback(null)
       log.error('disconnected')
       return
     }
@@ -107,37 +152,47 @@ try {
           const params = req.data.params || []
           log.debug("dynamic call", instance, req.action, params);
           hookArgument(req.action, params)
-          let result = instance[req.action](...params);
-          log.debug("dynamic call result", req.action, result);
-          result = hookResult(`${req.action}_dynamicResult`, result)
-          log.debug("dynamic call result hooked", req.action, result);
+          const finishDynamicCall = (value: any) => {
+            log.debug("dynamic call result", req.action, value);
+            const result = hookResult(`${req.action}_dynamicResult`, value)
+            log.debug("dynamic call result hooked", req.action, result);
 
-          if (messageId > 0) {
-            reply({
-              result: {
-                returnValue: result,
-              },
-            });
-            if (req.action === 'matches' && result === true) {
-              console.info('matches:', instance, params, result)
-            } else if (req.action === 'appendCompiledStyleSheets') {
-              /**
-               * 阻塞当前线程，直到有新消息到来
-               * appendCompiledStyleSheets执行后，必须立即执行appendStyleSheets，否则崩溃。
-               * 
-               * 崩溃情况：
-               * 1. appendCompiledStyleSheets执行后，还未执行appendStyleSheets
-               * 2. 渲染线程开始新一轮渲染，此时样式表存在异常，由于官方程序未做异常处理，程序崩溃
-               * 
-               * 解决方法：
-               * 1. appendCompiledStyleSheets执行后，立即阻塞当前线程
-               * 2. 由于线程阻塞，渲染线程无法开始新一轮渲染
-               * 3. 收到appendStyleSheets，解除阻塞
-               * 4. 执行appendStyleSheets，此时优先级高于渲染线程
-               * 5. 渲染线程继续渲染
-               */
-              global.blockUntilNextMessage()
+            if (messageId > 0) {
+              reply({
+                result: {
+                  returnValue: result,
+                },
+              });
+              if (req.action === 'matches' && result === true) {
+                console.info('matches:', instance, params, result)
+              } else if (req.action === 'appendCompiledStyleSheets') {
+                /**
+                 * 阻塞当前线程，直到有新消息到来
+                 * appendCompiledStyleSheets执行后，必须立即执行appendStyleSheets，否则崩溃。
+                 *
+                 * 崩溃情况：
+                 * 1. appendCompiledStyleSheets执行后，还未执行appendStyleSheets
+                 * 2. 渲染线程开始新一轮渲染，此时样式表存在异常，由于官方程序未做异常处理，程序崩溃
+                 *
+                 * 解决方法：
+                 * 1. appendCompiledStyleSheets执行后，立即阻塞当前线程
+                 * 2. 由于线程阻塞，渲染线程无法开始新一轮渲染
+                 * 3. 收到appendStyleSheets，解除阻塞
+                 * 4. 执行appendStyleSheets，此时优先级高于渲染线程
+                 * 5. 渲染线程继续渲染
+                 */
+                global.blockUntilNextMessage()
+              }
             }
+          }
+          const result = instance[req.action](...params);
+          if (result && typeof result.then === 'function') {
+            Promise.resolve(result).then(finishDynamicCall, (error: any) => {
+              log.error('Async dynamic call failed:', req.action, error)
+              reply({ error: error?.message || String(error) })
+            })
+          } else {
+            finishDynamicCall(result)
           }
         } else {
           console.error('Method not found or instance invalid', req.action, instance[req.action])

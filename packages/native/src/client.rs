@@ -2,9 +2,64 @@ use crate::binding::{
     arguments, borrow_object, define_property, define_value, error, function, invalid, port,
     Reference, State,
 };
-use napi::{CallContext, JsFunction, JsObject, JsUnknown, Result};
-use serde_json::json;
-use std::rc::Rc;
+use crate::transport::Pending;
+use napi::bindgen_prelude::{AsyncTask, ToNapiValue};
+use napi::{CallContext, Env, JsFunction, JsObject, JsUnknown, NapiValue, Result, Task};
+use serde_json::{json, Value};
+use std::rc::{Rc, Weak};
+use std::time::{Duration, Instant};
+
+struct ExecuteJavaScriptTask {
+    state: Weak<State>,
+    pending: Option<Pending>,
+    initial_error: Option<napi::Error>,
+}
+
+// napi-rs runs compute on a worker and resolve/reject/drop back on the JS
+// thread. compute only touches Pending; the non-Send Weak<State> is accessed
+// after the task returns to its owning JS thread.
+unsafe impl Send for ExecuteJavaScriptTask {}
+
+impl ExecuteJavaScriptTask {
+    fn state(&self) -> Result<Rc<State>> {
+        self.state
+            .upgrade()
+            .ok_or_else(|| error("Environment has closed"))
+    }
+}
+
+impl Task for ExecuteJavaScriptTask {
+    type Output = Value;
+    type JsValue = JsUnknown;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        if let Some(error) = self.initial_error.take() {
+            return Err(error);
+        }
+        let pending = self
+            .pending
+            .as_ref()
+            .ok_or_else(|| error("RPC request was not initialized"))?;
+        let body = pending
+            .wait(Instant::now() + Duration::from_secs(300))
+            .map_err(error)?;
+        let response: Value = serde_json::from_str(&body).map_err(error)?;
+        if let Some(message) = response.get("error") {
+            return Err(error(message.as_str().unwrap_or("Remote request failed")));
+        }
+        Ok(response["result"]["returnValue"].clone())
+    }
+
+    fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
+        let state = self.state()?;
+        report(&state, || state.decode(&output))
+    }
+
+    fn reject(&mut self, _env: Env, err: napi::Error) -> Result<Self::JsValue> {
+        let state = self.state()?;
+        report(&state, || Err(err))
+    }
+}
 
 struct Class {
     wire_name: &'static str,
@@ -17,7 +72,13 @@ const CLASSES: &[Class] = &[
     Class {
         wire_name: "Controller",
         name: "Controller",
-        methods: &["mount", "unmount"],
+        methods: &[
+            "mount",
+            "unmount",
+            "setDialogCallback",
+            "dialog",
+            "resolveDialog",
+        ],
         properties: &[("webview", true, false)],
     },
     Class {
@@ -194,6 +255,32 @@ fn add_method(state: &Rc<State>, prototype: &JsObject, name: &'static str) -> Re
     let weak = Rc::downgrade(state);
     let function = state.env.create_function_from_closure(name, move |ctx| {
         let state = weak.upgrade().ok_or_else(|| error("Environment has closed"))?;
+        if name == "executeJavaScript" {
+            let request = (|| {
+                let body = json!({"type": "dynamic", "action": name,
+                    "data": {"instanceId": instance(&state, &ctx)?, "params": arguments(&state, &ctx)?}}).to_string();
+                state.start_request(&body).map(|(_, pending)| pending)
+            })();
+            let task = match request {
+                Ok(pending) => ExecuteJavaScriptTask {
+                    state: Rc::downgrade(&state),
+                    pending: Some(pending),
+                    initial_error: None,
+                },
+                Err(initial_error) => ExecuteJavaScriptTask {
+                    state: Rc::downgrade(&state),
+                    pending: None,
+                    initial_error: Some(initial_error),
+                },
+            };
+            let promise = unsafe {
+                <AsyncTask<ExecuteJavaScriptTask> as ToNapiValue>::to_napi_value(
+                    state.env.raw(),
+                    AsyncTask::new(task),
+                )?
+            };
+            return Ok(unsafe { JsUnknown::from_raw_unchecked(state.env.raw(), promise) });
+        }
         report(&state, || {
             if name == "showDevTools" { return Err(error("Not implemented")); }
             let result = state.request(&json!({"type": "dynamic", "action": name,

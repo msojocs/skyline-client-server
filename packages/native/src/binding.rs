@@ -1,4 +1,4 @@
-use crate::transport::{Endpoint, Message};
+use crate::transport::{Endpoint, Message, Pending};
 use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi::{
     CallContext, Env, Error, JsFunction, JsObject, JsUnknown, NapiRaw, NapiValue, Ref, Result,
@@ -127,7 +127,7 @@ impl State {
             .ok_or_else(|| error("Not connected. Call connect() or start() first."))
     }
 
-    pub fn request(self: &Rc<Self>, body: &str) -> Result<Value> {
+    pub fn start_request(&self, body: &str) -> Result<(Arc<Endpoint>, Pending)> {
         let endpoint = self.socket()?;
         let id = self.next_request.get();
         self.next_request.set(if id >= 9_007_199_254_740_989 {
@@ -141,6 +141,11 @@ impl State {
         });
         let pending = endpoint.request(id);
         endpoint.send(id, body, pending.generation).map_err(error)?;
+        Ok((endpoint, pending))
+    }
+
+    pub fn request(self: &Rc<Self>, body: &str) -> Result<Value> {
+        let (endpoint, pending) = self.start_request(body)?;
         let deadline =
             Instant::now() + Duration::from_secs(if cfg!(feature = "client") { 5 } else { 3 });
         loop {

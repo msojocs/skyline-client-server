@@ -37,6 +37,37 @@ server.setMessageCallback((body, id) => {
     } else {
       switch (request.action) {
         case 'mount': case 'unmount': case 'setText': break;
+        case 'setDialogCallback':
+          object.dialogCallback = params[0];
+          break;
+        case 'dialog': {
+          const [webview, request] = params;
+          const callback = object.dialogCallback;
+          value = Boolean(callback);
+          if (callback) {
+            setImmediate(() => {
+              const payload = JSON.stringify({
+                type: 'emitCallback',
+                callbackId: callback.callbackId,
+                data: {
+                  block: false,
+                  args: [
+                    remote('ChromeWebViewElement', webview.instanceId),
+                    request.requestId,
+                    request.type,
+                    ...request.args,
+                  ],
+                },
+              });
+              server.sendMessageSingle(payload);
+            });
+          }
+          break;
+        }
+        case 'resolveDialog':
+          object.dialogResponse = params;
+          value = true;
+          break;
         case 'setAttribute': object[params[0]] = params[1]; break;
         case 'getAttribute': value = object[params[0]]; break;
         case 'removeAttribute': delete object[params[0]]; break;
@@ -50,7 +81,7 @@ server.setMessageCallback((body, id) => {
         case 'addRules': object.rules.push(...params[0]); break;
         case 'getRules': value = object.rules; break;
         case 'removeRules': object.rules = []; break;
-        case 'executeScript': {
+        case 'executeJavaScript': {
           const [options, callback] = params;
           if (options.error) throw new Error('fixture remote error');
           if (options.noReply) return;

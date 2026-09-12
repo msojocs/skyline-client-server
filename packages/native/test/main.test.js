@@ -193,4 +193,11 @@ test('未连接与断开后的调用会报错', { timeout: 10000 }, async t => {
   const getId = webContents.getId;
   assert.throws(() => getId(), /closed connection/);
   assert.throws(() => mainController.electron.webContents.fromId(webContentsId), /Not connected/);
+
+  // The same server instance must be usable after a client reconnects: remote IDs
+  // from the previous connection must not be reused from stale WeakMap entries.
+  mainController.connect('127.0.0.1', port);
+  const reconnected = mainController.electron.webContents.fromId(webContentsId);
+  assert.equal(reconnected.id, webContentsId);
+  mainController.disconnect();
 });

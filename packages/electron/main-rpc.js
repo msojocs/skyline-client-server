@@ -59,7 +59,7 @@ function createMainRpc(options = {}) {
   const port = options.port || process.env.SKYLINE_MAIN_RPC_PORT || DEFAULT_PORT;
 
   const instances = new Map();
-  const instanceIds = new WeakMap();
+  let instanceIds = new WeakMap();
   let nextInstanceId = 1;
   let listening = false;
 
@@ -72,7 +72,7 @@ function createMainRpc(options = {}) {
   // {instanceId, instanceType: 'function'}，客户端 remote() 会复活成可调用代理，调用落到
   // clazzMap 里的 functionData[instanceId]。
   const functionData = {};
-  const functionIds = new WeakMap();
+  let functionIds = new WeakMap();
   let nextFunctionId = 1;
 
   // 同一真实对象复用同一 instanceId，client 侧的代理才能保持同一性。
@@ -216,6 +216,11 @@ function createMainRpc(options = {}) {
       instances.clear();
       callbacks.clear();
       for (const id of Object.keys(functionData)) delete functionData[id];
+      // Remote IDs are valid only for the current connection. Rebuild the identity
+      // caches as well, otherwise a reconnect can reuse an ID that no longer exists
+      // in `instances` / `functionData`.
+      instanceIds = new WeakMap();
+      functionIds = new WeakMap();
       console.info('[main-rpc] client disconnected');
       return;
     }
@@ -302,6 +307,10 @@ function createMainRpc(options = {}) {
       rpc.stop();
       listening = false;
       instances.clear();
+      callbacks.clear();
+      for (const id of Object.keys(functionData)) delete functionData[id];
+      instanceIds = new WeakMap();
+      functionIds = new WeakMap();
     },
   };
 }

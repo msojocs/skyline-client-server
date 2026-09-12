@@ -53,8 +53,10 @@ target.session.extensions.getAllExtensions()
 
 ## 请求拦截（main 层）
 
-`session.webRequest` 同样是一个代理类（`WebRequest`，`main_client.rs` 的 `CLASSES` 表），
-八个事件名都在方法表里，所以可以按事件名动态取：
+`session.webRequest` 返回可调用成员的对象。服务端返回 `WebRequest` 类型时使用
+`main_client.rs` 的类表；Electron 36 的匿名原生对象会返回 `Object` 类型，客户端由
+`client.rs` 的 `remote_object` 创建普通 Object 原型的代理，按需读取并递归解码属性。
+函数成员绑定到原远端对象，支持按事件名动态取值，也支持取出后单独调用：
 
 ```js
 const target = mainController.electron.webContents.fromId(0)

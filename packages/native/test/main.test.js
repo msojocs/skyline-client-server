@@ -20,10 +20,10 @@ async function availablePort() {
   return port;
 }
 
-async function fixture(t) {
+async function fixture(t, anonymousWebRequest = false) {
   const port = await availablePort();
   const worker = new Worker(path.join(__dirname, 'main-fixture-server.js'), {
-    workerData: { webContentsId, port, serverModule: serverPath },
+    workerData: { webContentsId, port, serverModule: serverPath, anonymousWebRequest },
   });
   t.after(async () => { worker.postMessage('stop'); await once(worker, 'exit'); });
   await once(worker, 'message');
@@ -137,6 +137,47 @@ test('main 层 client/server: webContents.fromId 返回可远程调用的代理'
   assert.equal(typeof webContents.bogus, 'undefined');
   assert.equal(typeof webContents.setAttribute, 'undefined');
   assert.equal(typeof webContents.isConnected, 'undefined');
+});
+
+test('anonymous Electron webRequest returns a callable object', { timeout: 15000 }, async t => {
+  const port = await fixture(t, true);
+  const { mainController } = require(clientPath);
+  t.after(() => mainController.disconnect());
+  mainController.connect('127.0.0.1', port);
+
+  const [target] = mainController.electron.webContents.getAllWebContents();
+  const webRequest = target.session.webRequest;
+  assert.equal(typeof webRequest, 'object');
+  assert.ok(webRequest instanceof Object);
+  assert.equal(webRequest.constructor.name, 'Object');
+  assert.equal(target.session.webRequest, webRequest);
+  assert.equal(mainController.electron.webContents.fromId(webContentsId).session.webRequest, webRequest);
+
+  for (const name of [
+    'onBeforeRequest', 'onBeforeSendHeaders', 'onSendHeaders', 'onHeadersReceived',
+    'onResponseStarted', 'onBeforeRedirect', 'onCompleted', 'onErrorOccurred',
+  ]) {
+    assert.equal(typeof webRequest[name], 'function');
+  }
+  const responses = [];
+  const { onBeforeRequest } = webRequest;
+  onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+    assert.equal(details.url, 'https://example.com/onBeforeRequest');
+    responses.push(callback({ cancel: true }));
+  });
+  assert.deepEqual(responses, [
+    { accepted: true, name: 'onBeforeRequest', response: { cancel: true } },
+  ]);
+  assert.equal(webRequest.requestId, 1);
+  assert.equal(webRequest.missing, undefined);
+  assert.equal(webRequest[Symbol.toStringTag], undefined);
+  assert.equal(webRequest.onBeforeRequest, onBeforeRequest);
+  webRequest.onBeforeRequest = () => 'local override';
+  assert.equal(webRequest.onBeforeRequest(), 'local override');
+
+  mainController.disconnect();
+  assert.throws(() => onBeforeRequest({}, () => {}), /closed connection/);
+  assert.throws(() => webRequest.requestId, /closed connection/);
 });
 
 test('未连接与断开后的调用会报错', { timeout: 10000 }, async t => {

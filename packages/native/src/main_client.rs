@@ -68,7 +68,8 @@ const CLASSES: &[Class] = &[
     Class {
         wire_name: "Session",
         name: "Session",
-        methods: &[],
+        methods: &[
+        ],
         properties: &[("extensions", true, false), ("webRequest", true, false)],
         webview_element: false,
     },
@@ -134,6 +135,31 @@ pub fn init(state: &Rc<State>, exports: &mut JsObject) -> Result<()> {
         &web_contents,
         "fromId",
         from_id.into_unknown(),
+        true,
+    )?;
+
+    // webContents.getAllWebContents() → 返回所有 WebContents 实例的数组。
+    let weak = Rc::downgrade(state);
+    let get_all_web_contents = state
+        .env
+        .create_function_from_closure("getAllWebContents", move |ctx| {
+            let state = weak
+                .upgrade()
+                .ok_or_else(|| error("Environment has closed"))?;
+            report(&state, || {
+                let result = state.request(
+                    &json!({"type": "static", "clazz": "electron", "action": "webContents.getAllWebContents",
+                    "data": {"params": arguments(&state, &ctx)?}})
+                    .to_string(),
+                )?;
+                state.decode(&result["returnValue"])
+            })
+        })?;
+    define_value(
+        state.env,
+        &web_contents,
+        "getAllWebContents",
+        get_all_web_contents.into_unknown(),
         true,
     )?;
 

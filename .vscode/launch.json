@@ -5,12 +5,12 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "lldb",
+      "type": "node",
       "request": "launch",
       "name": "Debug",
-      "program": "node",
-      "args": ["${workspaceFolder}/test/skyline.js"],
-      "cwd": "${workspaceFolder}"
+      "runtimeExecutable": "electron",
+      "args": ["."],
+      "cwd": "${workspaceFolder}/packages/electron"
     }
   ]
 }

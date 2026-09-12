@@ -393,9 +393,10 @@ impl State {
             }
             Value::Object(values) => {
                 #[cfg(feature = "client")]
-                if let (Some(id), Some(kind)) =
-                    (value["instanceId"].as_u64(), value["instanceType"].as_str())
-                {
+                if let (Some(id), Some(kind)) = (
+                    values.get("instanceId").and_then(Value::as_u64),
+                    values.get("instanceType").and_then(Value::as_str),
+                ) {
                     return crate::client::remote(self, kind, id);
                 }
                 let object = self.env.create_object()?;

@@ -8,7 +8,8 @@ mainController.connect('127.0.0.1', 3002)
 
 console.info('mainController:', mainController)
 console.info('webContents', mainController.electron.webContents)
-console.info('webContents', mainController.electron.webContents.fromId(0))
+console.info('webContents fromId(0):', mainController.electron.webContents.fromId(0))
+console.info('webContents getAllWebContents():', mainController.electron.webContents.getAllWebContents())
 
 // 插件加载：属性链上的对象（session / extensions）都是远端代理，loadExtension 是异步方法。
 async function loadExtension(extensionPath) {

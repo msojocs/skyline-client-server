@@ -3,10 +3,8 @@
 const { parentPort, workerData } = require('node:worker_threads');
 const { createMainRpc } = require('../../electron/main-rpc.js');
 
-// 两个约束对所有类都成立：
-// 1. 必须是个类实例——普通对象会被 main-rpc.js 当作 JSON 数据直传，而不是代理成远端实例；
-// 2. 类名必须是 constructor.name，要和 main_client.rs 的 CLASSES 表里 `wire_name` 对上
-//    （这里是 WebContents / Session / Extensions / WebRequest），否则 client 侧 remote() 复活不出代理。
+// 类实例编码成远端句柄，普通对象递归编码为 JSON。
+// 命名类对应 main_client.rs 的 CLASSES 表；匿名类以 Object 句柄交给客户端动态读取成员。
 class Session {
   constructor() {
     this.extensions = new Extensions();
@@ -29,6 +27,11 @@ class WebRequest {
       return { accepted: true, name, response };
     });
   }
+}
+
+// Electron 36 的 WebRequest 使用匿名原生构造函数，不能依赖 constructor.name 识别。
+if (workerData.anonymousWebRequest) {
+  Object.defineProperty(WebRequest, 'name', { value: '' });
 }
 
 // Electron 的八个事件名，签名都是 (filter, listener)。
@@ -117,6 +120,7 @@ const rpc = createMainRpc({
   electron: {
     webContents: {
       fromId: (id) => (id === workerData.webContentsId ? webContents : undefined),
+      getAllWebContents: () => [webContents],
     },
   },
   server: require(workerData.serverModule),

@@ -214,6 +214,9 @@ app.whenReady().then(() => {
   });
   // main 层 RPC 服务端：把真实 Electron 对象（webContents 等）暴露给 devtools main 层的
   // mainController.electron.*。端口默认 3002，renderer 的 render-server 仍占 3001。
+  const electron = require('electron');
+  const list = electron.webContents.getAllWebContents();
+  const item = list[0]
   try {
     startMainRpc();
   } catch (error) {

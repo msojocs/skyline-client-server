@@ -39,7 +39,8 @@ function isPlainData(value) {
 // （main_client.rs 里是 "WebContents"）。Electron 内部类名不稳定时，在这里做一次归一化。
 function instanceTypeOf(value) {
   const name = value?.constructor?.name;
-  return typeof name === 'string' && name !== '' ? name : 'Object';
+  if (typeof name === 'string' && name !== '') return name;
+  return 'Object';
 }
 
 /**
@@ -84,7 +85,7 @@ function createMainRpc(options = {}) {
     return id;
   };
 
-  // 函数单独一张表：客户端 remote(kind='function') 按 instanceId 发 static / clazz 'functionData'。
+  // 函数单独一张表：客户端 functionData[id] 即调用服务端持有的函数，见 encode 的函数分支。
   const registerFunction = (value) => {
     const existing = functionIds.get(value);
     if (existing !== undefined) return existing;
@@ -231,7 +232,7 @@ function createMainRpc(options = {}) {
     }
     const instance = instances.get(data.instanceId);
     const missingInstance = () => {
-      console.error('[main-rpc] InstanceId not found', request.type, request.action, data.instanceId);
+      console.error('[main-rpc] InstanceId not found', request.type, request.action, data.instanceId, 'instances size:', instances.size);
       reply({ error: 'InstanceId not found' });
     };
 

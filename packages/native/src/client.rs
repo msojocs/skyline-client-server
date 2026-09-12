@@ -4,7 +4,9 @@ use crate::binding::{
 };
 use crate::transport::Pending;
 use napi::bindgen_prelude::{AsyncTask, ToNapiValue};
-use napi::{CallContext, Env, JsFunction, JsNumber, JsObject, JsUnknown, NapiValue, Result, Task};
+use napi::{
+    CallContext, Env, JsFunction, JsNumber, JsObject, JsUnknown, NapiValue, Result, Task, ValueType,
+};
 use serde_json::{json, Value};
 use std::rc::{Rc, Weak};
 use std::time::{Duration, Instant};
@@ -233,7 +235,8 @@ pub(crate) fn define_class(state: &Rc<State>, class: &'static Class) -> Result<J
             }).to_string()))?;
             result["instanceId"].as_u64().ok_or_else(|| error("No instanceId in constructor response"))?
         } else {
-            let id = ctx.get::<napi::JsNumber>(0)?.get_double()?;
+            let js_id = ctx.get::<napi::JsNumber>(0)?;
+            let id = js_id.get_double()?;
             if !id.is_finite() || id <= 0.0 || id.fract() != 0.0 || id > 9_007_199_254_740_991.0 {
                 return Err(invalid("Invalid remote instanceId"));
             }
@@ -304,7 +307,7 @@ fn instance(state: &State, ctx: &CallContext) -> Result<u64> {
 
 /// 一次远端调用：`ASYNC_METHODS` 里的方法走 AsyncTask（不阻塞 JS 线程，失败表现为 Promise
 /// reject），其余方法同步阻塞并直接抛出。
-fn invoke(state: &Rc<State>, ctx: &CallContext, name: &'static str, id: u64) -> Result<JsUnknown> {
+fn invoke(state: &Rc<State>, ctx: &CallContext, name: &str, id: u64) -> Result<JsUnknown> {
     if ASYNC_METHODS.contains(&name) {
         let request = (|| {
             let body = json!({"type": "dynamic", "action": name,
@@ -341,10 +344,11 @@ fn invoke(state: &Rc<State>, ctx: &CallContext, name: &'static str, id: u64) -> 
 /// 与 `remote()` 的函数代理同一套语义；为 `None` 时退回调用点传入的 `this`。
 fn method_function(
     state: &Rc<State>,
-    name: &'static str,
+    name: &str,
     binding: Option<(u64, u64)>,
 ) -> Result<JsFunction> {
     let weak = Rc::downgrade(state);
+    let method_name = name.to_owned();
     state.env.create_function_from_closure(name, move |ctx| {
         let state = weak.upgrade().ok_or_else(|| error("Environment has closed"))?;
         let (id, epoch) = match binding {
@@ -354,7 +358,7 @@ fn method_function(
         if epoch != state.epoch.get() {
             return Err(error("Remote object belongs to a closed connection"));
         }
-        report(&state, || invoke(&state, &ctx, name, id))
+        report(&state, || invoke(&state, &ctx, &method_name, id))
     })
 }
 
@@ -451,6 +455,58 @@ pub(crate) fn report<T>(state: &State, operation: impl FnOnce() -> Result<T>) ->
     result
 }
 
+// Anonymous Electron objects arrive as Object handles without a fixed class API.
+// Decode their properties recursively, binding function members to the owning handle.
+fn remote_object(state: &Rc<State>, id: u64) -> Result<JsUnknown> {
+    let object = state.env.create_object()?;
+    let epoch = state.epoch.get();
+    define_value(
+        state.env, &object, "instanceId",
+        state.env.create_double(id as f64)?.into_unknown(), false,
+    )?;
+    define_value(
+        state.env, &object, "__skylineEpoch",
+        state.env.create_double(epoch as f64)?.into_unknown(), false,
+    )?;
+
+    let mut handler = state.env.create_object()?;
+    let weak = Rc::downgrade(state);
+    let getter = state.env.create_function_from_closure("get", move |ctx| {
+        let state = weak
+            .upgrade()
+            .ok_or_else(|| error("Environment has closed"))?;
+        let target = ctx.get::<JsObject>(0)?;
+        let key = ctx.get::<JsUnknown>(1)?;
+        if key.get_type()? != ValueType::String {
+            return target.get_property::<_, JsUnknown>(key);
+        }
+        let name = key.coerce_to_string()?.into_utf8()?.as_str()?.to_owned();
+        if target.has_named_property(&name)? {
+            return target.get_named_property::<JsUnknown>(&name);
+        }
+        if epoch != state.epoch.get() {
+            return Err(error("Remote object belongs to a closed connection"));
+        }
+        report(&state, || {
+            let result = state.request(&json!({
+                "type": "dynamicProperty", "action": name,
+                "data": {"instanceId": id, "propertyAction": "get"}
+            }).to_string())?;
+            let value = &result["returnValue"];
+            if value["instanceType"].as_str() == Some("function") {
+                let method = method_function(&state, &name, Some((id, epoch)))?;
+                define_value(state.env, &target, &name, method.into_unknown(), true)?;
+                target.get_named_property::<JsUnknown>(&name)
+            } else {
+                state.decode(value)
+            }
+        })
+    })?;
+    handler.set_named_property("get", getter)?;
+    let proxy: JsFunction = state.env.get_global()?.get_named_property("Proxy")?;
+    Ok(proxy.new_instance(&[object, handler])?.into_unknown())
+}
+
 pub fn remote(state: &Rc<State>, kind: &str, id: u64) -> Result<JsUnknown> {
     let key = (kind.into(), id);
     if let Some(reference) = state.instances.borrow().get(&key) {
@@ -476,6 +532,8 @@ pub fn remote(state: &Rc<State>, kind: &str, id: u64) -> Result<JsUnknown> {
                 state.decode(&result["returnValue"])
             })?
             .into_unknown()
+    } else if kind == "Object" {
+        remote_object(state, id)?
     } else {
         let constructor = state
             .constructors

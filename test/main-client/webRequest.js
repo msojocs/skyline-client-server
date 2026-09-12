@@ -6,12 +6,24 @@ console.info(mainController)
 
 mainController.connect('127.0.0.1', 3002)
 
-const list = mainController.electron.webContents.getAllWebContents()
+// Try fromId first
+console.info('\nTesting fromId...')
+const wc = mainController.electron.webContents.fromId(1)
+console.info('fromId(1).id:', wc.id)
 
+// Try getAllWebContents
+console.info('\nTesting getAllWebContents...')
+const list = mainController.electron.webContents.getAllWebContents()
+console.info('allWebContents:', list.length)
 const target = list[0]
-for (const t of ['onBeforeRequest', 'onCompleted']) {
-  target.session.webRequest[t](
-    { urls: ["<all_urls>"] },
-    requestListernerFactory(t),
-  )
-}
+console.info('target.id:', target.id)
+console.info('target.session:', target.session)
+console.info('target.session.webRequest:', target.session.webRequest)
+
+// Test webRequest methods
+console.info('\nTesting webRequest methods...')
+const webRequest = target.session.webRequest
+console.info('webRequest.onBeforeRequest:', typeof webRequest.onBeforeRequest)
+console.info('webRequest.onBeforeSendHeaders:', typeof webRequest.onBeforeSendHeaders)
+
+console.info('\n✅ All tests passed!')

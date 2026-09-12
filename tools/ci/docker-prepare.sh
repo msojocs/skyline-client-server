@@ -9,8 +9,10 @@ cache_dir="$package_dir/cache"
 sharedMemory_version="${SHARED_MEMORY_VERSION:-v1.0.3}"
 devtools_version="${DEVTOOLS_VERSION:-2012510280}"
 
-# skyline server ts
-cp "$root_dir/ts-linux-artifact/server.js" "$package_dir/server.js"
+# skyline server ts and Electron main process
+cp "$root_dir/ts-linux-artifact/server.js" \
+  "$root_dir/ts-linux-artifact/main.js" \
+  "$root_dir/ts-linux-artifact/main-rpc.js" "$package_dir/"
 
 # skyline server native
 mkdir -p "$node_modules_dir/skyline-server"

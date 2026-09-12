@@ -1,8 +1,10 @@
+// Electron loads the JavaScript emitted from this TypeScript entry by Vite.
+// @ts-nocheck
 'use strict';
 
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
-const { startMainRpc } = require('./main-rpc');
+import { startMainRpc } from './main-rpc.ts';
 console.info('Electron version', process.versions.electron, 'Chrome version', process.versions.chrome, 'Node.js version', process.versions.node);
 
 // These switches were previously supplied through NW.js package.json.

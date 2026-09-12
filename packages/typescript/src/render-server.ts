@@ -254,3 +254,4 @@ try {
 catch (err) {
   log.error('Error:', err)
 }
+/* The renderer entry is bundled by Vite; native RPC values are intentionally dynamic. */

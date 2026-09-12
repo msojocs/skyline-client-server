@@ -6,11 +6,11 @@ native 模块使用 Rust 和 N-API 实现，共用同一套 RPC（`transport.rs`
 | 产物 | 进程 | 应用层 |
 | --- | --- | --- |
 | `render-client.node` | 微信 devtools renderer | `Controller` / webview 元素（`client.rs`） |
-| `render-server.node` | Skyline renderer | `server.ts` 的 `clazzMap` |
+| `render-server.node` | Skyline renderer | `render-server.ts` 的 `clazzMap` |
 | `main-client.node` | 微信 devtools main 层 | `mainController.electron.*`（`main_client.rs`） |
 
 `render-server.node` 本身不含应用层，复用为 Skyline main 进程的 RPC 服务端，
-应用层是同目录的 `packages/electron/main-rpc.js`。
+应用层是由 `main-rpc.ts` 构建出的 `packages/electron/main-rpc.js`。
 
 ```shell
 pnpm --filter nt-native compile            # 三个产物

@@ -1,8 +1,11 @@
+// Electron main-process integration is bundled by Vite. The RPC protocol is
+// intentionally dynamic because it mirrors values crossing the native bridge.
+// @ts-nocheck
 'use strict';
 
 // main 层 server 应用层。
 //
-// 与 render 的 server.ts 共用同一套 RPC：transport 仍是 native 的 render-server.node
+// 与 render-server.ts 共用同一套 RPC：transport 仍是 native 的 render-server.node
 // （start / stop / setMessageCallback / sendMessageSingle / blockUntilNextMessage），
 // 请求 type（constructor / static / dynamic / dynamicProperty）与回复格式也完全一致，
 // 差异只在应用层——这里注册的是 main 层的 Electron 命名空间，而不是 webview 那套 Controller。
@@ -321,4 +324,4 @@ function startMainRpc(options) {
   return rpc;
 }
 
-module.exports = { createMainRpc, startMainRpc };
+export { createMainRpc, startMainRpc };

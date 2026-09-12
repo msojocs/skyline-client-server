@@ -78,7 +78,11 @@ RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sourc
     mkdir -p electron && unzip "cache/electron-win32-x64.zip" -d electron && \
     rm -rf cache && \
     chmod -R a+X electron
+# Vite emits the renderer server and both Electron main-process entries into
+# the same package directory.
 COPY --from=server-builder /build/packages/electron/server.js electron/app/
+COPY --from=server-builder /build/packages/electron/main.js electron/app/
+COPY --from=server-builder /build/packages/electron/main-rpc.js electron/app/
 COPY packages/electron electron/app
 COPY --from=skyline-addon-builder /build/node_modules/skyline-addon electron/app/node_modules/skyline-addon
 

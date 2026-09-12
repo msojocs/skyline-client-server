@@ -1,4 +1,4 @@
-import path from "path"
+import path from "node:path"
 import { useLogger } from "../common/log"
 
 const log = useLogger('CustomHandle')

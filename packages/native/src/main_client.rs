@@ -13,11 +13,18 @@
 //! const webContents = mainController.electron.webContents.fromId(7)
 //! webContents.loadURL('https://example.com/')
 //! await webContents.session.extensions.loadExtension('/path/to/extension')
+//! const webRequest = webContents.session.webRequest
+//! webRequest[eventName]({ urls: ['<all_urls>'] }, (details, callback) => callback({ cancel: true }))
 //! ```
 //!
-//! `session` 是 WebContents 的属性、`extensions` 是 Session 的属性，两者都由服务端编成
-//! `{instanceId, instanceType}`、再由 `client::remote` 依 [`CLASSES`] 复活成代理，
-//! 所以命名空间可以有任意层（`webContents.session.extensions.loadExtension`）。
+//! `session` 是 WebContents 的属性、`extensions` / `webRequest` 是 Session 的属性，两者都由服务端
+//! 编成 `{instanceId, instanceType}`、再由 `client::remote` 依 [`CLASSES`] 复活成代理，
+//! 所以命名空间可以有任意层（`webContents.session.webRequest.onBeforeRequest`）。
+//!
+//! 传给 `webRequest.*` 的监听器是客户端函数，服务端（`main-rpc.js`）通过参数的 `callbackId`
+//! 把它还原成真实函数交给 Electron；监听器拿到的第二个参数（Electron 的 callback）又由服务端
+//! 编成 `functionData` 代理回传，于是 `(details, callback) => callback(response)` 这种
+//! 回调式监听器可以跨进程工作，包括稍后再调用 callback 的情况。
 //!
 //! 两点沿用 render client 的既有语义：
 //!
@@ -62,7 +69,7 @@ const CLASSES: &[Class] = &[
         wire_name: "Session",
         name: "Session",
         methods: &[],
-        properties: &[("extensions", true, false)],
+        properties: &[("extensions", true, false), ("webRequest", true, false)],
         webview_element: false,
     },
     // session.extensions，插件加载入口。
@@ -74,6 +81,24 @@ const CLASSES: &[Class] = &[
             "getAllExtensions",
             "getExtension",
             "removeExtension",
+        ],
+        properties: &[],
+        webview_element: false,
+    },
+    // session.webRequest，请求拦截入口。事件名是动态取的（`webRequest[eventName](filter, listener)`），
+    // 走原型上的访问器即可，方法表把 Electron 的八个事件名都列上。
+    Class {
+        wire_name: "WebRequest",
+        name: "WebRequest",
+        methods: &[
+            "onBeforeRequest",
+            "onBeforeSendHeaders",
+            "onSendHeaders",
+            "onHeadersReceived",
+            "onResponseStarted",
+            "onBeforeRedirect",
+            "onCompleted",
+            "onErrorOccurred",
         ],
         properties: &[],
         webview_element: false,

@@ -11,6 +11,16 @@
 //   mainController.electron
 //     .webContents.fromId(e)          →     require('electron').webContents.fromId(e)
 //       .loadURL(url)                 →       webContents.loadURL(url)
+//       .session.webRequest[name](filter, listener)
+//                                     →       ses.webRequest[name](filter, listener)
+//
+// 函数参数两个方向都要过桥：
+//
+// - client → server：参数里的 `{callbackId}` 还原成真实函数（`decodeArgument`），
+//   函数被调用时把参数编成 emitCallback 发回 client 并取回返回值。
+// - server → client：Electron 回调里拿到的函数（webRequest 的 callback 之类）编成
+//   `{instanceId, instanceType: 'function'}` 交给 client，client 调用时走
+//   `static / clazz "functionData"` 回到这里。
 //
 // 注意：client 侧的同步调用会阻塞它自己的 JS 线程。同进程（例如测试里把 server 跑在
 // Worker）时，返回 Promise 的方法仍能被 resolve；若 client 与 server 同处一个线程，
@@ -52,6 +62,18 @@ function createMainRpc(options = {}) {
   let nextInstanceId = 1;
   let listening = false;
 
+  // 客户端用 {callbackId} 表示一个函数参数（见 binding.rs 的 encode_object）。这里把它还原成
+  // 真实函数再交给 Electron（例如 webRequest 的监听器）；函数被调用时把参数编成 emitCallback
+  // 发回客户端。同一个 callbackId 复用同一个函数，与客户端那边的函数身份保持一致。
+  const callbacks = new Map();
+
+  // 反方向：Electron 传给我们的函数（webRequest 的 callback 之类）编成
+  // {instanceId, instanceType: 'function'}，客户端 remote() 会复活成可调用代理，调用落到
+  // clazzMap 里的 functionData[instanceId]。
+  const functionData = {};
+  const functionIds = new WeakMap();
+  let nextFunctionId = 1;
+
   // 同一真实对象复用同一 instanceId，client 侧的代理才能保持同一性。
   const register = (value) => {
     const existing = instanceIds.get(value);
@@ -62,13 +84,64 @@ function createMainRpc(options = {}) {
     return id;
   };
 
+  // 函数单独一张表：客户端 remote(kind='function') 按 instanceId 发 static / clazz 'functionData'。
+  const registerFunction = (value) => {
+    const existing = functionIds.get(value);
+    if (existing !== undefined) return existing;
+    const id = nextFunctionId++;
+    functionData[id] = value;
+    functionIds.set(value, id);
+    return id;
+  };
+
+  /** 客户端函数参数的本地替身：调用时把参数发回客户端；同步模式下取回返回值。 */
+  const callbackFunction = (callbackId, asyncCallback) => {
+    const existing = callbacks.get(callbackId);
+    if (existing) return existing;
+    const callback = (...args) => {
+      const body = JSON.stringify({
+        type: 'emitCallback',
+        callbackId,
+        data: { args: args.map((arg) => encode(arg)), block: !asyncCallback },
+      });
+      if (asyncCallback) {
+        // 与 render server 的 hookArgument 一致：__asyncCallback 的回调不等结果。
+        rpc.sendMessageSingle(body, 0);
+        return undefined;
+      }
+      return rpc.sendMessageSync(body);
+    };
+    callbacks.set(callbackId, callback);
+    return callback;
+  };
+
+  /** 把客户端编来的参数还原成服务端真实值：{callbackId} → 函数，{instanceId} → 之前的实例。 */
+  const decodeArgument = (value) => {
+    if (value === null || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map((item) => decodeArgument(item));
+    if (typeof value.callbackId === 'number') {
+      return callbackFunction(value.callbackId, value.asyncCallback === true);
+    }
+    if (value.instanceId !== undefined) {
+      const instance = instances.get(value.instanceId);
+      if (instance === undefined) throw new Error(`InstanceId not found: ${value.instanceId}`);
+      return instance;
+    }
+    const result = {};
+    for (const [key, item] of Object.entries(value)) result[key] = decodeArgument(item);
+    return result;
+  };
+
   /** 把 main 层的真实值编成 wire 值：普通数据走 JSON，Electron 对象走 instanceId 代理。 */
   const encode = (value, ancestors = new Set()) => {
     if (value === null || value === undefined) return null;
     const type = typeof value;
     if (type === 'string' || type === 'number' || type === 'boolean') return value;
     if (type === 'bigint') return Number(value);
-    // 与 binding.rs 的 encode 对齐：函数不做远端代理。
+    // 函数代理成 functionData：与 render server 的 hookResult 对齐，客户端解码成可调用对象。
+    if (type === 'function') {
+      return { instanceId: registerFunction(value), instanceType: 'function' };
+    }
     if (type !== 'object') return null;
 
     // 已经是远端代理的对象按现状透传，与 binding.rs 的 encode 一致。
@@ -89,7 +162,11 @@ function createMainRpc(options = {}) {
     return result;
   };
 
-  const clazzMap = new Map([['electron', electronModule]]);
+  const clazzMap = new Map([
+    ['electron', electronModule],
+    // 客户端调用 functionData[id] 即调用服务端持有的函数，见 encode 的函数分支。
+    ['functionData', functionData],
+  ]);
 
   /** 支持 `webContents.fromId` 这类点分 action，并保留 owner 作为 this。 */
   const resolveStatic = (root, action) => {
@@ -136,12 +213,22 @@ function createMainRpc(options = {}) {
     }
     if (request.action === 'disconnected') {
       instances.clear();
+      callbacks.clear();
+      for (const id of Object.keys(functionData)) delete functionData[id];
       console.info('[main-rpc] client disconnected');
       return;
     }
 
     const data = request.data || {};
-    const params = data.params || [];
+    // 参数里的 {callbackId} / {instanceId} 在交给 Electron 之前要还原成真实函数/实例。
+    let params;
+    try {
+      params = decodeArgument(data.params || []);
+    } catch (error) {
+      console.error('[main-rpc] invalid params', request.type, request.action, error);
+      reply({ error: error?.message || String(error) });
+      return;
+    }
     const instance = instances.get(data.instanceId);
     const missingInstance = () => {
       console.error('[main-rpc] InstanceId not found', request.type, request.action, data.instanceId);

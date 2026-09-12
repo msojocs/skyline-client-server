@@ -50,3 +50,28 @@ target.session.extensions.getAllExtensions()
 加载失败、连接断开或 300 秒超时都表现为 reject（同步分支的 RPC 超时只有 5 秒，插件加载可能更久）。
 其余 `Extensions` 方法（`getAllExtensions` / `getExtension` / `removeExtension`）是同步阻塞调用。
 返回的 `Extension` 在 Electron 里是普通数据结构，走 JSON 直传，不需要额外的代理类。
+
+## 请求拦截（main 层）
+
+`session.webRequest` 同样是一个代理类（`WebRequest`，`main_client.rs` 的 `CLASSES` 表），
+八个事件名都在方法表里，所以可以按事件名动态取：
+
+```js
+const target = mainController.electron.webContents.fromId(0)
+target.session.webRequest[t]({ urls: ['<all_urls>'] }, requestListernerFactory(t))
+```
+
+监听器是客户端函数，参数编码成 `{callbackId}`；服务端 `main-rpc.js` 的 `decodeArgument`
+把它还原成真实函数再交给 Electron。监听器拿到的第二个参数是 Electron 的 callback，
+服务端把它编成 `{instanceId, instanceType: 'function'}`（`functionData` 表），客户端解码成
+可调用代理——所以下面这种回调式监听器可以跨进程工作，包括稍后再调用 callback：
+
+```js
+webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+  callback({ cancel: details.url.includes('blocked') })
+})
+```
+
+同步模式下服务端用 `sendMessageSync` 等客户端把监听器跑完（回调在监听器内同步调用时走的是
+嵌套 RPC），`__asyncCallback` 的函数则用 `sendMessageSingle` 发完就走。函数代理的调用结果
+就是服务端那个函数的返回值，客户端 `callback(response)` 会把它带回来。

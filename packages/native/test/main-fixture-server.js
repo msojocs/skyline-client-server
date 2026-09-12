@@ -6,11 +6,48 @@ const { createMainRpc } = require('../../electron/main-rpc.js');
 // 两个约束对所有类都成立：
 // 1. 必须是个类实例——普通对象会被 main-rpc.js 当作 JSON 数据直传，而不是代理成远端实例；
 // 2. 类名必须是 constructor.name，要和 main_client.rs 的 CLASSES 表里 `wire_name` 对上
-//    （这里是 WebContents / Session / Extensions），否则 client 侧 remote() 复活不出代理。
+//    （这里是 WebContents / Session / Extensions / WebRequest），否则 client 侧 remote() 复活不出代理。
 class Session {
   constructor() {
     this.extensions = new Extensions();
+    this.webRequest = new WebRequest();
   }
+}
+
+// 模拟 Electron 的 WebRequest：注册后立刻用一份 details 触发监听器（真实 Electron 里触发
+// 时机由请求决定）。监听器调用 callback 的返回值经 functionData 代理回到客户端，测试据此断言
+// 回调确实穿过 RPC 落到了服务端。
+class WebRequest {
+  constructor() {
+    this.listeners = new Map();
+    this.requestId = 0;
+  }
+  invoke(name, url) {
+    const listener = this.listeners.get(name);
+    if (!listener) return;
+    listener({ id: ++this.requestId, url, webContentsId: 7 }, (response) => {
+      return { accepted: true, name, response };
+    });
+  }
+}
+
+// Electron 的八个事件名，签名都是 (filter, listener)。
+for (const name of [
+  'onBeforeRequest',
+  'onBeforeSendHeaders',
+  'onSendHeaders',
+  'onHeadersReceived',
+  'onResponseStarted',
+  'onBeforeRedirect',
+  'onCompleted',
+  'onErrorOccurred',
+]) {
+  WebRequest.prototype[name] = function (filter, listener) {
+    this.listeners.set(name, listener);
+    // 监听器必须是真实函数：客户端传的是 {callbackId}，main-rpc.js 要把它还原回来。
+    if (typeof listener !== 'function') throw new Error(`fixture listener is not a function: ${name}`);
+    this.invoke(name, `https://example.com/${name}`);
+  };
 }
 
 class Extensions {

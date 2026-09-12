@@ -92,6 +92,39 @@ test('main 层 client/server: webContents.fromId 返回可远程调用的代理'
   // 异步失败表现为 Promise reject，而不是同步抛出
   await assert.rejects(extensions.loadExtension(''), /fixture extension path required/);
 
+  // 请求拦截：事件名动态取（webRequest[eventName]），监听器是客户端函数——服务端按 callbackId
+  // 还原成真实函数（fixture 里监听器不是函数会直接抛错），并且把 Electron 的 callback 代理回客户端。
+  const webRequest = session.webRequest;
+  assert.equal(webRequest.constructor.name, 'WebRequest');
+  assert.equal(session.webRequest, webRequest);
+
+  const urls = [];
+  const responses = [];
+  webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+    urls.push(details.url);
+    assert.equal(typeof callback, 'function');
+    // callback 是服务端传回来的函数代理，调用它的返回值就是服务端监听器回调的返回值。
+    responses.push(callback({ cancel: true }));
+  });
+  assert.deepEqual(urls, ['https://example.com/onBeforeRequest']);
+  assert.deepEqual(responses, [
+    { accepted: true, name: 'onBeforeRequest', response: { cancel: true } },
+  ]);
+
+  // 稍后再调用 callback 也要回到服务端：callback 代理是惰性的，不要求在监听器这一次调用内完成。
+  webRequest.onCompleted({ urls: ['*'] }, (details, callback) => {
+    setImmediate(() => responses.push(callback({ ok: true })));
+  });
+  const deadline = Date.now() + 5000;
+  while (responses.length < 2 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.deepEqual(responses[1], {
+    accepted: true,
+    name: 'onCompleted',
+    response: { ok: true },
+  });
+
   // executeJavaScript 沿用 render client 的 AsyncTask 语义（不阻塞 JS 线程），
   // 所以服务端的失败表现为 Promise reject，而不是同步抛出。
   await assert.rejects(webContents.executeJavaScript('reject'), /fixture async failure/);

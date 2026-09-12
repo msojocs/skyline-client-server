@@ -14,9 +14,9 @@ const chromiumSwitches = [
   ['disable-quic'],
   ['allow-insecure-localhost'],
   ['ignore-gpu-blacklist'],
-  ['js-flags', '--harmony-weak-refs'],
   ['enable-experimental-webassembly-features'],
   ['remote-debugging-port', process.env.REMOTE_DEBUGGING_PORT || '9222'],
+  ['remote-allow-origins', '*'],
 ];
 
 for (const [name, value] of chromiumSwitches) {

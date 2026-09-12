@@ -90,15 +90,13 @@ const CLASSES: &[Class] = &[
             "getAttribute",
             "getUserAgent",
             "removeEventListener",
-            "setUserAgentOverride",
-            "showDevTools",
+            "setUserAgent",
+            "openDevTools",
             "getWebContentsId",
         ],
         properties: &[
-            ("request", true, false),
             ("src", true, true),
             ("style", true, true),
-            ("ondialog", false, true),
         ],
     },
     Class {

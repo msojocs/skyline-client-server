@@ -2,6 +2,6 @@
   "name": "skyline-electron",
   "version": "1.0.0",
   "description": "Electron host for the Skyline appservice",
-  "main": "main.js",
+  "main": "main-server.js",
   "private": true
 }

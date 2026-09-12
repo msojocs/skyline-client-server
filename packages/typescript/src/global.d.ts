@@ -1,4 +1,4 @@
-import { Controller } from "./server/controller"
+import { Controller } from "./render-process/controller"
 
 declare global {
     var __skylineResolveDialog: ((response: {

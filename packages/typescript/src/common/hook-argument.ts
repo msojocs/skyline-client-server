@@ -1,11 +1,33 @@
-import { useCallback } from "../server/callback";
-import { useInstanceManage, useObjectManage } from "../server/object-manage";
+import { useCallback } from "../render-process/callback";
+import { useInstanceManage, useObjectManage } from "../render-process/object-manage";
 import { useLogger } from "./log";
+import type { createCallbackManage } from './callback';
+import type { InstanceManage, ObjectManage } from './object-manage';
+import type { NativeRpcServer } from './rpc';
+
+export interface HookContext {
+    instances: InstanceManage;
+    objects: ObjectManage;
+    callbacks: ReturnType<typeof createCallbackManage>;
+    server: Pick<NativeRpcServer, 'sendMessageSingle' | 'sendMessageSync'>;
+    functions?: InstanceManage;
+    renderer?: boolean;
+}
+
+const rendererContext: HookContext = {
+    instances: useInstanceManage(),
+    objects: useObjectManage(),
+    callbacks: useCallback(),
+    server: {
+        sendMessageSingle: (body, messageId) => global.send(body, messageId),
+        sendMessageSync: (body) => global.sendMessageSync(body),
+    },
+    renderer: true,
+};
 
 const remoteInstanceTypes: Record<string, string> = {
     CSSStyleDeclaration: 'CSSStyleDeclaration',
     ChromeWebViewElement: 'ChromeWebViewElement',
-    // Electron exposes the same remote API under this constructor name.
     WebViewElement: 'ChromeWebViewElement',
     WebRequestEvent: 'WebRequestEvent',
     Event: 'Event',
@@ -13,240 +35,189 @@ const remoteInstanceTypes: Record<string, string> = {
 }
 const log = useLogger('HookArgument')
 
-const getRemoteInstanceType = (instance: any) => {
-    return remoteInstanceTypes[instance?.constructor?.name]
+const getRemoteInstanceType = (instance: any, context: HookContext) => {
+    if (context.renderer) return remoteInstanceTypes[instance?.constructor?.name]
+    if (instance === null || typeof instance !== 'object') return undefined
+    const prototype = Object.getPrototypeOf(instance)
+    if (prototype === Object.prototype || prototype === null) return undefined
+    const name = instance.constructor?.name
+    return typeof name === 'string' && name !== '' ? name : 'Object'
 }
-/**
- * 处理Callback的参数
- * 
- * Server -> Client
- * @param arg 
- * @returns 
- */
-const hookCallbackArgument = (arg: any) => {
+
+const hookCallbackArgument = (arg: any, context: HookContext): any => {
+    if (!context.renderer) return hookResult('callbackArgument', arg, context)
     if (Array.isArray(arg)) {
         for (let i = 0; i < arg.length; i++) {
-            const element = arg[i];
-            arg[i] = hookCallbackArgument(element)
+            arg[i] = hookCallbackArgument(arg[i], context)
         }
     }
     else if (typeof arg === 'object') {
-        // 对象处理
         const name = arg?.constructor?.name
-        const instanceType = getRemoteInstanceType(arg)
-        // 特定实例，转换为自定义对象
+        const instanceType = getRemoteInstanceType(arg, context)
         if (instanceType) {
-            const { getInstanceId, setInstance } = useInstanceManage()
-            const instanceId = getInstanceId(arg) || setInstance(arg);
+            const { getInstanceId, setInstance } = context.instances
             arg = {
-                instanceId: instanceId,
+                instanceId: getInstanceId(arg) ?? setInstance(arg),
                 instanceType,
             }
         }
         else {
-            // 其他对象，直接转换为普通对象
-            const g = global
-            if (!g.clazzSet)
-                g.clazzSet = new Set()
-            if (!g.clazzSet.has(name)) {
-                g.clazzSet.add(name)
-            }
+            if (!global.clazzSet) global.clazzSet = new Set()
+            global.clazzSet.add(name)
             log.warn('hookCallbackArgument type not found!', name, arg)
             for (const key in arg) {
-                arg[key] = hookCallbackArgument(arg[key])
+                arg[key] = hookCallbackArgument(arg[key], context)
             }
         }
     }
     return arg;
 }
 
-const hookArgumentItem = (action: string, arg: any) => {
+const hookArgumentItem = (action: string, arg: any, context: HookContext): any => {
     if (!arg) return arg
     if (Array.isArray(arg)) {
-        // Array 处理
         for (let i = 0; i < arg.length; i++) {
-            const element = arg[i];
-            arg[i] = hookArgumentItem(action, element)
+            arg[i] = hookArgumentItem(action, arg[i], context)
         }
     }
     else if (typeof arg === 'object') {
-        // Object 处理
-        if (arg.hasOwnProperty('instanceId')) {
-            // 实例替换
-            const { getInstance } = useInstanceManage()
-            const instance = getInstance(arg.instanceId)
-            if (instance) {
-                arg = instance
+        if (Object.prototype.hasOwnProperty.call(arg, 'instanceId')) {
+            const instance = context.instances.getInstance(arg.instanceId)
+            if (instance === undefined) {
+                const label = context.renderer ? 'Instance not found' : 'InstanceId not found'
+                throw new Error(`${label}: ${arg.instanceId}`)
             }
-            else {
-                throw new Error(`Instance not found: ${arg.instanceId}`)
-            }
+            arg = instance
         }
-        else if (arg.hasOwnProperty('callbackId')) {
-            // 回调替换
+        else if (Object.prototype.hasOwnProperty.call(arg, 'callbackId') && (context.renderer || typeof arg.callbackId === 'number')) {
             const callbackId = arg.callbackId
-            // Dialog callbacks may resolve a later synchronous dialog request.
-            // Marking this callback asynchronous avoids a nested sendSync deadlock
-            // when the callback calls controller.resolveDialog().
-            const asyncCallback = arg.asyncCallback || action === 'setDialogCallback'
-            const temp: any = (...args1: any[]) => {
-                // 替换参数中的具体对象
-                hookCallbackArgument(args1)
-                log.debug('callback emit', action, args1)
-                if (asyncCallback) {
-                    log.debug('callback emit async', action, args1)
-                    // 异步回调
-                    global.send(JSON.stringify({
-                        type: 'emitCallback',
-                        callbackId,
-                        data: {
-                            args: args1,
-                            block: false,
-                        },
-                    }))
-                    return;
-                }
-                log.debug('callback emit sync', action, args1)
-                // 同步回调
-                const result = global.sendMessageSync(JSON.stringify({
+            // Dialog callbacks may resolve a deferred synchronous request.
+            const dialogCallback = context.renderer && action === 'setDialogCallback'
+            const asyncCallback = (context.renderer ? Boolean(arg.asyncCallback) : arg.asyncCallback === true) || dialogCallback
+            const callback: any = (...args: any[]) => {
+                const body = JSON.stringify({
                     type: 'emitCallback',
                     callbackId,
                     data: {
-                        args: args1,
-                        block: true,
+                        args: hookCallbackArgument(args, context),
+                        block: !asyncCallback,
                     },
-                }))
-                log.debug('callback emit sync result:', result)
-                return hookResult(`${action}_syncResult`, result)
+                })
+                if (asyncCallback) {
+                    context.server.sendMessageSingle(body, context.renderer ? undefined : 0)
+                    return
+                }
+                const result = context.server.sendMessageSync(body)
+                return context.renderer ? hookResult(`${action}_syncResult`, result, context) : result
             }
-            // worklet 处理
-            if (arg.__worklet) {
-                temp.asString = arg.asString
-                temp.__workletHash = arg.__workletHash
-                temp.__location = arg.__location
-                temp.__worklet = arg.__worklet
-                temp._closure = hookArgumentItem(action, arg._closure)
+            if (context.renderer && arg.__worklet) {
+                callback.asString = arg.asString
+                callback.__workletHash = arg.__workletHash
+                callback.__location = arg.__location
+                callback.__worklet = arg.__worklet
+                callback._closure = hookArgumentItem(action, arg._closure, context)
             }
-            const { getCallback } = useCallback()
-            // A dialog handler is a replaceable singleton. Reusing a wrapper by
-            // callbackId can retain a disconnected native process after reconnect.
-            arg = action === 'setDialogCallback' ? temp : getCallback(callbackId, temp)
+            arg = dialogCallback ? callback : context.callbacks.getCallback(callbackId, callback)
         }
         else {
-            for (const k in arg) {
-                if (arg.hasOwnProperty(k)) {
-                    arg[k] = hookArgumentItem(action, arg[k])
-                }
+            for (const key of Object.keys(arg)) {
+                arg[key] = hookArgumentItem(action, arg[key], context)
             }
         }
     }
     return arg
 }
 
-export const hookArgument = (action: string, args: any[]) => {
-    args = hookArgumentItem(action, args)
+export const hookArgument = (action: string, args: any[], context = rendererContext): any[] => {
+    args = hookArgumentItem(action, args, context)
+    if (!context.renderer) return args
     if (action === 'createWindow') {
-        // 创建窗口时，传入的bufferKey参数需要转换为ArrayBuffer
         const sharedMemory = require('sharedMemory/sharedMemory.node')
         args[6] = sharedMemory.getMemory(args[6])
     }
     else if (action === 'notifyHttpRequestComplete') {
-        // http资源替换buffer
         const sharedMemory = require('sharedMemory/sharedMemory.node')
-        const buf = sharedMemory.getMemory(args[4]) as ArrayBuffer
-        // sharedMemory.removeMemory(args[4])
-        args[4] = new Uint8Array(buf)
-        // if (args[4] != 'resource_0') {
-        //     throw new Error('break!')
-        // }
+        args[4] = new Uint8Array(sharedMemory.getMemory(args[4]) as ArrayBuffer)
     }
     else if (action === 'notifyResourceLoad') {
-        // http资源替换buffer
         args[1] = new Uint8Array(args[1])
     }
     else if (action === 'registerEventHandler') {
         console.info('registerEventHandler', args)
     }
+    return args
 }
+
 let functionDataId = 1;
-export const hookResult = (action: string, result: any) => {
-    log.debug('result before:', result)
-    if (action === 'setLoadResourceCallback_syncResult') {
+export const hookResult = (action: string, result: any, context = rendererContext, ancestors = new Set<object>()): any => {
+    if (context.renderer) log.debug('result before:', result)
+    if (context.renderer && action === 'setLoadResourceCallback_syncResult') {
         return new Uint8Array(result);
     }
-    else if (typeof result === 'function') {
-        const id = functionDataId++
-        const { getClazz } = useObjectManage()
-        const functionData = getClazz('functionData')
-        functionData[id] = result;
-        return { instanceId: id, instanceType: 'function' };
+    if (typeof result === 'function') {
+        const id = context.functions
+            ? context.functions.getInstanceId(result) ?? context.functions.setInstance(result)
+            : functionDataId++
+        context.objects.getClazz('functionData')[id] = result
+        return { instanceId: id, instanceType: 'function' }
     }
-    else if (Array.isArray(result)) {
-        // 是个Array，转为自定义Object
-        const { setInstance } = useInstanceManage()
+    if (!context.renderer) {
+        if (result === null || result === undefined) return null
+        const type = typeof result
+        if (type === 'string' || type === 'number' || type === 'boolean') return result
+        if (type === 'bigint') return Number(result)
+        if (type !== 'object') return null
+        if (result.instanceId !== undefined) return { instanceId: result.instanceId }
+        if (Buffer.isBuffer(result)) return [...result]
+        if (result instanceof ArrayBuffer) return [...new Uint8Array(result)]
+    }
+    if (Array.isArray(result)) {
+        if (!context.renderer) return result.map((item) => hookResult(action, item, context, ancestors))
         for (let i = 0; i < result.length; i++) {
-            const element = result[i];
-            const name = element?.constructor?.name
-            const instanceType = getRemoteInstanceType(element)
+            const element = result[i]
+            const instanceType = getRemoteInstanceType(element, context)
             if (instanceType) {
                 result[i] = {
-                    instanceId: setInstance(element),
+                    instanceId: context.instances.setInstance(element),
                     instanceType,
                 }
             }
             else {
-                const g = global as any
-                if (!g.clazzSet)
-                    g.clazzSet = new Set()
-                if (!g.clazzSet.has(name)) {
-                    g.clazzSet.add(name)
-                }
+                if (!global.clazzSet) global.clazzSet = new Set()
+                global.clazzSet.add(element?.constructor?.name)
             }
         }
     }
     else if (typeof result === 'object') {
-        const name = result?.constructor?.name
-        const instanceType = getRemoteInstanceType(result)
+        const instanceType = getRemoteInstanceType(result, context)
         if (instanceType) {
-            const { setInstance } = useInstanceManage()
-            result = {
-                instanceId: setInstance(result),
-                instanceType,
+            const { getInstanceId, setInstance } = context.instances
+            const id = context.renderer ? setInstance(result) : getInstanceId(result) ?? setInstance(result)
+            return { instanceId: id, instanceType }
+        }
+        if (context.renderer) {
+            if (action === 'request_propertyResult_onMessage_propertyResult') {
+                return { instanceId: context.instances.setInstance(result), instanceType: 'RequestMessageEvent' }
+            }
+            if (action === 'request_propertyResult_onRequest_propertyResult') {
+                return { instanceId: context.instances.setInstance(result), instanceType: 'RequestRule' }
+            }
+            if (!global.clazzSet) global.clazzSet = new Set()
+            global.clazzSet.add(result?.constructor?.name)
+        }
+        else {
+            if (ancestors.has(result)) throw new Error('Cannot serialize a circular result')
+            if (ancestors.size >= 128) throw new Error('Result nesting exceeds 128 levels')
+            ancestors.add(result)
+        }
+        const output: Record<string, any> = {}
+        for (const key in result) {
+            if (context.renderer || Object.prototype.hasOwnProperty.call(result, key)) {
+                output[key] = hookResult(`${action}_${key}_propertyResult`, result[key], context, ancestors)
             }
         }
-        else if (action === 'request_propertyResult') {
-            const t = result
-            result = {}
-            for (const k in t) {
-                result[k] = hookResult(`${action}_${k}_propertyResult`, t[k])
-            }
-        } else if (action === 'request_propertyResult_onMessage_propertyResult') {
-            const { setInstance } = useInstanceManage()
-            result = {
-                instanceId: setInstance(result),
-                instanceType: 'RequestMessageEvent',
-            }
-            
-        } else if (action === 'request_propertyResult_onRequest_propertyResult') {
-            const { setInstance } = useInstanceManage()
-            result = {
-                instanceId: setInstance(result),
-                instanceType: 'RequestRule',
-            }
-            
-        } else {
-            const g = global as any
-            if (!g.clazzSet)
-                g.clazzSet = new Set()
-            if (!g.clazzSet.has(name)) {
-                g.clazzSet.add(name)
-            }
-            const t = result
-            result = {}
-            for (const k in t) {
-                result[k] = hookResult(`${action}_${k}_propertyResult`, t[k])
-            }
-        }
+        if (!context.renderer) ancestors.delete(result)
+        return output
     }
     return result;
 }

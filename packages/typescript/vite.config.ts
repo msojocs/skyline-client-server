@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 const packageRoot = __dirname;
 
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
   build: {
     // Keep the output layout consumed by the Electron package and release scripts.
     outDir: resolve(packageRoot, '../electron'),
@@ -11,9 +11,9 @@ export default defineConfig(() => ({
     minify: process.env.ENVIRONMENT === 'production' ? ('esbuild' as const) : false,
     rollupOptions: {
       input: {
-        server: resolve(packageRoot, 'src/render-server.ts'),
-        main: resolve(packageRoot, '../electron/main.ts'),
-        'main-rpc': resolve(packageRoot, '../electron/main-rpc.ts'),
+        [mode === 'main' ? 'main-server' : 'render-server']: resolve(
+          packageRoot, mode === 'main' ? 'src/main-server.ts' : 'src/render-server.ts',
+        ),
       },
       external: [
         'electron',
@@ -21,11 +21,12 @@ export default defineConfig(() => ({
         'skyline-server/render-server.node',
         /^node:/,
       ],
-      // Keep every public export available when main-rpc.js is required by
-      // native tests or by another Electron entry.
+      // Keep every public export available when the bundled main server is
+      // required by native tests or by another Electron entry.
       preserveEntrySignatures: 'strict' as const,
       output: {
         format: 'cjs' as const,
+        inlineDynamicImports: true,
         entryFileNames: '[name].js',
         chunkFileNames: 'chunks/[name]-[hash].js',
         exports: 'auto' as const,

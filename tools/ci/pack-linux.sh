@@ -16,7 +16,7 @@ $root_dir/tools/prepare.sh
 
 # skyline server ts
 cd "$root_dir/ts-linux-artifact"
-mv server.js main.js main-rpc.js "$root_dir/packages/electron"
+mv render-server.js main-server.js "$root_dir/packages/electron"
 
 # skyline server native
 cd "$root_dir/native-win-artifact"

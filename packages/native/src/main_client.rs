@@ -21,7 +21,7 @@
 //! 编成 `{instanceId, instanceType}`、再由 `client::remote` 依 [`CLASSES`] 复活成代理，
 //! 所以命名空间可以有任意层（`webContents.session.webRequest.onBeforeRequest`）。
 //!
-//! 传给 `webRequest.*` 的监听器是客户端函数，服务端（`main-rpc.js`）通过参数的 `callbackId`
+//! 传给 `webRequest.*` 的监听器是客户端函数，服务端（`main-server.js`）通过参数的 `callbackId`
 //! 把它还原成真实函数交给 Electron；监听器拿到的第二个参数（Electron 的 callback）又由服务端
 //! 编成 `functionData` 代理回传，于是 `(details, callback) => callback(response)` 这种
 //! 回调式监听器可以跨进程工作，包括稍后再调用 callback 的情况。
@@ -33,7 +33,7 @@
 //!   同步分支的 RPC 超时是 5 秒，插件加载可能更久，因此 `loadExtension` 必须在异步分支里。
 //! - 返回 `{instanceId, instanceType}` 的对象由 `client::remote` 依 `instanceType` 复活成
 //!   代理，因此 [`CLASSES`] 里的 `wire_name` 必须与服务端回的 `instanceType` 一致
-//!   （服务端取 `constructor.name`，见 `packages/electron/main-rpc.js`）。
+//!   （服务端取 `constructor.name`，见 `packages/electron/main-server.js`）。
 
 use crate::binding::{arguments, define_value, error, port, State};
 use crate::client::{define_class, report, Class};
@@ -42,7 +42,7 @@ use serde_json::json;
 use std::rc::Rc;
 
 /// main 层可远程调用的类。`wire_name` 必须与服务端回传的 `instanceType` 一致
-/// （Electron 侧是 `constructor.name`，见 `main-rpc.js` 的 `instanceTypeOf`）。
+/// （Electron 侧是 `constructor.name`，见 `main-server.js` 的 `instanceTypeOf`）。
 const CLASSES: &[Class] = &[
     Class {
         wire_name: "WebContents",

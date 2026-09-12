@@ -1,7 +1,7 @@
-// main.test.js 的服务端 fixture：在 Worker 里跑 main-rpc.js，注入假的 electron。
+// main.test.js 的服务端 fixture：在 Worker 里跑 main-server.js，注入假的 electron。
 // 独立的 Worker 有自己的事件循环，返回 Promise 的方法才有机会 resolve（client 侧是同步阻塞的）。
 const { parentPort, workerData } = require('node:worker_threads');
-const { createMainRpc } = require('../../electron/main-rpc.js');
+const { createMainRpc } = require('../../electron/main-server.js');
 
 // 类实例编码成远端句柄，普通对象递归编码为 JSON。
 // 命名类对应 main_client.rs 的 CLASSES 表；匿名类以 Object 句柄交给客户端动态读取成员。
@@ -47,7 +47,7 @@ for (const name of [
 ]) {
   WebRequest.prototype[name] = function (filter, listener) {
     this.listeners.set(name, listener);
-    // 监听器必须是真实函数：客户端传的是 {callbackId}，main-rpc.js 要把它还原回来。
+    // 监听器必须是真实函数：客户端传的是 {callbackId}，main-server.js 要把它还原回来。
     if (typeof listener !== 'function') throw new Error(`fixture listener is not a function: ${name}`);
     this.invoke(name, `https://example.com/${name}`);
   };

@@ -10,7 +10,7 @@ native 模块使用 Rust 和 N-API 实现，共用同一套 RPC（`transport.rs`
 | `main-client.node` | 微信 devtools main 层 | `mainController.electron.*`（`main_client.rs`） |
 
 `render-server.node` 本身不含应用层，复用为 Skyline main 进程的 RPC 服务端，
-应用层是由 `main-rpc.ts` 构建出的 `packages/electron/main-rpc.js`。
+应用层是由 `main-rpc.ts` 构建并合入 `packages/electron/main-server.js`。
 
 ```shell
 pnpm --filter nt-native compile            # 三个产物
@@ -63,7 +63,7 @@ const target = mainController.electron.webContents.fromId(0)
 target.session.webRequest[t]({ urls: ['<all_urls>'] }, requestListernerFactory(t))
 ```
 
-监听器是客户端函数，参数编码成 `{callbackId}`；服务端 `main-rpc.js` 的 `decodeArgument`
+监听器是客户端函数，参数编码成 `{callbackId}`；服务端 `common/hook-argument.ts` 的 `hookArgument`
 把它还原成真实函数再交给 Electron。监听器拿到的第二个参数是 Electron 的 callback，
 服务端把它编成 `{instanceId, instanceType: 'function'}`（`functionData` 表），客户端解码成
 可调用代理——所以下面这种回调式监听器可以跨进程工作，包括稍后再调用 callback：

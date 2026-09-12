@@ -37,10 +37,10 @@ Controller 可以参与两类方案：
     │  └─ 原版 Webview/dialog handler
     │
     └─ Skyline Electron
-       ├─ main.js
+       ├─ main-server.js
        │  └─ ipcMain.on("prompt")
        └─ Skyline Server renderer
-          ├─ server.js
+          ├─ render-server.js
           ├─ TypeScript Controller
           ├─ skyline-server/render-server.node
           └─ <webview id="appservice">
@@ -49,7 +49,7 @@ Controller 可以参与两类方案：
 
 本项目的 Controller 位于 Skyline Server renderer：
 
-[controller.ts](/home/msojocs/github/skyline-client-server/packages/typescript/src/server/controller.ts:3)
+[controller.ts](/home/msojocs/github/skyline-client-server/packages/typescript/src/render-process/controller.ts:3)
 
 当前 Controller 负责：
 
@@ -65,7 +65,7 @@ Controller 可以参与两类方案：
 
 当前 Electron 主进程入口：
 
-[main.js](/home/msojocs/github/skyline-client-server/packages/electron/main.js:25)
+[main-server.js](/home/msojocs/github/skyline-client-server/packages/electron/main-server.js:25)
 
 当前 native client 对 Controller 的暴露：
 
@@ -89,11 +89,11 @@ appservice 首次加载时的链路：
       -> window.prompt("GET_RUNTIME_INSTANCE_INFO")
       -> preload hackElectronDialog
       -> ipcRenderer.sendSync("prompt", ...)
-      -> Skyline Electron main.js
+      -> Skyline Electron main-server.js
       -> event.returnValue
       -> guest prompt() 返回
 
-如果 main.js 没有设置 event.returnValue，guest renderer 会永久等待。此时：
+如果 main-server.js 没有设置 event.returnValue，guest renderer 会永久等待。此时：
 
 - setTimeout 不会执行；
 - dom-ready 不会触发；
@@ -276,7 +276,7 @@ appservice 主 frame 的初始化代码在文档加载完成后发送：
 
     alert("MAINFRAME_LOADED")
 
-原版处理是确认 dialog 并阻止默认处理。它主要告诉宿主 mainframe 已经执行到加载完成位置。当前 main.js 返回空字符串可以解除同步调用，但不会向微信开发者工具 renderer 发送 mainframe loaded 状态。
+原版处理是确认 dialog 并阻止默认处理。它主要告诉宿主 mainframe 已经执行到加载完成位置。当前 main-server.js 返回空字符串可以解除同步调用，但不会向微信开发者工具 renderer 发送 mainframe loaded 状态。
 
 ### 6.2 alert: DOCUMENT_READY
 
@@ -314,7 +314,7 @@ pageframe 在用户代码注入完成后发送：
 4. 将解析结果保存为后续 WebSocket 请求使用的 header；
 5. JSON 解析失败时清空 header。
 
-payload 是 JSON 对象字符串，可能包含 Origin、Cookie 或 Authorization。当前 main.js 只返回空字符串并不会保存这些 header，后续用户 WebSocket 连接可能因此缺少认证信息。
+payload 是 JSON 对象字符串，可能包含 Origin、Cookie 或 Authorization。当前 main-server.js 只返回空字符串并不会保存这些 header，后续用户 WebSocket 连接可能因此缺少认证信息。
 
 ### 6.5 alert: GET_WEBVIEW_SCROLL_Y<value>
 
@@ -353,7 +353,7 @@ documentstart 会在右键菜单事件中发送：
 
 ### 7.2 当前最小策略
 
-当前 main.js 对 confirm 返回空字符串，语义是所有 confirm 默认取消。
+当前 main-server.js 对 confirm 返回空字符串，语义是所有 confirm 默认取消。
 
 优点：
 
@@ -393,7 +393,7 @@ instance frame 的 alert/prompt 可能被包装为：
 
 ## 9. 当前最小返回策略评估
 
-当前 main.js 的策略：
+当前 main-server.js 的策略：
 
     CONTINUE_LOAD -> "yes"
     GET_MESSAGE_TOKEN -> ""

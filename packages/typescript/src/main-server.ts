@@ -2,9 +2,15 @@
 // @ts-nocheck
 'use strict';
 
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const electronModule = require('electron');
+const { app, BrowserWindow, ipcMain, session } = electronModule;
 const path = require('path');
-import { startMainRpc } from './main-rpc.ts';
+import { createMainRpc, startMainRpc } from './main-process/controller.ts';
+
+// The combined bundle also exposes the RPC factory to native integration tests.
+// Node resolves the Electron package to its executable path outside Electron;
+// in that context only the RPC module is needed and main-process setup is skipped.
+if (app) {
 console.info('Electron version', process.versions.electron, 'Chrome version', process.versions.chrome, 'Node.js version', process.versions.node);
 
 // These switches were previously supplied through NW.js package.json.
@@ -229,3 +235,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+}
+
+export { createMainRpc, startMainRpc };

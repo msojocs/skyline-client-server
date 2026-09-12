@@ -1,8 +1,9 @@
 import { useLogger } from "./common/log"
-import { registerDefaultClazz, useInstanceManage, useObjectManage } from "./server/object-manage"
+import { registerDefaultClazz, useInstanceManage, useObjectManage } from "./render-process/object-manage"
 import { hookArgument, hookResult } from "./common/hook-argument"
-import { Controller } from "./server/controller"
+import { Controller } from "./render-process/controller"
 import { ipcRenderer } from 'electron'
+import type { NativeRpcServer, RpcRequest } from './common/rpc'
 const log = useLogger('Server')
 try {
   log.info('Hi rpc server!')
@@ -12,7 +13,7 @@ try {
     log.error('unhandledRejection:', err)
     // process.exit(1)
   })
-  const server = require('skyline-server/render-server.node')
+  const server: NativeRpcServer = require('skyline-server/render-server.node')
   global.sendMessageSync = server.sendMessageSync
   global.send = server.sendMessageSingle
   global.blockUntilNextMessage = server.blockUntilNextMessage
@@ -62,8 +63,6 @@ try {
   })
 
   const g = global as any
-  g.window = g
-  window = g
   registerDefaultClazz(g)
   const port = 3001
   server.start('127.0.0.1', port)
@@ -75,19 +74,7 @@ try {
       console.info('Reply message <====', payload, messageId)
       global.send(JSON.stringify(payload), messageId)
     }
-    const req = JSON.parse(message) as {
-      type: 'constructor' | 'static' | 'dynamic' | 'dynamicProperty' | 'registerCallback'
-      clazz: string
-      action: string
-      data: {
-        instanceId?: number
-        clazz?: string
-        callbackId?: string
-        asyncCallback?: boolean
-        params?: any[]
-        propertyAction?: 'set' | 'get'
-      }
-    }
+    const req = JSON.parse(message) as RpcRequest
     if (req.action === 'disconnected') {
       global.controller.setDialogCallback(null)
       log.error('disconnected')

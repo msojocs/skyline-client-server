@@ -50,7 +50,7 @@ jobs:
           pnpm run build
           cd ../../
           mkdir -p tmp/build
-          mv packages/electron/server.js packages/electron/main.js packages/electron/main-rpc.js tmp/build
+          mv packages/electron/render-server.js packages/electron/main-server.js tmp/build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

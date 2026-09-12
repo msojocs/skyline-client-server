@@ -14,7 +14,6 @@
   "include": [
       "src/**/*.ts",
       "tools/**/*.ts",
-      "vite.config.ts",
-      "../electron/**/*.ts"
+      "vite.config.ts"
   ],
 }

@@ -5,8 +5,9 @@
   "main": "build/render-client.node",
   "scripts": {
     "compile": "node build.js",
+    "compile:main-client": "node build.js --module main-client",
     "compile:windows": "node build.js --target x86_64-pc-windows-gnu",
-    "test": "node --test test/native.test.js"
+    "test": "node --test test/native.test.js test/main.test.js"
   },
   "keywords": [],
   "author": "",

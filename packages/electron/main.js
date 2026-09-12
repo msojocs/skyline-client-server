@@ -2,6 +2,7 @@
 
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
+const { startMainRpc } = require('./main-rpc');
 console.info('Electron version', process.versions.electron, 'Chrome version', process.versions.chrome, 'Node.js version', process.versions.node);
 
 // These switches were previously supplied through NW.js package.json.
@@ -211,6 +212,13 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+  // main 层 RPC 服务端：把真实 Electron 对象（webContents 等）暴露给 devtools main 层的
+  // mainController.electron.*。端口默认 3002，renderer 的 render-server 仍占 3001。
+  try {
+    startMainRpc();
+  } catch (error) {
+    console.error('[main-rpc] failed to start', error);
+  }
 });
 
 app.on('window-all-closed', () => {

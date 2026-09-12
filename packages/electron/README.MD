@@ -15,6 +15,7 @@
 │  ├─skyline-server (编译后的SkylineServer native项目文件)
 │  └─skyline-addon (官方原版)
 ├─server.js (编译后的ts项目文件)
+├─main-rpc.js (main 层 RPC 服务端：把真实 Electron 对象暴露给 devtools main 层)
 └─...
 
 Electron 使用 `main.js` 创建窗口；渲染层兼容脚本提供项目原先使用的 NW.js webview 方法名。

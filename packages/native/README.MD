@@ -1,12 +1,25 @@
 # Native 模块
 
-native 模块使用 Rust 和 N-API 实现，客户端输出 `render-client.node`，服务端输出 `render-server.node`。
+native 模块使用 Rust 和 N-API 实现，共用同一套 RPC（`transport.rs` + `binding.rs`），
+差异只在应用层——暴露的类/方法/字段不同：
+
+| 产物 | 进程 | 应用层 |
+| --- | --- | --- |
+| `render-client.node` | 微信 devtools renderer | `Controller` / webview 元素（`client.rs`） |
+| `render-server.node` | Skyline renderer | `server.ts` 的 `clazzMap` |
+| `main-client.node` | 微信 devtools main 层 | `mainController.electron.*`（`main_client.rs`） |
+
+`render-server.node` 本身不含应用层，复用为 Skyline main 进程的 RPC 服务端，
+应用层是同目录的 `packages/electron/main-rpc.js`。
 
 ```shell
-pnpm --filter nt-native compile
+pnpm --filter nt-native compile            # 三个产物
+pnpm --filter nt-native compile:main-client # 只出 main-client.node
 pnpm --filter nt-native compile:windows
 pnpm --filter nt-native test
 ```
+
+`--module` 可取 `client` / `server` / `main-client` / `all`（默认 `all`，历史写法 `both` 等同）。
 
 `compile:windows` 的目标是 `x86_64-pc-windows-gnu`，需要 Linux 上安装 `gcc-mingw-w64-x86-64`。Rust 的 `napi/dyn-symbols` 特性使模块直接从 Node/Electron 加载 N-API，不需要下载或链接 Electron 的 `node.lib`。
 

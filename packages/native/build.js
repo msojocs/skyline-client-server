@@ -21,7 +21,7 @@ function main() {
   const host = run('rustc', ['-vV']).split('\n').find(line => line.startsWith('host: '))?.slice(6);
   if (!host) throw new Error('Cannot determine the Rust host target');
   let target = host;
-  let module = 'both';
+  let module = 'all';
   let profile = 'release';
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--target') target = args[++i];
@@ -29,13 +29,17 @@ function main() {
     else if (args[i] === '--debug') profile = 'debug';
     else throw new Error(`Unknown argument: ${args[i]}`);
   }
-  if (!['client', 'server', 'both'].includes(module)) throw new Error('--module must be client, server, or both');
+  const modules = { client: 'render-client.node', server: 'render-server.node', 'main-client': 'main-client.node' };
+  // 'both' 是历史写法，等同 'all'。
+  if (!['all', 'both'].includes(module) && !Object.hasOwn(modules, module)) {
+    throw new Error(`--module must be ${[...Object.keys(modules), 'all'].join(', ')}`);
+  }
   if (!['x86_64-unknown-linux-gnu', 'x86_64-pc-windows-gnu', 'x86_64-pc-windows-msvc'].includes(target)) {
     throw new Error(`Unsupported target: ${target}`);
   }
   const output = path.join(__dirname, 'build', target);
   mkdirSync(output, { recursive: true });
-  for (const feature of module === 'both' ? ['client', 'server'] : [module]) {
+  for (const feature of ['all', 'both'].includes(module) ? Object.keys(modules) : [module]) {
     const cargoArgs = ['build', '--locked', '--target', target, '--no-default-features', '--features', feature,
       '--message-format=json-render-diagnostics'];
     if (profile === 'release') cargoArgs.push('--release');
@@ -45,11 +49,12 @@ function main() {
       && item.target.name === 'skyline_native' && item.target.crate_types.includes('cdylib'));
     const library = artifact?.filenames.find(file => /\.(so|dll|dylib)$/.test(file));
     if (!library) throw new Error(`Cargo did not produce a ${feature} library`);
-    const name = feature === 'client' ? 'render-client.node' : 'render-server.node';
+    const name = modules[feature];
     const destination = path.join(output, name);
     copyFileSync(library, destination);
     console.log(destination);
-    if (target === host) {
+    // main 层客户端由 devtools main 层加载，不落在本仓库的运行时目录。
+    if (target === host && feature !== 'main-client') {
       const local = feature === 'client'
         ? path.join(process.env.SKYLINE_DEV_PATH || path.join(__dirname, 'build'), name)
         : path.join(__dirname, '../electron/node_modules/skyline-server', name);

@@ -61,11 +61,14 @@ impl Task for ExecuteJavaScriptTask {
     }
 }
 
-struct Class {
-    wire_name: &'static str,
-    name: &'static str,
-    methods: &'static [&'static str],
-    properties: &'static [(&'static str, bool, bool)],
+pub(crate) struct Class {
+    pub(crate) wire_name: &'static str,
+    pub(crate) name: &'static str,
+    pub(crate) methods: &'static [&'static str],
+    pub(crate) properties: &'static [(&'static str, bool, bool)],
+    /// render 客户端的 DOM 元素类额外挂载 reload / setAttribute / removeAttribute / isConnected。
+    /// main 客户端代理的是 Electron 对象，不挂这些。
+    pub(crate) webview_element: bool,
 }
 
 const CLASSES: &[Class] = &[
@@ -80,6 +83,7 @@ const CLASSES: &[Class] = &[
             "resolveDialog",
         ],
         properties: &[("webview", true, false)],
+        webview_element: false,
     },
     Class {
         wire_name: "ChromeWebViewElement",
@@ -94,16 +98,15 @@ const CLASSES: &[Class] = &[
             "openDevTools",
             "getWebContentsId",
         ],
-        properties: &[
-            ("src", true, true),
-            ("style", true, true),
-        ],
+        properties: &[("src", true, true), ("style", true, true)],
+        webview_element: true,
     },
     Class {
         wire_name: "CSSStyleDeclaration",
         name: "CSSStyleDeclaration",
         methods: &["setText"],
         properties: &[("display", true, true), ("pointerEvents", true, true)],
+        webview_element: true,
     },
     Class {
         wire_name: "Event",
@@ -116,12 +119,14 @@ const CLASSES: &[Class] = &[
             ("returnValue", false, true),
             ("type", true, false),
         ],
+        webview_element: true,
     },
     Class {
         wire_name: "WebRequestEvent",
         name: "WebRequestEvent",
         methods: &["addListener", "hasListener", "removeListener"],
         properties: &[],
+        webview_element: true,
     },
     Class {
         wire_name: "RequestMessageEvent",
@@ -136,54 +141,20 @@ const CLASSES: &[Class] = &[
             "removeListener",
         ],
         properties: &[],
+        webview_element: true,
     },
     Class {
         wire_name: "RequestRule",
         name: "RequestRule",
         methods: &["getRules", "addRules", "removeRules"],
         properties: &[],
+        webview_element: true,
     },
 ];
 
 pub fn init(state: &Rc<State>, exports: &mut JsObject) -> Result<()> {
     for class in CLASSES {
-        let weak = Rc::downgrade(state);
-        let constructor = state.env.create_function_from_closure(class.name, move |ctx| {
-            ctx.get_new_target::<JsFunction>()?;
-            let state = weak.upgrade().ok_or_else(|| error("Environment has closed"))?;
-            let object = ctx.this::<JsObject>()?;
-            let id = if class.name == "Controller" {
-                let callback = function(&ctx, 0)?;
-                *state.error_callback.borrow_mut() = Some(Reference::new(state.env, callback)?);
-                let result = report(&state, || state.request(&json!({
-                    "type": "constructor", "clazz": "Controller", "data": {"params": arguments(&state, &ctx)?}
-                }).to_string()))?;
-                result["instanceId"].as_u64().ok_or_else(|| error("No instanceId in constructor response"))?
-            } else {
-                let id = ctx.get::<napi::JsNumber>(0)?.get_double()?;
-                if !id.is_finite() || id <= 0.0 || id.fract() != 0.0 || id > 9_007_199_254_740_991.0 {
-                    return Err(invalid("Invalid remote instanceId"));
-                }
-                id as u64
-            };
-            define_value(state.env, &object, "instanceId", state.env.create_double(id as f64)?.into_unknown(), false)?;
-            define_value(state.env, &object, "__skylineEpoch", state.env.create_double(state.epoch.get() as f64)?.into_unknown(), false)?;
-            Ok(object)
-        })?;
-        let prototype: JsObject =
-            borrow_object(state.env, &constructor)?.get_named_property("prototype")?;
-        for method in class.methods {
-            add_method(state, &prototype, method)?;
-        }
-        if class.name != "Controller" {
-            for method in ["reload", "setAttribute", "removeAttribute"] {
-                add_method(state, &prototype, method)?;
-            }
-            add_property(state, &prototype, "isConnected", true, false)?;
-        }
-        for (name, get, set) in class.properties {
-            add_property(state, &prototype, name, *get, *set)?;
-        }
+        let constructor = define_class(state, class)?;
         if class.name == "Controller" {
             let weak = Rc::downgrade(state);
             let connect = state
@@ -212,8 +183,13 @@ pub fn init(state: &Rc<State>, exports: &mut JsObject) -> Result<()> {
                     *state.endpoint.borrow_mut() = Some(endpoint);
                     ctx.env.get_undefined()
                 })?;
-            let object = borrow_object(state.env, &constructor)?;
-            define_value(state.env, &object, "connect", connect.into_unknown(), true)?;
+            define_value(
+                state.env,
+                &constructor,
+                "connect",
+                connect.into_unknown(),
+                true,
+            )?;
             let weak = Rc::downgrade(state);
             let disconnect = state
                 .env
@@ -225,19 +201,64 @@ pub fn init(state: &Rc<State>, exports: &mut JsObject) -> Result<()> {
                 })?;
             define_value(
                 state.env,
-                &object,
+                &constructor,
                 "disconnect",
                 disconnect.into_unknown(),
                 true,
             )?;
-            exports.set_named_property("Controller", borrow_object(state.env, &constructor)?)?;
+            exports.set_named_property("Controller", constructor)?;
         }
-        state.constructors.borrow_mut().insert(
-            class.wire_name.into(),
-            Reference::new(state.env, constructor)?,
-        );
     }
     Ok(())
+}
+
+/// 按 `Class` 表建一个 JS 构造函数：挂上方法/属性原型，并登记到 `state.constructors`，
+/// 供 `binding.rs` 的 `decode` 依 `instanceType` 复活远端对象（见 `client::remote`）。
+/// render 与 main 两个客户端应用层共用这段逻辑，差异只在各自的 `Class` 表。
+pub(crate) fn define_class(state: &Rc<State>, class: &'static Class) -> Result<JsObject> {
+    let weak = Rc::downgrade(state);
+    let constructor = state.env.create_function_from_closure(class.name, move |ctx| {
+        ctx.get_new_target::<JsFunction>()?;
+        let state = weak.upgrade().ok_or_else(|| error("Environment has closed"))?;
+        let object = ctx.this::<JsObject>()?;
+        let id = if class.name == "Controller" {
+            let callback = function(&ctx, 0)?;
+            *state.error_callback.borrow_mut() = Some(Reference::new(state.env, callback)?);
+            let result = report(&state, || state.request(&json!({
+                "type": "constructor", "clazz": "Controller", "data": {"params": arguments(&state, &ctx)?}
+            }).to_string()))?;
+            result["instanceId"].as_u64().ok_or_else(|| error("No instanceId in constructor response"))?
+        } else {
+            let id = ctx.get::<napi::JsNumber>(0)?.get_double()?;
+            if !id.is_finite() || id <= 0.0 || id.fract() != 0.0 || id > 9_007_199_254_740_991.0 {
+                return Err(invalid("Invalid remote instanceId"));
+            }
+            id as u64
+        };
+        define_value(state.env, &object, "instanceId", state.env.create_double(id as f64)?.into_unknown(), false)?;
+        define_value(state.env, &object, "__skylineEpoch", state.env.create_double(state.epoch.get() as f64)?.into_unknown(), false)?;
+        Ok(object)
+    })?;
+    let prototype: JsObject =
+        borrow_object(state.env, &constructor)?.get_named_property("prototype")?;
+    for method in class.methods {
+        add_method(state, &prototype, method)?;
+    }
+    if class.webview_element {
+        for method in ["reload", "setAttribute", "removeAttribute"] {
+            add_method(state, &prototype, method)?;
+        }
+        add_property(state, &prototype, "isConnected", true, false)?;
+    }
+    for (name, get, set) in class.properties {
+        add_property(state, &prototype, name, *get, *set)?;
+    }
+    let object = borrow_object(state.env, &constructor)?;
+    state
+        .constructors
+        .borrow_mut()
+        .insert(class.wire_name.into(), Reference::new(state.env, &object)?);
+    Ok(object)
 }
 
 fn instance(state: &State, ctx: &CallContext) -> Result<u64> {
@@ -330,7 +351,7 @@ fn add_property(
     define_property(state.env, prototype, name, descriptor)
 }
 
-fn report<T>(state: &State, operation: impl FnOnce() -> Result<T>) -> Result<T> {
+pub(crate) fn report<T>(state: &State, operation: impl FnOnce() -> Result<T>) -> Result<T> {
     let result = operation();
     if let Err(ref error) = result {
         let callback = state

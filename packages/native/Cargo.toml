@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 default = ["client"]
 client = []
 server = []
+# main 层客户端：复用 client 的 RPC 角色（request id 奇偶、超时、drain 语义），只换应用层。
+main-client = ["client"]
 
 [dependencies]
 napi = { version = "2.16.17", default-features = false, features = ["napi7", "dyn-symbols", "compat-mode"] }

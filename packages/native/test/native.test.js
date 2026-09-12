@@ -8,8 +8,8 @@ const { spawnSync } = require('node:child_process');
 
 const directory = process.env.SKYLINE_NATIVE_TEST_DIR || path.resolve(__dirname, '../build',
   process.platform === 'win32' ? 'x86_64-pc-windows-gnu' : 'x86_64-unknown-linux-gnu');
-const clientPath = path.join(directory, 'skyline.node');
-const serverPath = path.join(directory, 'server.node');
+const clientPath = path.join(directory, 'render-client.node');
+const serverPath = path.join(directory, 'render-server.node');
 
 async function availablePort() {
   const listener = net.createServer();

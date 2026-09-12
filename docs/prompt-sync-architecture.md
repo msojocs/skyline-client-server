@@ -42,7 +42,7 @@ Controller 可以参与两类方案：
        └─ Skyline Server renderer
           ├─ server.js
           ├─ TypeScript Controller
-          ├─ skyline-server/server.node
+          ├─ skyline-server/render-server.node
           └─ <webview id="appservice">
              └─ appservice guest renderer
                 └─ 微信 preload

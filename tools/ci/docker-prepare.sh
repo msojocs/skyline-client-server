@@ -14,4 +14,4 @@ cp "$root_dir/ts-linux-artifact/server.js" "$package_dir/server.js"
 
 # skyline server native
 mkdir -p "$node_modules_dir/skyline-server"
-cp "$root_dir/native-win-artifact"/skyline-server-win32-*.node "$node_modules_dir/skyline-server/server.node"
+cp "$root_dir/native-win-artifact"/skyline-server-win32-*.node "$node_modules_dir/skyline-server/render-server.node"

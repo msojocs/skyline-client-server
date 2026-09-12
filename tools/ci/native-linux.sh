@@ -7,5 +7,5 @@ tag=${2:-continuous}
 
 node "$root_dir/packages/native/build.js" --target x86_64-unknown-linux-gnu
 mkdir -p "$root_dir/tmp/build"
-cp "$root_dir/packages/native/build/x86_64-unknown-linux-gnu/skyline.node" \
+cp "$root_dir/packages/native/build/x86_64-unknown-linux-gnu/render-client.node" \
   "$root_dir/tmp/build/skyline-client-linux-$arch-$tag.node"

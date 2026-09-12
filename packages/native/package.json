@@ -2,7 +2,7 @@
   "name": "nt-native",
   "version": "1.0.0",
   "description": "",
-  "main": "build/skyline.node",
+  "main": "build/render-client.node",
   "scripts": {
     "compile": "node build.js",
     "compile:windows": "node build.js --target x86_64-pc-windows-gnu",

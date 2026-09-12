@@ -45,7 +45,7 @@ function main() {
       && item.target.name === 'skyline_native' && item.target.crate_types.includes('cdylib'));
     const library = artifact?.filenames.find(file => /\.(so|dll|dylib)$/.test(file));
     if (!library) throw new Error(`Cargo did not produce a ${feature} library`);
-    const name = feature === 'client' ? 'skyline.node' : 'server.node';
+    const name = feature === 'client' ? 'render-client.node' : 'render-server.node';
     const destination = path.join(output, name);
     copyFileSync(library, destination);
     console.log(destination);

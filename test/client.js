@@ -1,7 +1,7 @@
 const path = require('path');
 const clientNode = process.env['SKYLINE_DEV_PATH']
-    ? `${process.env['SKYLINE_DEV_PATH']}/skyline.node` 
-    : path.resolve(__dirname, "../packages/native/build/skyline.node")
+    ? `${process.env['SKYLINE_DEV_PATH']}/render-client.node`
+    : path.resolve(__dirname, "../packages/native/build/render-client.node")
 
 const skylineClient = require(clientNode);
 console.info("skylineClient", skylineClient)

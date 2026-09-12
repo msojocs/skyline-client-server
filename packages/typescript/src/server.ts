@@ -12,7 +12,7 @@ try {
     log.error('unhandledRejection:', err)
     // process.exit(1)
   })
-  const server = require('skyline-server/server.node')
+  const server = require('skyline-server/render-server.node')
   global.sendMessageSync = server.sendMessageSync
   global.send = server.sendMessageSingle
   global.blockUntilNextMessage = server.blockUntilNextMessage

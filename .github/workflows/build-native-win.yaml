@@ -55,8 +55,8 @@ jobs:
         run: |
           $destination = "packages/native/build/x86_64-pc-windows-gnu"
           New-Item -ItemType Directory -Force $destination | Out-Null
-          Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-client-*.node" | Select-Object -First 1).FullName "$destination/skyline.node"
-          Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-server-*.node" | Select-Object -First 1).FullName "$destination/server.node"
+          Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-client-*.node" | Select-Object -First 1).FullName "$destination/render-client.node"
+          Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-server-*.node" | Select-Object -First 1).FullName "$destination/render-server.node"
           node --test packages/native/test/native.test.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test Electron 36.6.0 Loading

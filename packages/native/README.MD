@@ -1,6 +1,6 @@
 # Native 模块
 
-native 模块使用 Rust 和 N-API 实现，客户端输出 `skyline.node`，服务端输出 `server.node`。
+native 模块使用 Rust 和 N-API 实现，客户端输出 `render-client.node`，服务端输出 `render-server.node`。
 
 ```shell
 pnpm --filter nt-native compile

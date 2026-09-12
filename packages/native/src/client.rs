@@ -9,7 +9,11 @@ use serde_json::{json, Value};
 use std::rc::{Rc, Weak};
 use std::time::{Duration, Instant};
 
-struct ExecuteJavaScriptTask {
+/// 返回 Promise 的远端方法走 AsyncTask 分支：等待在 worker 线程上进行，不阻塞 JS 线程，
+/// 失败表现为 Promise reject 而不是同步抛出。列表按方法名匹配，render 与 main 两个应用层共用。
+const ASYNC_METHODS: &[&str] = &["executeJavaScript", "loadExtension"];
+
+struct AsyncCallTask {
     state: Weak<State>,
     pending: Option<Pending>,
     initial_error: Option<napi::Error>,
@@ -18,9 +22,9 @@ struct ExecuteJavaScriptTask {
 // napi-rs runs compute on a worker and resolve/reject/drop back on the JS
 // thread. compute only touches Pending; the non-Send Weak<State> is accessed
 // after the task returns to its owning JS thread.
-unsafe impl Send for ExecuteJavaScriptTask {}
+unsafe impl Send for AsyncCallTask {}
 
-impl ExecuteJavaScriptTask {
+impl AsyncCallTask {
     fn state(&self) -> Result<Rc<State>> {
         self.state
             .upgrade()
@@ -28,7 +32,7 @@ impl ExecuteJavaScriptTask {
     }
 }
 
-impl Task for ExecuteJavaScriptTask {
+impl Task for AsyncCallTask {
     type Output = Value;
     type JsValue = JsUnknown;
 
@@ -298,29 +302,29 @@ fn instance(state: &State, ctx: &CallContext) -> Result<u64> {
     Ok(id)
 }
 
-/// 一次远端调用：`executeJavaScript` 走 AsyncTask（不阻塞 JS 线程，失败表现为 Promise reject），
-/// 其余方法同步阻塞并直接抛出。
+/// 一次远端调用：`ASYNC_METHODS` 里的方法走 AsyncTask（不阻塞 JS 线程，失败表现为 Promise
+/// reject），其余方法同步阻塞并直接抛出。
 fn invoke(state: &Rc<State>, ctx: &CallContext, name: &'static str, id: u64) -> Result<JsUnknown> {
-    if name == "executeJavaScript" {
+    if ASYNC_METHODS.contains(&name) {
         let request = (|| {
             let body = json!({"type": "dynamic", "action": name,
                 "data": {"instanceId": id, "params": arguments(state, ctx)?}}).to_string();
             state.start_request(&body).map(|(_, pending)| pending)
         })();
         let task = match request {
-            Ok(pending) => ExecuteJavaScriptTask {
+            Ok(pending) => AsyncCallTask {
                 state: Rc::downgrade(state),
                 pending: Some(pending),
                 initial_error: None,
             },
-            Err(initial_error) => ExecuteJavaScriptTask {
+            Err(initial_error) => AsyncCallTask {
                 state: Rc::downgrade(state),
                 pending: None,
                 initial_error: Some(initial_error),
             },
         };
         let promise = unsafe {
-            <AsyncTask<ExecuteJavaScriptTask> as ToNapiValue>::to_napi_value(
+            <AsyncTask<AsyncCallTask> as ToNapiValue>::to_napi_value(
                 state.env.raw(),
                 AsyncTask::new(task),
             )?

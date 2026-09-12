@@ -5,19 +5,25 @@
 //! 负责反序列化），差异只在应用层：这里代理的是 main 层的 Electron API，入口是
 //! `mainController.electron.*`，而不是 webview 那套 Controller。
 //!
-//! 首条打通的方法：
+//! 已打通的方法：
 //!
 //! ```js
 //! const { mainController } = require('main-client.node')
 //! mainController.connect('127.0.0.1', 3002)
 //! const webContents = mainController.electron.webContents.fromId(7)
 //! webContents.loadURL('https://example.com/')
+//! await webContents.session.extensions.loadExtension('/path/to/extension')
 //! ```
+//!
+//! `session` 是 WebContents 的属性、`extensions` 是 Session 的属性，两者都由服务端编成
+//! `{instanceId, instanceType}`、再由 `client::remote` 依 [`CLASSES`] 复活成代理，
+//! 所以命名空间可以有任意层（`webContents.session.extensions.loadExtension`）。
 //!
 //! 两点沿用 render client 的既有语义：
 //!
-//! - 名为 `executeJavaScript` 的方法走 `client.rs` 的 AsyncTask 分支，不阻塞 JS 线程，
-//!   失败表现为 Promise reject；其余方法同步阻塞并直接抛出。
+//! - `client.rs` 的 `ASYNC_METHODS`（`executeJavaScript`、`Extensions.loadExtension`）走
+//!   AsyncTask 分支，不阻塞 JS 线程，失败表现为 Promise reject；其余方法同步阻塞并直接抛出。
+//!   同步分支的 RPC 超时是 5 秒，插件加载可能更久，因此 `loadExtension` 必须在异步分支里。
 //! - 返回 `{instanceId, instanceType}` 的对象由 `client::remote` 依 `instanceType` 复活成
 //!   代理，因此 [`CLASSES`] 里的 `wire_name` 必须与服务端回的 `instanceType` 一致
 //!   （服务端取 `constructor.name`，见 `packages/electron/main-rpc.js`）。
@@ -28,23 +34,51 @@ use napi::{JsObject, Result};
 use serde_json::json;
 use std::rc::Rc;
 
-/// main 层可远程调用的类。`wire_name` 必须与服务端回传的 `instanceType` 一致。
-const CLASSES: &[Class] = &[Class {
-    wire_name: "WebContents",
-    name: "WebContents",
-    methods: &[
-        "loadURL",
-        "getURL",
-        "reload",
-        "executeJavaScript",
-        "getId",
-        "isDestroyed",
-        "close",
-        "openDevTools",
-    ],
-    properties: &[("id", true, false), ("url", true, false)],
-    webview_element: false,
-}];
+/// main 层可远程调用的类。`wire_name` 必须与服务端回传的 `instanceType` 一致
+/// （Electron 侧是 `constructor.name`，见 `main-rpc.js` 的 `instanceTypeOf`）。
+const CLASSES: &[Class] = &[
+    Class {
+        wire_name: "WebContents",
+        name: "WebContents",
+        methods: &[
+            "loadURL",
+            "getURL",
+            "reload",
+            "executeJavaScript",
+            "getId",
+            "isDestroyed",
+            "close",
+            "openDevTools",
+        ],
+        properties: &[
+            ("id", true, false),
+            ("url", true, false),
+            ("session", true, false),
+        ],
+        webview_element: false,
+    },
+    // webContents.session，Electron 侧 `readonly session: Session`。
+    Class {
+        wire_name: "Session",
+        name: "Session",
+        methods: &[],
+        properties: &[("extensions", true, false)],
+        webview_element: false,
+    },
+    // session.extensions，插件加载入口。
+    Class {
+        wire_name: "Extensions",
+        name: "Extensions",
+        methods: &[
+            "loadExtension",
+            "getAllExtensions",
+            "getExtension",
+            "removeExtension",
+        ],
+        properties: &[],
+        webview_element: false,
+    },
+];
 
 pub fn init(state: &Rc<State>, exports: &mut JsObject) -> Result<()> {
     for class in CLASSES {

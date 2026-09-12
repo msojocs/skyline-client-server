@@ -75,6 +75,23 @@ test('main 层 client/server: webContents.fromId 返回可远程调用的代理'
   assert.equal(webContents.getURL(), 'https://example.com/next');
   assert.equal(webContents.url, 'https://example.com/next');
 
+  // 插件加载：session / extensions 是属性链上的远端代理，各自按 instanceType 复活成对应类
+  const session = webContents.session;
+  assert.equal(session.constructor.name, 'Session');
+  assert.equal(webContents.session, session);
+  const extensions = session.extensions;
+  assert.equal(extensions.constructor.name, 'Extensions');
+  assert.equal(session.extensions, extensions);
+  // loadExtension 返回 Promise，走 ASYNC_METHODS 分支；远端对象 encode 成普通 JSON 直传
+  const extension = await extensions.loadExtension('/tmp/fixture-extension');
+  assert.deepEqual(extension, { id: 'fixture-1', path: '/tmp/fixture-extension' });
+  assert.deepEqual(extensions.getAllExtensions(), [{ id: 'fixture-1', path: '/tmp/fixture-extension' }]);
+  assert.equal(extensions.getExtension('fixture-1').path, '/tmp/fixture-extension');
+  // 远端的 null 在 client 侧统一解成 undefined（见 binding.rs 的 decode）
+  assert.equal(extensions.getExtension('missing'), undefined);
+  // 异步失败表现为 Promise reject，而不是同步抛出
+  await assert.rejects(extensions.loadExtension(''), /fixture extension path required/);
+
   // executeJavaScript 沿用 render client 的 AsyncTask 语义（不阻塞 JS 线程），
   // 所以服务端的失败表现为 Promise reject，而不是同步抛出。
   await assert.rejects(webContents.executeJavaScript('reject'), /fixture async failure/);

@@ -33,3 +33,20 @@ const result = await controller.webview.executeJavaScript('1 + 2')
 ```
 
 参数编码失败、远端脚本执行失败、连接断开或 300 秒 RPC 超时都会 reject Promise。等待远端结果在 N-API async work 中进行，不阻塞 native client 的 JavaScript 事件循环，因此等待期间仍可处理 Controller prompt callback 和其它 RPC 消息。
+
+## 插件加载（main 层）
+
+`mainController.electron.webContents.fromId(id)` 返回的 WebContents 代理上，`session` 是属性、
+`session.extensions` 又是属性，两者都由 `main_client.rs` 的 `CLASSES` 表（`Session` / `Extensions`）
+按远端 `instanceType` 复活成代理，所以属性链可以任意分层：
+
+```js
+const target = mainController.electron.webContents.fromId(0)
+const extension = await target.session.extensions.loadExtension('/path/to/extension')
+target.session.extensions.getAllExtensions()
+```
+
+`loadExtension` 与 `executeJavaScript` 一样列在 `client.rs` 的 `ASYNC_METHODS` 里，返回 Promise：
+加载失败、连接断开或 300 秒超时都表现为 reject（同步分支的 RPC 超时只有 5 秒，插件加载可能更久）。
+其余 `Extensions` 方法（`getAllExtensions` / `getExtension` / `removeExtension`）是同步阻塞调用。
+返回的 `Extension` 在 Electron 里是普通数据结构，走 JSON 直传，不需要额外的代理类。

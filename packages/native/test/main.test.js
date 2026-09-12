@@ -50,6 +50,21 @@ test('main 层 client/server: webContents.fromId 返回可远程调用的代理'
   assert.equal(webContents.id, webContentsId);
   assert.equal(webContents.url, `https://example.com/${webContentsId}`);
 
+  // 方法从代理上摘下来单独调用时仍作用在原句柄上（devtools 里 `const getId = webview.getWebContentsId`
+  // 那种写法）：句柄身份在取方法时就绑好了，不依赖调用点的 this。
+  const { getId, getURL } = webContents;
+  assert.equal(getId(), webContentsId);
+  assert.equal([webContentsId].map(webContents.getId)[0], webContentsId);
+  assert.equal(getURL(), `https://example.com/${webContentsId}`);
+  // 接收者不是句柄时给一条明确的错误，而不是 napi 的
+  // "Object property '__skylineEpoch' type mismatch. Expect value to be Number, but received Undefined"。
+  const getURLDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(webContents), 'getURL');
+  assert.throws(() => getURLDescriptor.get.call({})(), /not a Skyline instance/);
+  // devtools 里"取出来再包一层"的写法：赋值要能盖住原型上的方法，且包起来的那份仍可用。
+  webContents.getId = () => getId() + 1;
+  assert.equal(webContents.getId(), webContentsId + 1);
+  assert.equal(getId(), webContentsId);
+
   // 方法调用走 dynamic
   assert.equal(await webContents.executeJavaScript('1 + 2'), '1 + 2');
   assert.equal(webContents.reload(), true);
@@ -80,7 +95,11 @@ test('未连接与断开后的调用会报错', { timeout: 10000 }, async t => {
 
   const port = await fixture(t);
   mainController.connect('127.0.0.1', port);
-  assert.ok(mainController.electron.webContents.fromId(webContentsId));
+  const webContents = mainController.electron.webContents.fromId(webContentsId);
+  assert.ok(webContents);
   mainController.disconnect();
+  // 断开后取方法本身不报错，调用时才报连接已失效；句柄身份随方法一起摘下来也照样失效。
+  const getId = webContents.getId;
+  assert.throws(() => getId(), /closed connection/);
   assert.throws(() => mainController.electron.webContents.fromId(webContentsId), /Not connected/);
 });

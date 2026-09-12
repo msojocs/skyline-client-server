@@ -4,7 +4,7 @@ use crate::binding::{
 };
 use crate::transport::Pending;
 use napi::bindgen_prelude::{AsyncTask, ToNapiValue};
-use napi::{CallContext, Env, JsFunction, JsObject, JsUnknown, NapiValue, Result, Task};
+use napi::{CallContext, Env, JsFunction, JsNumber, JsObject, JsUnknown, NapiValue, Result, Task};
 use serde_json::{json, Value};
 use std::rc::{Rc, Weak};
 use std::time::{Duration, Instant};
@@ -261,53 +261,133 @@ pub(crate) fn define_class(state: &Rc<State>, class: &'static Class) -> Result<J
     Ok(object)
 }
 
-fn instance(state: &State, ctx: &CallContext) -> Result<u64> {
-    let object = ctx.this::<JsObject>()?;
-    let epoch: f64 = object.get_named_property("__skylineEpoch")?;
-    if epoch as u64 != state.epoch.get() {
-        return Err(error("Remote object belongs to a closed connection"));
+/// 读句柄上的数字字段。缺失、`undefined` 或非数字一律当作没有：`get_named_property::<f64>`
+/// 遇到 `undefined` 会抛 napi 的 "Expect value to be Number, but received Undefined"。
+fn number_property(object: &JsObject, name: &str) -> Result<Option<f64>> {
+    let value: JsUnknown = object.get_named_property(name)?;
+    match JsNumber::try_from(value) {
+        Ok(value) => Ok(Some(value.get_double()?)),
+        Err(_) => Ok(None),
     }
-    Ok(object.get_named_property::<f64>("instanceId")? as u64)
 }
 
-fn add_method(state: &Rc<State>, prototype: &JsObject, name: &'static str) -> Result<()> {
+/// 从句柄读 `(instanceId, __skylineEpoch)`。两者都是建句柄时用 `define_value` 写上的非负整数，
+/// 外来对象上的同名值不算句柄。
+fn handle_binding(object: &JsObject) -> Result<Option<(u64, u64)>> {
+    let field = |name: &str| -> Result<Option<u64>> {
+        Ok(number_property(object, name)?
+            .filter(|value| value.is_finite() && value.fract() == 0.0 && *value >= 0.0)
+            .map(|value| value as u64))
+    };
+    Ok(match (field("instanceId")?, field("__skylineEpoch")?) {
+        (Some(id), Some(epoch)) => Some((id, epoch)),
+        _ => None,
+    })
+}
+
+fn instance(state: &State, ctx: &CallContext) -> Result<u64> {
+    let object = ctx.this::<JsObject>()?;
+    let Some((id, epoch)) = handle_binding(&object)? else {
+        // 方法被摘下来单独调用（`const f = webview.getURL; f()`、`[id].map(webview.getId)`）
+        // 时接收者会丢，这里给一条明确的错误，而不是让 napi 报属性类型不匹配。
+        return Err(error("Remote method receiver is not a Skyline instance"));
+    };
+    if epoch != state.epoch.get() {
+        return Err(error("Remote object belongs to a closed connection"));
+    }
+    Ok(id)
+}
+
+/// 一次远端调用：`executeJavaScript` 走 AsyncTask（不阻塞 JS 线程，失败表现为 Promise reject），
+/// 其余方法同步阻塞并直接抛出。
+fn invoke(state: &Rc<State>, ctx: &CallContext, name: &'static str, id: u64) -> Result<JsUnknown> {
+    if name == "executeJavaScript" {
+        let request = (|| {
+            let body = json!({"type": "dynamic", "action": name,
+                "data": {"instanceId": id, "params": arguments(state, ctx)?}}).to_string();
+            state.start_request(&body).map(|(_, pending)| pending)
+        })();
+        let task = match request {
+            Ok(pending) => ExecuteJavaScriptTask {
+                state: Rc::downgrade(state),
+                pending: Some(pending),
+                initial_error: None,
+            },
+            Err(initial_error) => ExecuteJavaScriptTask {
+                state: Rc::downgrade(state),
+                pending: None,
+                initial_error: Some(initial_error),
+            },
+        };
+        let promise = unsafe {
+            <AsyncTask<ExecuteJavaScriptTask> as ToNapiValue>::to_napi_value(
+                state.env.raw(),
+                AsyncTask::new(task),
+            )?
+        };
+        return Ok(unsafe { JsUnknown::from_raw_unchecked(state.env.raw(), promise) });
+    }
+    if name == "showDevTools" { return Err(error("Not implemented")); }
+    let result = state.request(&json!({"type": "dynamic", "action": name,
+        "data": {"instanceId": id, "params": arguments(state, ctx)?}}).to_string())?;
+    state.decode(&result["returnValue"])
+}
+
+/// 造一个方法闭包。`binding` 为 `Some` 时身份在建方法时就固定下来、调用时不看接收者，
+/// 与 `remote()` 的函数代理同一套语义；为 `None` 时退回调用点传入的 `this`。
+fn method_function(
+    state: &Rc<State>,
+    name: &'static str,
+    binding: Option<(u64, u64)>,
+) -> Result<JsFunction> {
     let weak = Rc::downgrade(state);
-    let function = state.env.create_function_from_closure(name, move |ctx| {
+    state.env.create_function_from_closure(name, move |ctx| {
         let state = weak.upgrade().ok_or_else(|| error("Environment has closed"))?;
-        if name == "executeJavaScript" {
-            let request = (|| {
-                let body = json!({"type": "dynamic", "action": name,
-                    "data": {"instanceId": instance(&state, &ctx)?, "params": arguments(&state, &ctx)?}}).to_string();
-                state.start_request(&body).map(|(_, pending)| pending)
-            })();
-            let task = match request {
-                Ok(pending) => ExecuteJavaScriptTask {
-                    state: Rc::downgrade(&state),
-                    pending: Some(pending),
-                    initial_error: None,
-                },
-                Err(initial_error) => ExecuteJavaScriptTask {
-                    state: Rc::downgrade(&state),
-                    pending: None,
-                    initial_error: Some(initial_error),
-                },
-            };
-            let promise = unsafe {
-                <AsyncTask<ExecuteJavaScriptTask> as ToNapiValue>::to_napi_value(
-                    state.env.raw(),
-                    AsyncTask::new(task),
-                )?
-            };
-            return Ok(unsafe { JsUnknown::from_raw_unchecked(state.env.raw(), promise) });
+        let (id, epoch) = match binding {
+            Some(binding) => binding,
+            None => (instance(&state, &ctx)?, state.epoch.get()),
+        };
+        if epoch != state.epoch.get() {
+            return Err(error("Remote object belongs to a closed connection"));
         }
-        report(&state, || {
-            if name == "showDevTools" { return Err(error("Not implemented")); }
-            let result = state.request(&json!({"type": "dynamic", "action": name,
-                "data": {"instanceId": instance(&state, &ctx)?, "params": arguments(&state, &ctx)?}}).to_string())?;
-            state.decode(&result["returnValue"])
-        })
+        report(&state, || invoke(&state, &ctx, name, id))
+    })
+}
+
+/// 原型上挂的是访问器：取值时按当前句柄现绑一个方法闭包。于是
+/// `const f = webview.getWebContentsId; f()`、`[id].map(webview.getId)` 这类把方法从句柄上
+/// 摘下来的写法仍然作用在原句柄上，而不会丢掉 `this`。取值本身不校验连接世代，
+/// 保持"读方法不报错、调用才报错"的语义。
+fn add_method(state: &Rc<State>, prototype: &JsObject, name: &'static str) -> Result<()> {
+    let mut descriptor = state.env.create_object()?;
+    descriptor.set_named_property("configurable", true)?;
+    let weak = Rc::downgrade(state);
+    let getter = state.env.create_function_from_closure(name, move |ctx| {
+        let state = weak
+            .upgrade()
+            .ok_or_else(|| error("Environment has closed"))?;
+        let binding = handle_binding(&ctx.this::<JsObject>()?)?;
+        Ok(method_function(&state, name, binding)?.into_unknown())
     })?;
-    define_value(state.env, prototype, name, function.into_unknown(), true)
+    descriptor.set_named_property("get", getter)?;
+    // 方法原本是原型上的可写数据属性，赋值会在句柄上落一个自有属性把它盖住；换成访问器后
+    // 必须显式保留这套语义（例如 `webview.getWebContentsId = () => 114514 + getId()`）。
+    let weak = Rc::downgrade(state);
+    let setter = state.env.create_function_from_closure(name, move |ctx| {
+        let state = weak
+            .upgrade()
+            .ok_or_else(|| error("Environment has closed"))?;
+        define_value(
+            state.env,
+            &ctx.this::<JsObject>()?,
+            name,
+            ctx.get::<JsUnknown>(0)?,
+            true,
+        )?;
+        ctx.env.get_undefined()
+    })?;
+    descriptor.set_named_property("set", setter)?;
+    define_property(state.env, prototype, name, descriptor)
 }
 
 fn add_property(

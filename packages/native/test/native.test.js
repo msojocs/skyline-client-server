@@ -224,3 +224,34 @@ test('wire format, fragmented frames, disconnect notification, and server restar
   server.start('127.0.0.1', port);
   server.stop();
 });
+
+// devtools 的 preload 会把方法从句柄上摘出来再包一层：
+//   const getId = webview.getWebContentsId
+//   webview.getWebContentsId = () => 114514 + getId()
+// 摘下来的方法必须仍然作用在原句柄上，否则 this 丢失后会抛 napi 的
+// "Object property '__skylineEpoch' type mismatch. Expect value to be Number, but received Undefined"。
+test('句柄方法摘下来调用、被包一层之后仍作用在原句柄上', { timeout: 10000 }, async t => {
+  const port = await fixture(t);
+  const { Controller } = require(clientPath);
+  t.after(() => Controller.disconnect());
+  Controller.connect('127.0.0.1', port);
+  const webview = new Controller(() => {}).webview;
+
+  const getUserAgent = webview.getUserAgent;
+  assert.equal(getUserAgent(), 'Fixture');
+  assert.equal([0].map(webview.getUserAgent)[0], 'Fixture');
+  assert.equal(webview.getUserAgent(), 'Fixture');
+
+  // 包一层要能盖住原型上的方法，被包住的那份仍然可用
+  webview.getUserAgent = () => `${getUserAgent()}!`;
+  assert.equal(webview.getUserAgent(), 'Fixture!');
+
+  // 接收者不是句柄时给明确错误，而不是 napi 的属性类型不匹配
+  const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(webview), 'getUserAgent');
+  assert.throws(() => descriptor.get.call({})(), /not a Skyline instance/);
+
+  // 读方法本身不报错，调用才报连接已失效
+  Controller.disconnect();
+  const reload = webview.reload;
+  assert.throws(() => reload(), /closed connection/);
+});

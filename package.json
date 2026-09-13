@@ -9,6 +9,8 @@
     "native:build:windows": "pnpm --filter nt-native compile:windows",
     "native:test": "pnpm --filter nt-native test",
     "electron:start": "electron packages/electron",
+    "electron:download:windows": "bash tools/download-electron-win.sh",
+    "electron:start:wine": "bash tools/start-electron-wine.sh",
     "server:start": "pnpm run electron:start",
     "test": "vitest",
     "test:run": "vitest run"

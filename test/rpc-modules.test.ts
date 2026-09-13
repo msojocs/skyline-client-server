@@ -195,8 +195,26 @@ test('renderer adapters retain webview handles, worklet metadata and replaceable
   hookArgument('setDialogCallback', second);
   expect(first[0]).not.toBe(second[0]);
   expect(second[0]('request')).toBeUndefined();
+  expect(send.mock.calls[0][1]).toBe(0);
   expect(JSON.parse(send.mock.calls[0][0]).data.block).toBe(false);
   expect(sendSync).toHaveBeenCalledOnce();
+});
+
+test('renderer asynchronous event callbacks use message ID zero', () => {
+  const send = vi.fn();
+  const sendSync = vi.fn();
+  vi.stubGlobal('send', send);
+  vi.stubGlobal('sendMessageSync', sendSync);
+  const params: any[] = ['load', { callbackId: 2, asyncCallback: true }];
+  hookArgument('addEventListener', params);
+
+  expect(params[1]('loaded')).toBeUndefined();
+  expect(send).toHaveBeenCalledExactlyOnceWith(JSON.stringify({
+    type: 'emitCallback',
+    callbackId: 2,
+    data: { args: ['loaded'], block: false },
+  }), 0);
+  expect(sendSync).not.toHaveBeenCalled();
 });
 
 test('main calls with renderer action names keep their original parameters and callback behavior', () => {

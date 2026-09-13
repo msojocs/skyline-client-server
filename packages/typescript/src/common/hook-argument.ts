@@ -104,7 +104,8 @@ const hookArgumentItem = (action: string, arg: any, context: HookContext): any =
                     },
                 })
                 if (asyncCallback) {
-                    context.server.sendMessageSingle(body, context.renderer ? undefined : 0)
+                    // Native bindings require a numeric ID when the argument is supplied.
+                    context.server.sendMessageSingle(body, 0)
                     return
                 }
                 const result = context.server.sendMessageSync(body)

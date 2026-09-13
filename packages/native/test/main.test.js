@@ -139,6 +139,32 @@ test('main 层 client/server: webContents.fromId 返回可远程调用的代理'
   assert.equal(typeof webContents.isConnected, 'undefined');
 });
 
+test('WebContents.once forwards event arguments and fires each listener only once', { timeout: 15000 }, async t => {
+  const port = await fixture(t);
+  const { mainController } = require(clientPath);
+  t.after(() => mainController.disconnect());
+  mainController.connect('127.0.0.1', port);
+
+  const webContents = mainController.electron.webContents.fromId(webContentsId);
+  const navigations = [];
+  const { once: listenOnce } = webContents;
+  assert.equal(listenOnce('did-navigate', (...args) => navigations.push(args)), webContents);
+  await webContents.loadURL('https://example.com/first');
+  await webContents.loadURL('https://example.com/second');
+  assert.deepEqual(navigations, [[{}, 'https://example.com/first', 200, 'OK']]);
+
+  const destroyed = [];
+  const listener = (...args) => destroyed.push(args);
+  assert.equal(webContents.once('destroyed', listener).once('destroyed', listener), webContents);
+  assert.deepEqual(destroyed, []);
+  webContents.close();
+  assert.equal(webContents.isDestroyed(), true);
+  assert.deepEqual(destroyed, [[], []]);
+  // The fixture emits on every close to check that once removed both registrations.
+  webContents.close();
+  assert.deepEqual(destroyed, [[], []]);
+});
+
 test('anonymous Electron webRequest returns a callable object', { timeout: 15000 }, async t => {
   const port = await fixture(t, true);
   const { mainController } = require(clientPath);

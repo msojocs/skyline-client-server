@@ -34,6 +34,20 @@ const result = await controller.webview.executeJavaScript('1 + 2')
 
 参数编码失败、远端脚本执行失败、连接断开或 300 秒 RPC 超时都会 reject Promise。等待远端结果在 N-API async work 中进行，不阻塞 native client 的 JavaScript 事件循环，因此等待期间仍可处理 Controller prompt callback 和其它 RPC 消息。
 
+## 一次性事件监听（main 层）
+
+WebContents 代理支持 `once(eventName, listener)`，监听器在事件首次触发时执行，
+事件参数通过 RPC 传回客户端。一次性监听由服务端 Electron 的 `once` 处理，
+返回同一个 WebContents 代理，支持链式调用。
+
+```js
+const wc = mainController.electron.webContents.fromId(1)
+console.info('fromId(1).id:', wc.id)
+wc.once('destroyed', () => {
+  console.info('webContents destroyed')
+})
+```
+
 ## 插件加载（main 层）
 
 `mainController.electron.webContents.fromId(id)` 返回的 WebContents 代理上，`session` 是属性、

@@ -1,6 +1,7 @@
 // main.test.js 的服务端 fixture：在 Worker 里跑 main-server.js，注入假的 electron。
 // 独立的 Worker 有自己的事件循环，返回 Promise 的方法才有机会 resolve（client 侧是同步阻塞的）。
 const { parentPort, workerData } = require('node:worker_threads');
+const { EventEmitter } = require('node:events');
 const { createMainRpc } = require('../../electron/main-server.js');
 
 // 类实例编码成远端句柄，普通对象递归编码为 JSON。
@@ -77,15 +78,19 @@ class Extensions {
   }
 }
 
-class WebContents {
+class WebContents extends EventEmitter {
   constructor(id) {
+    super();
     this.id = id;
     this.url = `https://example.com/${id}`;
     this.destroyed = false;
     this.session = new Session();
   }
   loadURL(url) {
-    return Promise.resolve().then(() => { this.url = url; });
+    return Promise.resolve().then(() => {
+      this.url = url;
+      this.emit('did-navigate', {}, url, 200, 'OK');
+    });
   }
   getURL() {
     // 同步抛出的失败路径：client 侧应表现为同步 throw。
@@ -103,6 +108,7 @@ class WebContents {
   }
   close() {
     this.destroyed = true;
+    this.emit('destroyed');
   }
   openDevTools() {
     return undefined;

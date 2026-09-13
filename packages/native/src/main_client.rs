@@ -56,6 +56,7 @@ const CLASSES: &[Class] = &[
             "isDestroyed",
             "close",
             "openDevTools",
+            "once",
         ],
         properties: &[
             ("id", true, false),

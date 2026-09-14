@@ -144,6 +144,11 @@ impl Endpoint {
     }
 
     fn install(&self, socket: &TcpStream) -> io::Result<u64> {
+        // Restore blocking mode: Wine's winsock accepts into an O_NONBLOCK fd
+        // (server/sock.c::accept_new_fd) and std::net surfaces that flag, so
+        // receive()'s first read_frame would otherwise fail with WouldBlock
+        // and the listen loop would immediately disconnect.
+        socket.set_nonblocking(false)?;
         socket.set_nodelay(true)?;
         socket.set_write_timeout(Some(IO_TIMEOUT))?;
         let mut writer = self.writer.lock().unwrap();

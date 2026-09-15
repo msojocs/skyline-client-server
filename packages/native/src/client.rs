@@ -131,6 +131,8 @@ const CLASSES: &[Class] = &[
         name: "Event",
         methods: &["preventDefault"],
         properties: &[
+            ("channel", true, false),
+            ("args", true, false),
             ("dialog", true, false),
             ("messageText", true, false),
             ("messageType", true, false),

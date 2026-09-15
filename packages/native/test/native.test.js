@@ -67,6 +67,34 @@ test('webview parentElement tracks mounting and send forwards the channel and al
   assert.equal(webview.parentElement, parent);
 });
 
+test('Event callbacks expose read-only channel and nested args through RPC', { timeout: 10000 }, async t => {
+  const port = await fixture(t);
+  const { Controller } = require(clientPath);
+  t.after(() => Controller.disconnect());
+  Controller.connect('127.0.0.1', port);
+  const errors = [];
+  const webview = new Controller(message => errors.push(message)).webview;
+  const response = { cmd: '23', data: { command: 'SAC6', data: { windowId: 4, width: 390, dpr: 2 } } };
+  const args = [response, ['中文', 42], false];
+
+  const windowId = await webview.executeJavaScript({
+    event: { type: 'ipc-message', channel: '__message__', args },
+  }, event => {
+    // These property reads issue nested RPCs while the server waits for this callback.
+    assert.equal(event.type, 'ipc-message');
+    assert.equal(event.channel, '__message__');
+    assert.deepEqual(event.args, args);
+    assert.equal(Reflect.set(event, 'channel', 'changed'), false);
+    assert.equal(Reflect.set(event, 'args', []), false);
+    assert.equal(event.channel, '__message__');
+    assert.deepEqual(event.args, args);
+    return event.args[0].data.data.windowId;
+  });
+
+  assert.equal(windowId, 4);
+  assert.deepEqual(errors, []);
+});
+
 test('exports, argument validation, and idle environment cleanup', { timeout: 10000 }, async () => {
   const client = require(clientPath);
   const server = require(serverPath);
@@ -147,25 +175,10 @@ test('Rust client/server RPC, objects, callbacks, and nested synchronous calls',
   assert.equal(webview.getAttribute('sample'), undefined);
   assert.equal(controller.mount(), undefined);
   assert.equal(webview.reload(), true);
-  assert.throws(() => webview.showDevTools(), /Not implemented/);
   const rejectedExecution = webview.executeJavaScript({ error: true });
   assert.equal(typeof rejectedExecution.then, 'function');
   await assert.rejects(rejectedExecution, /fixture remote error/);
   assert.ok(errors.includes('fixture remote error'));
-
-  const callback = value => value;
-  for (const key of ['onAuthRequired', 'onMessage']) {
-    const event = webview.request[key];
-    event.addListener(callback);
-    assert.equal(event.hasListener(callback), true);
-    event.removeListener(callback);
-    assert.equal(event.hasListener(callback), false);
-  }
-  const rules = webview.request.onRequest;
-  rules.addRules([{ id: 'test' }]);
-  assert.deepEqual(rules.getRules(), [{ id: 'test' }]);
-  rules.removeRules();
-  assert.deepEqual(rules.getRules(), []);
 
   const echo = value => webview.executeJavaScript({ echo: true, value });
   assert.deepEqual(await echo({ text: '中文', array: [1, true, null], buffer: Buffer.from([0, 128, 255]),

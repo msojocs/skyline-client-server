@@ -42,6 +42,10 @@ if (webview.parentElement) {
 `send(channel, ...args)` 转发到真实 Electron webview，远端调用失败会同步抛出。
 这两个接口需要配套更新 `render-client.node` 和包含父节点句柄编码的 `render-server.js`。
 
+webview 回调中的 `Event` 代理提供只读 `channel` 和 `args` 属性，读取时通过 RPC 获取远端事件字段。
+`ipc-message` 监听器可用 `event.channel` 分发消息，再从 `event.args[0]` 读取消息内容；
+`args` 中的数组和对象沿用现有 RPC 解码规则。这两个属性只需更新 `render-client.node`。
+
 ## executeJavaScript
 
 native client 保留 Electron webview 的 Promise 语义：

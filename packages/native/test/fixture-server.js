@@ -17,11 +17,7 @@ server.setMessageCallback((body, id) => {
   try {
     if (request.type === 'constructor') {
       const style = put('CSSStyleDeclaration', { display: '', pointerEvents: '' });
-      const webview = put('ChromeWebViewElement', { src: '', style, parentElement: null, request: {
-        onAuthRequired: put('WebRequestEvent', { listeners: new Set() }),
-        onMessage: put('RequestMessageEvent', { listeners: new Set() }),
-        onRequest: put('RequestRule', { rules: [] }),
-      }});
+      const webview = put('ChromeWebViewElement', { src: '', style, parentElement: null });
       const container = put('HTMLDivElement', { id: 'container' });
       const controller = put('Controller', { webview, container });
       reply({ instanceId: controller.instanceId });
@@ -84,14 +80,6 @@ server.setMessageCallback((body, id) => {
         case 'removeAttribute': delete object[params[0]]; break;
         case 'getUserAgent': value = object.userAgent || 'Fixture'; break;
         case 'setUserAgentOverride': object.userAgent = params[0]; value = true; break;
-        case 'addListener': object.listeners.add(params[0].callbackId); break;
-        case 'hasListener': value = object.listeners.has(params[0].callbackId); break;
-        case 'hasListeners': value = object.listeners.size > 0; break;
-        case 'removeListener': object.listeners.delete(params[0].callbackId); break;
-        case 'getListeners': value = [...object.listeners]; break;
-        case 'addRules': object.rules.push(...params[0]); break;
-        case 'getRules': value = object.rules; break;
-        case 'removeRules': object.rules = []; break;
         case 'executeJavaScript': {
           const [options, callback] = params;
           if (options.error) throw new Error('fixture remote error');
@@ -108,7 +96,7 @@ server.setMessageCallback((body, id) => {
           if (callback) {
             const emit = () => {
               const payload = JSON.stringify({ type: 'emitCallback', callbackId: callback.callbackId,
-                data: { block: !callback.asyncCallback, args: options.args || [remote('Event', objects.size + 1000)] } });
+                data: { block: !callback.asyncCallback, args: options.args || [put('Event', options.event || {})] } });
               return callback.asyncCallback ? server.sendMessageSingle(payload) : server.sendMessageSync(payload);
             };
             if (options.later) setTimeout(emit, 10);

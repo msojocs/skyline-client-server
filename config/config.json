@@ -1,4 +1,8 @@
 {
     "shared-memory": "1.0.4",
-    "devtools": "在package.json里面"
+    "devtools": "在package.json里面",
+    "electron": {
+        "devtoolsVersion": "2.02.2608070",
+        "urlTemplate": "https://devtools.wxqcloud.qq.com.cn/WechatWebDev/release/be1ec64cf6184b0fa64091919793f068/wechat_devtools_${version}_win32_x64.exe"
+    }
 }

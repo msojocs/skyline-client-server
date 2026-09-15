@@ -39,7 +39,6 @@ WORKDIR /build
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY tools/prepare ./tools/prepare
 COPY packages/typescript/package.json ./packages/typescript/package.json
 RUN pnpm install --frozen-lockfile --filter ./packages/typescript
 
@@ -64,19 +63,28 @@ RUN mkdir -p cache node_modules/skyline-addon && \
     mv documentstart/code/package.nw/js/extensions/inject/documentstart/index.js documentstart/ && \
     rm -rf node_modules/skyline-addon/code documentstart/code cache
 
+FROM node:20-bookworm AS electron-builder
+
+WORKDIR /build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl p7zip-full && \
+    rm -rf /var/lib/apt/lists/*
+COPY package.json ./
+COPY config/config.json ./config/config.json
+COPY tools/parse-config.js tools/download-electron-win.sh ./tools/
+RUN bash tools/download-electron-win.sh
+
 FROM ubuntu:22.04 AS source
 
 ARG APP_ROOT="packages/electron"
 WORKDIR /workspace
+COPY --from=electron-builder /build/cache/electron-win32-x64 electron
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
-    apt update && apt install -y wget unzip && \
-    mkdir -p electron/app/node_modules/sharedMemory && \
+    apt update && apt install -y wget && \
+    mkdir -p electron/app/node_modules/sharedMemory electron/resources && \
+    ln -s ../app electron/resources/app && \
     wget -c "https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node" -O electron/app/node_modules/sharedMemory/sharedMemory.node && \
-    mkdir -p cache && \
-    wget -c "https://github.com/electron/electron/releases/download/v36.6.0/electron-v36.6.0-win32-x64.zip" -O "cache/electron-win32-x64.zip" && \
-    mkdir -p electron && unzip "cache/electron-win32-x64.zip" -d electron && \
-    rm -rf cache && \
     chmod -R a+X electron
 # Vite emits the renderer server and the combined Electron main-process server
 # into the same package directory.

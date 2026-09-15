@@ -59,15 +59,16 @@ jobs:
           Copy-Item (Get-ChildItem "tmp/windows-artifact/skyline-server-*.node" | Select-Object -First 1).FullName "$destination/render-server.node"
           node --test packages/native/test/native.test.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Test Electron 36.6.0 Loading
+      - name: Download Electron From WeChat Devtools
+        shell: bash
+        run: |
+          export PATH="/c/Program Files/7-Zip:$PATH"
+          bash tools/download-electron-win.sh
+      - name: Test WeChat Devtools Electron Loading
         shell: pwsh
         run: |
-          npm install --prefix tmp/electron-test --ignore-scripts electron@36.6.0
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tmp/electron-test/node_modules/electron/install.js
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:ELECTRON_RUN_AS_NODE = "1"
-          & tmp/electron-test/node_modules/electron/dist/electron.exe packages/native/test/electron-smoke.js
+          & cache/electron-win32-x64/electron.exe packages/native/test/electron-smoke.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   build-msvc:

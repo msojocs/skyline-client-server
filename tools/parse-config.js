@@ -7,6 +7,12 @@ const config = require("../config/config.json");
 
 // 16.17.0后可以使用util.parseArgs，目前是16.11.0
 const options = {
+    '--get-electron-url': {
+        type: 'boolean',
+    },
+    '--get-electron-devtools-version': {
+        type: 'boolean',
+    },
     '--get-devtools-version': {
         type: 'boolean',
     },
@@ -43,6 +49,14 @@ for (let i = 0; i < args.length; i++) {
     }
 }
 
+if (configArg['get-electron-url']) {
+    console.log(config.electron.urlTemplate.replace(/\$\{version\}/g, config.electron.devtoolsVersion));
+    exit(0);
+}
+if (configArg['get-electron-devtools-version']) {
+    console.log(config.electron.devtoolsVersion);
+    exit(0);
+}
 if (configArg['get-devtools-version']) {
     console.log(pkg.version.split("-")[0].replace(/\./g, ''));
     exit(0);

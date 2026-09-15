@@ -200,6 +200,45 @@ test('renderer adapters retain webview handles, worklet metadata and replaceable
   expect(sendSync).toHaveBeenCalledOnce();
 });
 
+test.each([
+  'parentElement_propertyResult',
+  'querySelector_dynamicResult',
+])('renderer HTMLDivElement results preserve their type regardless of action: %s', (action) => {
+  class HTMLDivElement {
+    id = 'container';
+    children: unknown[] = [];
+  }
+  const parent = new HTMLDivElement();
+  const webview = { parentElement: parent };
+  parent.children.push(webview);
+
+  const handle = hookResult(action, parent);
+  expect(handle.instanceType).toBe('HTMLDivElement');
+  expect(useInstanceManage().getInstance(handle.instanceId)).toBe(parent);
+  expect(hookResult('parentElement_propertyResult', parent)).toEqual(handle);
+  expect(hookResult('nodes_dynamicResult', [parent, parent])).toEqual([handle, handle]);
+  expect(hookResult('payload_staticResult', { parent, count: 2, empty: null })).toEqual({
+    parent: handle, count: 2, empty: null,
+  });
+  expect(useInstanceManage().instanceCount).toBe(1);
+  expect(hookArgument('send', [handle])).toEqual([parent]);
+  expect(hookResult(action, null)).toBeNull();
+});
+
+test('renderer HTMLDivElement callbacks reuse the same typed handle as return values', () => {
+  class HTMLDivElement {}
+  const element = new HTMLDivElement();
+  const handle = hookResult('element_propertyResult', element);
+  expect(handle.instanceType).toBe('HTMLDivElement');
+  const send = vi.fn();
+  vi.stubGlobal('send', send);
+  const params: any[] = ['event', { callbackId: 1, asyncCallback: true }];
+  hookArgument('addEventListener', params);
+  params[1](element);
+  expect(JSON.parse(send.mock.calls[0][0]).data.args).toEqual([handle]);
+  expect(useInstanceManage().instanceCount).toBe(1);
+});
+
 test('renderer asynchronous event callbacks use message ID zero', () => {
   const send = vi.fn();
   const sendSync = vi.fn();

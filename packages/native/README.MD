@@ -23,6 +23,25 @@ pnpm --filter nt-native test
 
 `compile:windows` 的目标是 `x86_64-pc-windows-gnu`，需要 Linux 上安装 `gcc-mingw-w64-x86-64`。Rust 的 `napi/dyn-symbols` 特性使模块直接从 Node/Electron 加载 N-API，不需要下载或链接 Electron 的 `node.lib`。
 
+## webview 挂载状态与消息发送
+
+`controller.webview.parentElement` 是只读属性，返回远端父节点的对象代理；未挂载时，服务端的 `null`
+按现有 RPC 规则解码为 `undefined`。
+父节点通过句柄传输，不递归序列化 DOM，重复读取会复用同一代理。
+服务端保留 `HTMLDivElement` 类型，由 Rust 层创建同名代理，目前只提供只读 `id` 属性。
+属性、方法返回值和回调参数均使用这条类型映射，不依赖 `parentElement` 属性名。普通数据对象继续按值传输。
+
+```js
+const webview = controller.webview
+controller.mount()
+if (webview.parentElement) {
+  webview.send('host___message__', { cmd: '23', data: { command: 'SAC0', data: options } })
+}
+```
+
+`send(channel, ...args)` 转发到真实 Electron webview，远端调用失败会同步抛出。
+这两个接口需要配套更新 `render-client.node` 和包含父节点句柄编码的 `render-server.js`。
+
 ## executeJavaScript
 
 native client 保留 Electron webview 的 Promise 语义：

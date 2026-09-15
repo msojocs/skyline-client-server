@@ -29,6 +29,7 @@ const remoteInstanceTypes: Record<string, string> = {
     CSSStyleDeclaration: 'CSSStyleDeclaration',
     ChromeWebViewElement: 'ChromeWebViewElement',
     WebViewElement: 'ChromeWebViewElement',
+    HTMLDivElement: 'HTMLDivElement',
     WebRequestEvent: 'WebRequestEvent',
     Event: 'Event',
     Controller: 'Controller',
@@ -179,7 +180,7 @@ export const hookResult = (action: string, result: any, context = rendererContex
             const instanceType = getRemoteInstanceType(element, context)
             if (instanceType) {
                 result[i] = {
-                    instanceId: context.instances.setInstance(element),
+                    instanceId: context.instances.getInstanceId(element) ?? context.instances.setInstance(element),
                     instanceType,
                 }
             }
@@ -190,10 +191,11 @@ export const hookResult = (action: string, result: any, context = rendererContex
         }
     }
     else if (typeof result === 'object') {
+        if (result === null) return null
         const instanceType = getRemoteInstanceType(result, context)
         if (instanceType) {
             const { getInstanceId, setInstance } = context.instances
-            const id = context.renderer ? setInstance(result) : getInstanceId(result) ?? setInstance(result)
+            const id = getInstanceId(result) ?? setInstance(result)
             return { instanceId: id, instanceType }
         }
         if (context.renderer) {

@@ -20,13 +20,52 @@ async function availablePort() {
   return port;
 }
 
-async function fixture(t) {
+async function fixture(t, onMessage) {
   const port = await availablePort();
   const worker = new Worker(path.join(__dirname, 'fixture-server.js'), { workerData: { module: serverPath, port } });
+  if (onMessage) worker.on('message', onMessage);
   t.after(async () => { worker.postMessage('stop'); await once(worker, 'exit'); });
   await once(worker, 'message');
   return port;
 }
+
+test('webview parentElement tracks mounting and send forwards the channel and all arguments', { timeout: 10000 }, async t => {
+  let receive;
+  const received = new Promise(resolve => { receive = resolve; });
+  const port = await fixture(t, message => {
+    if (message.type === 'webview-message') receive(message.params);
+  });
+  const { Controller } = require(clientPath);
+  t.after(() => Controller.disconnect());
+  Controller.connect('127.0.0.1', port);
+  const errors = [];
+  const controller = new Controller(message => errors.push(message));
+  const webview = controller.webview;
+
+  assert.equal(webview.parentElement, undefined);
+  controller.mount();
+  const parent = webview.parentElement;
+  assert.equal(parent.constructor.name, 'HTMLDivElement');
+  assert.equal(parent.id, 'container');
+  assert.equal(parent, webview.parentElement);
+  assert.equal(Reflect.set(parent, 'id', 'changed'), false);
+  assert.equal(parent.id, 'container');
+  assert.equal(parent.parentElement, undefined);
+  assert.equal(parent.reload, undefined);
+  assert.equal(Reflect.set(webview, 'parentElement', null), false);
+
+  const payload = { cmd: '23', data: { command: 'SAC0', data: { windowId: 4, width: 390, dpr: 2 } } };
+  const send = webview.send;
+  assert.equal(send('host___message__', payload, ['中文', 42], false), undefined);
+  assert.deepEqual(await received, ['host___message__', payload, ['中文', 42], false]);
+  assert.throws(() => webview.send(42), /Channel must be a string/);
+  assert.ok(errors.includes('Channel must be a string'));
+
+  controller.unmount();
+  assert.equal(webview.parentElement, undefined);
+  controller.mount();
+  assert.equal(webview.parentElement, parent);
+});
 
 test('exports, argument validation, and idle environment cleanup', { timeout: 10000 }, async () => {
   const client = require(clientPath);

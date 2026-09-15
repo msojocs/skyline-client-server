@@ -1,0 +1,151 @@
+{
+  "collectedAt": "2026-09-15T07:17:16.199Z",
+  "host": {
+    "platform": "win32",
+    "electron": "36.6.0",
+    "ready": "complete",
+    "guest": {
+      "id": 3,
+      "isConnected": true,
+      "parentId": "container",
+      "sendType": "function",
+      "partition": "persist:skyline_appservice_0",
+      "preload": "file:///Z:/home/msojocs/github/wechat-web-devtools-linux/resources/app/js/extensions/inject/preload/electron/index.js"
+    }
+  },
+  "guest": {
+    "ready": "complete",
+    "platform": "win32",
+    "preloadGlobalType": "object",
+    "messagerType": "object",
+    "appExists": true,
+    "currentPageCount": 0,
+    "skylineShellType": "undefined",
+    "frames": [
+      {
+        "path": "/appservice/s0/_sessionId/simulator-app-session-s0/mainframe",
+        "skylineWindowCount": 0
+      },
+      {
+        "path": "/appservice/instanceframe",
+        "skylineWindowCount": 0
+      },
+      {
+        "path": "/appservice/appContext",
+        "skylineWindowCount": null
+      },
+      {
+        "path": "/appservice/app_xrframe_renderContext",
+        "skylineWindowCount": null
+      },
+      {
+        "path": "/appservice/app_sub_debugContext",
+        "skylineWindowCount": null
+      }
+    ]
+  },
+  "preloadMessager": {
+    "name": "s0|WEBVIEW_APPSERVICE",
+    "logicReady": true,
+    "pendingCount": 0,
+    "skylineListenerCount": 1,
+    "clients": [
+      "MAIN",
+      "RENDERER_PROJECT"
+    ]
+  },
+  "linux": {
+    "platform": "linux",
+    "pid": 1226804,
+    "userData": "/home/msojocs/.config/wechat-devtools",
+    "project": {
+      "barriers": [
+        {
+          "id": 4,
+          "open": false
+        }
+      ],
+      "appRoute": {
+        "openType": "appLaunch",
+        "status": "done",
+        "skyline": {
+          "animated": false,
+          "delta": 0,
+          "taskId": 0
+        }
+      },
+      "pages": [
+        {
+          "id": 4,
+          "path": "pages/index/index",
+          "ready": false,
+          "renderer": "skyline"
+        }
+      ]
+    },
+    "proxy": {
+      "clientWaiters": [],
+      "detachedQueue": [
+        {
+          "channel": "__message__",
+          "cmd": "HELLO",
+          "command": null,
+          "createWindow": null
+        },
+        {
+          "channel": "__opened__",
+          "cmd": null,
+          "command": null,
+          "createWindow": null
+        },
+        {
+          "channel": "__message__",
+          "cmd": "23",
+          "command": "SAC2",
+          "createWindow": null
+        },
+        {
+          "channel": "__message__",
+          "cmd": "23",
+          "command": "SAC0",
+          "createWindow": {
+            "dpr": 2,
+            "height": 844,
+            "safeAreaInsets": {
+              "bottom": 34,
+              "left": 0,
+              "right": 0,
+              "top": 47
+            },
+            "sharedMemoryKey": "skyline_4_1789455317491",
+            "width": 390,
+            "windowId": 4
+          }
+        },
+        {
+          "channel": "__message__",
+          "cmd": "48",
+          "command": "AC11",
+          "createWindow": null
+        }
+      ],
+      "flushTimerActive": false,
+      "logicReady": true,
+      "messageQueueLength": 0,
+      "messagerName": "s0|RENDERER_PROJECT",
+      "origin": {
+        "hasParentElement": false,
+        "isConnected": true,
+        "parentElementType": "undefined",
+        "sendType": "undefined"
+      },
+      "proxyReady": true
+    },
+    "pageframe": {
+      "title": "skyline_renderer",
+      "ready": "complete",
+      "canvasCount": 0,
+      "rendererInstanceType": "undefined"
+    }
+  }
+}

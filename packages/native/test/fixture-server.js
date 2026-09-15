@@ -17,12 +17,13 @@ server.setMessageCallback((body, id) => {
   try {
     if (request.type === 'constructor') {
       const style = put('CSSStyleDeclaration', { display: '', pointerEvents: '' });
-      const webview = put('ChromeWebViewElement', { src: '', style, request: {
+      const webview = put('ChromeWebViewElement', { src: '', style, parentElement: null, request: {
         onAuthRequired: put('WebRequestEvent', { listeners: new Set() }),
         onMessage: put('RequestMessageEvent', { listeners: new Set() }),
         onRequest: put('RequestRule', { rules: [] }),
       }});
-      const controller = put('Controller', { webview });
+      const container = put('HTMLDivElement', { id: 'container' });
+      const controller = put('Controller', { webview, container });
       reply({ instanceId: controller.instanceId });
       return;
     }
@@ -36,7 +37,17 @@ server.setMessageCallback((body, id) => {
       value = { called: request.action, params };
     } else {
       switch (request.action) {
-        case 'mount': case 'unmount': case 'setText': break;
+        case 'mount':
+          objects.get(object.webview.instanceId).parentElement = object.container;
+          break;
+        case 'unmount':
+          objects.get(object.webview.instanceId).parentElement = null;
+          break;
+        case 'setText': break;
+        case 'send':
+          if (typeof params[0] !== 'string') throw new Error('Channel must be a string');
+          parentPort.postMessage({ type: 'webview-message', params });
+          break;
         case 'setDialogCallback':
           object.dialogCallback = params[0];
           break;

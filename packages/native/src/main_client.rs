@@ -69,8 +69,7 @@ const CLASSES: &[Class] = &[
     Class {
         wire_name: "Session",
         name: "Session",
-        methods: &[
-        ],
+        methods: &[],
         properties: &[("extensions", true, false), ("webRequest", true, false)],
         webview_element: false,
     },

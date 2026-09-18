@@ -325,7 +325,8 @@ fn invoke(state: &Rc<State>, ctx: &CallContext, name: &str, id: u64) -> Result<J
     if ASYNC_METHODS.contains(&name) {
         let request = (|| {
             let body = json!({"type": "dynamic", "action": name,
-                "data": {"instanceId": id, "params": arguments(state, ctx)?}}).to_string();
+                "data": {"instanceId": id, "params": arguments(state, ctx)?}})
+            .to_string();
             state.start_request(&body).map(|(_, pending)| pending)
         })();
         let task = match request {
@@ -348,9 +349,14 @@ fn invoke(state: &Rc<State>, ctx: &CallContext, name: &str, id: u64) -> Result<J
         };
         return Ok(unsafe { JsUnknown::from_raw_unchecked(state.env.raw(), promise) });
     }
-    if name == "showDevTools" { return Err(error("Not implemented")); }
-    let result = state.request(&json!({"type": "dynamic", "action": name,
-        "data": {"instanceId": id, "params": arguments(state, ctx)?}}).to_string())?;
+    if name == "showDevTools" {
+        return Err(error("Not implemented"));
+    }
+    let result = state.request(
+        &json!({"type": "dynamic", "action": name,
+        "data": {"instanceId": id, "params": arguments(state, ctx)?}})
+        .to_string(),
+    )?;
     state.decode(&result["returnValue"])
 }
 
@@ -364,7 +370,9 @@ fn method_function(
     let weak = Rc::downgrade(state);
     let method_name = name.to_owned();
     state.env.create_function_from_closure(name, move |ctx| {
-        let state = weak.upgrade().ok_or_else(|| error("Environment has closed"))?;
+        let state = weak
+            .upgrade()
+            .ok_or_else(|| error("Environment has closed"))?;
         let (id, epoch) = match binding {
             Some(binding) => binding,
             None => (instance(&state, &ctx)?, state.epoch.get()),
@@ -475,12 +483,18 @@ fn remote_object(state: &Rc<State>, id: u64) -> Result<JsUnknown> {
     let object = state.env.create_object()?;
     let epoch = state.epoch.get();
     define_value(
-        state.env, &object, "instanceId",
-        state.env.create_double(id as f64)?.into_unknown(), false,
+        state.env,
+        &object,
+        "instanceId",
+        state.env.create_double(id as f64)?.into_unknown(),
+        false,
     )?;
     define_value(
-        state.env, &object, "__skylineEpoch",
-        state.env.create_double(epoch as f64)?.into_unknown(), false,
+        state.env,
+        &object,
+        "__skylineEpoch",
+        state.env.create_double(epoch as f64)?.into_unknown(),
+        false,
     )?;
 
     let mut handler = state.env.create_object()?;
@@ -502,10 +516,13 @@ fn remote_object(state: &Rc<State>, id: u64) -> Result<JsUnknown> {
             return Err(error("Remote object belongs to a closed connection"));
         }
         report(&state, || {
-            let result = state.request(&json!({
-                "type": "dynamicProperty", "action": name,
-                "data": {"instanceId": id, "propertyAction": "get"}
-            }).to_string())?;
+            let result = state.request(
+                &json!({
+                    "type": "dynamicProperty", "action": name,
+                    "data": {"instanceId": id, "propertyAction": "get"}
+                })
+                .to_string(),
+            )?;
             let value = &result["returnValue"];
             if value["instanceType"].as_str() == Some("function") {
                 let method = method_function(&state, &name, Some((id, epoch)))?;

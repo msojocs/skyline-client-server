@@ -20,8 +20,8 @@ Windows 运行时来源在 `config/config.json` 的 `electron` 中配置，目�
 Electron 主进程会在 `9222` 端口开启远程调试；可通过 `REMOTE_DEBUGGING_PORT` 覆盖端口。
 
 ### Docker
-> [!WARNING]
-> Docker存在字体渲染问题，暂未解决。
+
+Docker 使用 Wine 11.0 stable，并直接复制仓库 `tools/wine-fonts/` 中配套的 `dwrite.dll`、`dwrite.so` 和字体资源。`SkylineFallback.ttf` 包含与 Linux 编辑器一致的 Noto 彩色 emoji。容器启动时会向当前 Wine prefix 注册字体，已有 prefix 也会更新到镜像中的字体路径；无需重新下载旧版 DirectWrite 修复 DLL。字体生成、运行库源码补丁和验证方式见 [字体资源说明](tools/wine-fonts/README.md)。
 
 ```shell
 docker run -d \

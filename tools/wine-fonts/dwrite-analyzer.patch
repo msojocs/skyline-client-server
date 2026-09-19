@@ -1,0 +1,75 @@
+--- a/dlls/dwrite/analyzer.c
++++ b/dlls/dwrite/analyzer.c
+@@ -232,6 +232,11 @@
+ }
+ system_fallback_config[] =
+ {
++    /* Skyline's renderer may keep a mixed CJK/emoji string in one text run.
++       The composite outline font keeps that run drawable when the base font
++       has no glyph for one of its code points. */
++    { "0000-10FFFF",             L"Skyline Fallback" },
++
+     /* Latin, Combining Diacritical Marks */
+     { "0000-007F, 0080-00FF, 0100-017F, 0180-024F, "
+       "0250-02AF, 02B0-02FF, 0300-036F", L"Tahoma" },
+@@ -308,8 +313,17 @@
+     { "1C00-1C4F",              L"Noto Sans Lepcha" },
+     { "1C50-1C7F",              L"Noto Sans Ol Chiki" },
+ 
+-    /* Dingbats - 2700-27BF */
+-    { "2700-27BF",              L"Noto Sans Symbols2, Noto Sans Symbols 2" },
++    /* Emoji and pictographs fallback ranges. */
++    { "2194-2199, 231A-231B, 2328, 23CF, 23E9-23FA, 24C2, "
++      "25AA-25AB, 25B6, 25C0, 25FB-25FE, 2600-27BF, "
++      "2934-2935, 2B00-2BFF, 3030, 303D, 3297, 3299, "
++      "1F000-1FAFF",            L"Skyline Fallback, Symbola, Segoe UI Emoji, Noto Color Emoji, Noto Sans Symbols2, Noto Sans Symbols 2" },
++
++    /* Mathematical operators and symbols. */
++    { "2200-22FF",              L"Skyline Fallback, Symbola, DejaVu Sans, Noto Sans CJK SC" },
++
++    /* Bopomofo and Bopomofo Extended */
++    { "3100-312F, 31A0-31BF",   L"Noto Sans CJK TC, Noto Sans CJK SC, Noto Sans CJK JP, Noto Sans CJK KR" },
+ 
+     { "2C80-2CFF",              L"Noto Sans Coptic" },
+     { "2D30-2D7F",              L"Noto Sans Tifinagh" },
+@@ -377,7 +391,7 @@
+     { "FF00-FFEF",              L"Noto Sans CJK KR", L"ko" },
+     { "FF00-FFEF",              L"Noto Sans CJK JP" },
+ 
+-    { "1F800-1F8FF",            L"Noto Sans Symbols2, Noto Sans Symbols 2" },
++    { "1F800-1F8FF",            L"Skyline Fallback, Symbola, Segoe UI Emoji, Noto Color Emoji, Noto Sans Symbols2, Noto Sans Symbols 2" },
+ };
+ 
+ struct text_source_context
+@@ -2632,6 +2646,22 @@
+     if (!basecollection)
+         basecollection = fallback->systemcollection;
+ 
++    /* Skyline keeps mixed CJK/emoji text in a single run and passes no base
++       family.  Use the composite outline font for that run so DirectWrite
++       does not return a color emoji face that cannot rasterize the rest of
++       the string on this Wine build. */
++    if (!basefamily || !*basefamily)
++    {
++        if (SUCCEEDED(create_matching_font(fallback->systemcollection, L"Skyline Fallback", weight, style, stretch,
++                &IID_IDWriteFont, (void **)&font)))
++        {
++            *mapped_length = length;
++            *ret_font = (IDWriteFont *)font;
++            *scale = 1.0f;
++            return S_OK;
++        }
++    }
++
+     if (basefamily && *basefamily)
+     {
+         if (SUCCEEDED(create_matching_font(basecollection, basefamily, weight, style, stretch,
+@@ -3086,7 +3116,7 @@
+     IDWriteFontFallbackBuilder *builder_iface;
+     unsigned int range_count, families_count;
+     IDWriteFactory7 *factory = param;
+-    DWRITE_UNICODE_RANGE ranges[16];
++    DWRITE_UNICODE_RANGE ranges[32];
+     WCHAR *families[4], *str;
+     HRESULT hr;
+     size_t i;

@@ -1,0 +1,237 @@
+--- a/dlls/dwrite/font.c
++++ b/dlls/dwrite/font.c
+@@ -1903,34 +1903,156 @@
+     return E_NOTIMPL;
+ }
+ 
++/* sbix stores the original Noto PNG glyphs; retain the table until release. */
++struct sbix_image_context
++{
++    struct dwrite_fonttable table;
++};
++
++struct sbix_image
++{
++    const BYTE *data;
++    UINT32 size, ppem, width, height;
++    INT16 x, y;
++};
++
++static UINT16 sbix_u16(const BYTE *p)
++{
++    return (p[0] << 8) | p[1];
++}
++
++static UINT32 sbix_u32(const BYTE *p)
++{
++    return ((UINT32)p[0] << 24) | ((UINT32)p[1] << 16) | (p[2] << 8) | p[3];
++}
++
++static BOOL sbix_png_image(const struct dwrite_fonttable *table, UINT16 glyph, UINT32 glyph_count,
++        UINT32 requested_ppem, struct sbix_image *image)
++{
++    const BYTE *data = table->data, *record, *png;
++    UINT32 count, i, strike, next, start, end, ppem, distance, best = ~0u;
++    BOOL found = FALSE;
++
++    if (!data || table->size < 8 || glyph >= glyph_count || sbix_u16(data) != 1) return FALSE;
++    count = sbix_u32(data + 4);
++    if (count > (table->size - 8) / 4) return FALSE;
++    for (i = 0; i < count; ++i)
++    {
++        strike = sbix_u32(data + 8 + 4 * i);
++        next = i + 1 < count ? sbix_u32(data + 12 + 4 * i) : table->size;
++        if (strike < 8 + 4 * count || strike > next || next > table->size || next - strike < 4 + 4 * (glyph_count + 1)) continue;
++        ppem = sbix_u16(data + strike);
++        if (!ppem) continue;
++        start = sbix_u32(data + strike + 4 + 4 * glyph);
++        end = sbix_u32(data + strike + 8 + 4 * glyph);
++        if (start < 4 + 4 * (glyph_count + 1) || start > end || end > next - strike || end - start < 41) continue;
++        record = data + strike + start;
++        if (memcmp(record + 4, "png ", 4)) continue;
++        png = record + 8;
++        if (memcmp(png, "\x89PNG\r\n\x1a\n", 8) || sbix_u32(png + 8) != 13 || memcmp(png + 12, "IHDR", 4)) continue;
++        distance = ppem > requested_ppem ? ppem - requested_ppem : requested_ppem - ppem;
++        if (found && distance >= best) continue;
++        image->width = sbix_u32(png + 16);
++        image->height = sbix_u32(png + 20);
++        if (!image->width || !image->height || image->width > 65535 || image->height > 65535) continue;
++        image->data = png;
++        image->size = end - start - 8;
++        image->ppem = ppem;
++        image->x = (INT16)sbix_u16(record);
++        image->y = (INT16)sbix_u16(record + 2);
++        best = distance;
++        found = TRUE;
++    }
++    return found;
++}
++
+ static HRESULT WINAPI dwritefontface4_GetGlyphImageFormats_(IDWriteFontFace5 *iface, UINT16 glyph,
+     UINT32 ppem_first, UINT32 ppem_last, DWRITE_GLYPH_IMAGE_FORMATS *formats)
+ {
+-    FIXME("%p, %u, %u, %u, %p: stub\n", iface, glyph, ppem_first, ppem_last, formats);
+-
+-    return E_NOTIMPL;
++    struct dwrite_fontface *fontface = impl_from_IDWriteFontFace5(iface);
++    struct dwrite_fonttable table = { .exists = TRUE };
++    struct sbix_image image;
++
++    if (!formats) return E_INVALIDARG;
++    *formats = DWRITE_GLYPH_IMAGE_FORMATS_NONE;
++    if (ppem_first > ppem_last || glyph >= IDWriteFontFace5_GetGlyphCount(iface)) return E_INVALIDARG;
++    *formats = fontface->glyph_image_formats & ~DWRITE_GLYPH_IMAGE_FORMATS_PNG;
++    if (get_fontface_table(iface, DWRITE_MAKE_OPENTYPE_TAG('s','b','i','x'), &table))
++    {
++        if (sbix_png_image(&table, glyph, IDWriteFontFace5_GetGlyphCount(iface), ppem_first, &image))
++            *formats |= DWRITE_GLYPH_IMAGE_FORMATS_PNG;
++        IDWriteFontFace5_ReleaseFontTable(iface, table.context);
++    }
++    return S_OK;
+ }
+ 
+ static DWRITE_GLYPH_IMAGE_FORMATS WINAPI dwritefontface4_GetGlyphImageFormats(IDWriteFontFace5 *iface)
+ {
+-    struct dwrite_fontface *fontface = impl_from_IDWriteFontFace5(iface);
+-
+-    TRACE("%p.\n", iface);
+-
+-    return fontface->glyph_image_formats;
++    return impl_from_IDWriteFontFace5(iface)->glyph_image_formats;
+ }
+ 
+ static HRESULT WINAPI dwritefontface4_GetGlyphImageData(IDWriteFontFace5 *iface, UINT16 glyph,
+     UINT32 ppem, DWRITE_GLYPH_IMAGE_FORMATS format, DWRITE_GLYPH_IMAGE_DATA *data, void **context)
+ {
+-    FIXME("%p, %u, %u, %d, %p, %p: stub\n", iface, glyph, ppem, format, data, context);
+-
+-    return E_NOTIMPL;
++    struct dwrite_fontface *fontface = impl_from_IDWriteFontFace5(iface);
++    struct sbix_image_context *storage;
++    struct sbix_image image;
++    DWRITE_GLYPH_METRICS metrics;
++    LONG advance, vertical_origin, vertical_advance;
++    HRESULT hr;
++
++    if (!data || !context) return E_INVALIDARG;
++    memset(data, 0, sizeof(*data));
++    *context = NULL;
++    if (format != DWRITE_GLYPH_IMAGE_FORMATS_PNG) return E_NOTIMPL;
++    if (glyph >= IDWriteFontFace5_GetGlyphCount(iface)) return E_INVALIDARG;
++    if (!(storage = calloc(1, sizeof(*storage)))) return E_OUTOFMEMORY;
++    storage->table.exists = TRUE;
++    if (!get_fontface_table(iface, DWRITE_MAKE_OPENTYPE_TAG('s','b','i','x'), &storage->table))
++    {
++        free(storage);
++        return DWRITE_E_NOCOLOR;
++    }
++    if (!sbix_png_image(&storage->table, glyph, IDWriteFontFace5_GetGlyphCount(iface), ppem, &image))
++    {
++        IDWriteFontFace5_ReleaseFontTable(iface, storage->table.context);
++        free(storage);
++        return DWRITE_E_NOCOLOR;
++    }
++    data->imageData = image.data;
++    data->imageDataSize = image.size;
++    data->uniqueDataId = ((image.ppem & 0xffff) << 16) | glyph;
++    data->pixelsPerEm = image.ppem;
++    data->pixelSize.width = image.width;
++    data->pixelSize.height = image.height;
++    data->horizontalLeftOrigin.x = -image.x;
++    data->horizontalLeftOrigin.y = image.height + image.y;
++    hr = IDWriteFontFace5_GetDesignGlyphMetrics(iface, &glyph, 1, &metrics, FALSE);
++    if (FAILED(hr) || !fontface->metrics.designUnitsPerEm)
++    {
++        IDWriteFontFace5_ReleaseFontTable(iface, storage->table.context);
++        free(storage);
++        memset(data, 0, sizeof(*data));
++        return FAILED(hr) ? hr : DWRITE_E_FILEFORMAT;
++    }
++    advance = (LONG)((double)metrics.advanceWidth * image.ppem / fontface->metrics.designUnitsPerEm + 0.5);
++    vertical_origin = (LONG)((double)metrics.verticalOriginY * image.ppem / fontface->metrics.designUnitsPerEm);
++    vertical_advance = (LONG)((double)metrics.advanceHeight * image.ppem / fontface->metrics.designUnitsPerEm + 0.5);
++    data->horizontalRightOrigin = data->horizontalLeftOrigin;
++    data->horizontalRightOrigin.x += advance;
++    data->verticalTopOrigin.x = data->verticalBottomOrigin.x = data->horizontalLeftOrigin.x + advance / 2;
++    data->verticalTopOrigin.y = data->horizontalLeftOrigin.y - vertical_origin;
++    data->verticalBottomOrigin.y = data->verticalTopOrigin.y + vertical_advance;
++    *context = storage;
++    return S_OK;
+ }
+ 
+ static void WINAPI dwritefontface4_ReleaseGlyphImageData(IDWriteFontFace5 *iface, void *context)
+ {
+-    FIXME("%p, %p: stub\n", iface, context);
++    struct sbix_image_context *storage = context;
++    if (!storage) return;
++    IDWriteFontFace5_ReleaseFontTable(iface, storage->table.context);
++    free(storage);
+ }
+ 
+ static UINT32 WINAPI dwritefontface5_GetFontAxisValueCount(IDWriteFontFace5 *iface)
+--- a/dlls/dwrite/opentype.c
++++ b/dlls/dwrite/opentype.c
+@@ -2224,6 +2224,15 @@
+         IDWriteFontFileStream_ReleaseFileFragment(stream_desc->stream, colr.context);
+     }
+ 
++    /* Bitmap colour fonts have no COLR/CPAL palette. */
++    memset(&colr, 0, sizeof(colr));
++    opentype_get_font_table(stream_desc, MS_SBIX_TAG, &colr);
++    if (colr.data)
++    {
++        props->flags |= FONT_IS_COLORED;
++        IDWriteFontFileStream_ReleaseFileFragment(stream_desc->stream, colr.context);
++    }
++
+     TRACE("stretch %d, weight %d, style %d\n", props->stretch, props->weight, props->style);
+ 
+     if (os2.data)
+--- a/dlls/dwrite/freetype.c
++++ b/dlls/dwrite/freetype.c
+@@ -34,6 +34,7 @@
+ #include FT_OUTLINE_H
+ #include FT_TRUETYPE_TABLES_H
+ #include FT_SIZES_H
++#include FT_PARAMETER_TAGS_H
+ #endif /* HAVE_FT2BUILD_H */
+ 
+ #include "ntstatus.h"
+@@ -75,7 +76,7 @@
+ MAKE_FUNCPTR(FT_Load_Glyph);
+ MAKE_FUNCPTR(FT_Matrix_Multiply);
+ MAKE_FUNCPTR(FT_MulDiv);
+-MAKE_FUNCPTR(FT_New_Memory_Face);
++MAKE_FUNCPTR(FT_Open_Face);
+ MAKE_FUNCPTR(FT_New_Size);
+ MAKE_FUNCPTR(FT_Outline_Copy);
+ MAKE_FUNCPTR(FT_Outline_Decompose);
+@@ -141,7 +142,7 @@
+     LOAD_FUNCPTR(FT_Load_Glyph)
+     LOAD_FUNCPTR(FT_Matrix_Multiply)
+     LOAD_FUNCPTR(FT_MulDiv)
+-    LOAD_FUNCPTR(FT_New_Memory_Face)
++    LOAD_FUNCPTR(FT_Open_Face)
+     LOAD_FUNCPTR(FT_New_Size)
+     LOAD_FUNCPTR(FT_Outline_Copy)
+     LOAD_FUNCPTR(FT_Outline_Decompose)
+@@ -184,8 +185,17 @@
+     struct create_font_object_params *params = args;
+     FT_Face face = NULL;
+     FT_Error fterror;
+-
+-    fterror = pFT_New_Memory_Face(library, params->data, params->size, params->index, &face);
++    FT_Parameter parameter = { FT_PARAM_TAG_IGNORE_SBIX, NULL };
++    FT_Open_Args open_args = { 0 };
++
++    /* DirectWrite serves sbix PNGs through GetGlyphImageData. Keep FreeType
++       on scalable outlines for design metrics and ordinary CJK/Latin text. */
++    open_args.flags = FT_OPEN_MEMORY | FT_OPEN_PARAMS;
++    open_args.memory_base = params->data;
++    open_args.memory_size = params->size;
++    open_args.num_params = 1;
++    open_args.params = &parameter;
++    fterror = pFT_Open_Face(library, &open_args, params->index, &face);
+     if (fterror != FT_Err_Ok)
+     {
+         WARN("Failed to create a face object, error %d.\n", fterror);

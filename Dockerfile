@@ -8,24 +8,39 @@ ENV WINEDLLOVERRIDES="mscoree,mshtml="
 # Force Mesa software rasterizer — no GPU in container
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV GALLIUM_DRIVER=llvmpipe
-ADD --chmod=644 https://github.com/msojocs/skyline-client-server/releases/download/dll/seguiemj.ttf /usr/share/fonts/truetype/segoe/seguiemj.ttf
 
 RUN sed -i 's|http://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
     sed -i 's|http://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
     apt update && \
-    apt install -y fonts-noto-cjk sudo wget gnupg libgl1 && \
+    apt install -y fonts-noto-cjk fontconfig libfreetype6 sudo wget gnupg libgl1 && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-ARG WINE_BRANCH="staging"
+# The local DirectWrite PE/Unix pair is built against Wine 11.0.
+ARG WINE_VERSION="11.0.0.0~noble-1"
 RUN mkdir -pm755 /etc/apt/keyrings && \
     wget -nv -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
     echo "deb [signed-by=/etc/apt/keyrings/winehq-archive.key] https://dl.winehq.org/wine-builds/ubuntu/ $(grep VERSION_CODENAME= /etc/os-release | cut -d= -f2) main" > /etc/apt/sources.list.d/winehq.list && \
     dpkg --add-architecture i386 && \
     apt update && \
-    apt install -y --install-recommends winehq-${WINE_BRANCH} && \
+    apt install -y --install-recommends \
+        winehq-stable="${WINE_VERSION}" \
+        wine-stable="${WINE_VERSION}" \
+        wine-stable-amd64="${WINE_VERSION}" \
+        wine-stable-i386:i386="${WINE_VERSION}" && \
     apt install -y --no-install-recommends xvfb libegl1 libegl-mesa0 libglx-mesa0 mesa-vulkan-drivers mesa-utils gosu && \
     rm -rf /var/lib/apt/lists/*
+
+# Install both halves before the first Wine process creates a prefix or caches
+# builtin module handles. The container has its own Wine installation, so it
+# does not need the host launcher's bwrap overlay.
+COPY --chmod=644 tools/wine-fonts/dwrite.dll /opt/wine-stable/lib/wine/x86_64-windows/dwrite.dll
+COPY --chmod=644 tools/wine-fonts/dwrite.so /opt/wine-stable/lib/wine/x86_64-unix/dwrite.so
+COPY --chmod=644 tools/wine-fonts/SkylineFallback.ttf tools/wine-fonts/Symbola.ttf tools/wine-fonts/seguiemj.ttf /usr/local/share/fonts/skyline/
+COPY --chmod=644 tools/wine-fonts/NotoColorEmoji.COPYRIGHT /usr/share/doc/skyline-fonts/
+RUN chmod 755 /usr/local/share/fonts/skyline /usr/share/doc/skyline-fonts && \
+    fc-cache -f /usr/local/share/fonts/skyline && \
+    test "$(wine --version)" = "wine-11.0"
 
 RUN useradd -m docker && \
     echo "docker:docker" | chpasswd && \
@@ -40,7 +55,8 @@ RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/typescript/package.json ./packages/typescript/package.json
-RUN pnpm install --frozen-lockfile --filter ./packages/typescript
+# Bundling only needs the package's types; electron-builder supplies the runtime.
+RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile --filter ./packages/typescript
 
 COPY packages/typescript ./packages/typescript
 RUN pnpm --filter ./packages/typescript build
@@ -95,7 +111,6 @@ COPY --from=skyline-addon-builder /build/node_modules/skyline-addon electron/app
 
 FROM runtime-base AS runtime
 WORKDIR /workspace
-ADD --chmod=644 https://github.com/msojocs/wine-emoji-fix/releases/download/dwrite-v1.0.0/dwrite.dll /opt/wine-staging/lib/wine/x86_64-windows/dwrite.dll
 COPY --from=source /workspace/electron /workspace
 COPY packages/electron/node_modules/skyline-server /workspace/app/node_modules/skyline-server
 COPY tools/xvfb-startup.sh xvfb-startup.sh

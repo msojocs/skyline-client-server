@@ -1,5 +1,6 @@
 #!/bin/bash
 # from https://github.com/bengreenier/docker-xvfb/blob/master/docker/xvfb-startup.sh
+set -e
 
 # Create X11 socket directory as root before dropping privileges
 mkdir -p /tmp/.X11-unix
@@ -29,14 +30,28 @@ chown -R docker /workspace 2>/dev/null || true
 rm -rf /tmp/.X99-lock
 Xvfb :99 -ac -screen 0 "$XVFB_RES" -nolisten tcp $XVFB_ARGS &
 XVFB_PROC=$!
+trap 'kill "$XVFB_PROC" 2>/dev/null || true' EXIT
 sleep 1
 export DISPLAY=:99
 export LANG=zh_CN.UTF-8
 export LC_ALL=zh_CN.UTF-8
 export LANGUAGE=zh_CN.UTF-8
+export WINEDEBUG=${WINEDEBUG:--all}
+
+# Wine DirectWrite enumerates HKLM fonts. Register the image's font paths on
+# every start so an existing, mounted prefix also sees the current resources.
+font_registry='HKLM\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+gosu docker wine reg add "$font_registry" /v 'Skyline Fallback (TrueType)' \
+    /t REG_SZ /d 'Z:\usr\local\share\fonts\skyline\SkylineFallback.ttf' /f >/dev/null
+gosu docker wine reg add "$font_registry" /v 'Symbola (TrueType)' \
+    /t REG_SZ /d 'Z:\usr\local\share\fonts\skyline\Symbola.ttf' /f >/dev/null
+gosu docker wine reg add "$font_registry" /v 'Segoe UI Emoji (TrueType)' \
+    /t REG_SZ /d 'Z:\usr\local\share\fonts\skyline\seguiemj.ttf' /f >/dev/null
 
 cd /workspace
-gosu docker wine electron.exe --remote-debugging-port=9222
+set +e
+# Wine 11.0 needs a terminal for Node's stdout handles. A detached Docker log
+# pipe otherwise makes Electron fail with "open EBADF" before the app starts.
+script -q -e -f -c 'gosu docker wine electron.exe --remote-debugging-port=9222' /dev/null
 WINE_EXIT=$?
-kill $XVFB_PROC
 exit $WINE_EXIT

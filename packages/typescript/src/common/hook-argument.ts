@@ -95,7 +95,10 @@ const hookArgumentItem = (action: string, arg: any, context: HookContext): any =
             // Dialog callbacks may resolve a deferred synchronous request.
             const dialogCallback = context.renderer && action === 'setDialogCallback'
             const asyncCallback = (context.renderer ? Boolean(arg.asyncCallback) : arg.asyncCallback === true) || dialogCallback
+            const generation = context.callbacks.generation
             const callback: any = (...args: any[]) => {
+                // Old listeners must neither serialize objects nor send to a later connection.
+                if (context.callbacks.generation !== generation) return
                 const body = JSON.stringify({
                     type: 'emitCallback',
                     callbackId,

@@ -54,11 +54,12 @@ function main() {
     copyFileSync(library, destination);
     console.log(destination);
     // main 层客户端由 devtools main 层加载，不落在本仓库的运行时目录。
-    if (target === host && feature !== 'main-client') {
+    if (feature !== 'main-client') {
       const local = feature === 'client'
         ? path.join(process.env.SKYLINE_DEV_PATH || path.join(__dirname, 'build'), name)
         : path.join(__dirname, '../electron/node_modules/skyline-server', name);
       mkdirSync(path.dirname(local), { recursive: true });
+      console.log('Copy to:', local);
       copyFileSync(destination, local);
     }
   }

@@ -45,10 +45,7 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 pub(crate) fn load_extension_params(mut params: Value) -> Value {
-    if let Some(path) = params[0]
-        .as_str()
-        .and_then(|path| path.strip_prefix("/"))
-    {
+    if let Some(path) = params[0].as_str().and_then(|path| path.strip_prefix("/")) {
         println!("Original path: {}", path);
         // Wine exposes the host filesystem under Z:. Keep existing drive letters.
         let bytes = path.as_bytes();

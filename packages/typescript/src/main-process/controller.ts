@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { createInstanceManage, createObjectManage } from '../common/object-manage';
 import type { InstanceManage, ObjectManage } from '../common/object-manage';
 import { createCallbackManage } from '../common/callback';
@@ -8,6 +9,7 @@ import { registerDefaultClazz } from './object-manage';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3002;
+const listenerMethods = new Set(['on', 'once', 'addListener', 'prependListener', 'prependOnceListener']);
 
 export interface MainProcessOptions {
   electron?: any;
@@ -50,6 +52,7 @@ export class Controller {
   private functionData: Record<string, Function> = {};
   private hookContext: HookContext;
   private listening = false;
+  private listeners: { owner: EventEmitter; event: string | symbol; callback: (...args: any[]) => void }[] = [];
 
   constructor(options: MainProcessOptions = {}) {
     const electronModule = options.electron || require('electron');
@@ -71,10 +74,23 @@ export class Controller {
   }
 
   private clearConnection() {
+    // Invalidate first: removing a listener can itself emit an event.
+    this.callbacks.clearCallback();
+    const listeners = this.listeners;
+    this.listeners = [];
+    for (const { owner, event, callback } of listeners) owner.removeListener(event, callback);
     this.instances.clearInstance();
     this.functions.clearInstance();
-    this.callbacks.clearCallback();
     for (const id of Object.keys(this.functionData)) delete this.functionData[id];
+  }
+
+  private invoke(owner: any, method: Function, action: string, params: any[]) {
+    const result = method.apply(owner, params);
+    if (owner instanceof EventEmitter && listenerMethods.has(action.split('.').at(-1)!)
+      && this.callbacks.hasCallback(params[1])) {
+      this.listeners.push({ owner, event: params[0], callback: params[1] });
+    }
+    return result;
   }
 
   // Arrow property: setMessageCallback receives the function unbound, so `this` must be captured here.
@@ -153,7 +169,7 @@ export class Controller {
         reply({ error: 'Method not found or instance invalid' });
         return;
       }
-      replyWith(() => value.apply(owner, params));
+      replyWith(() => this.invoke(owner, value, request.action, params));
       return;
     }
     if (request.type === 'dynamicProperty') {
@@ -180,7 +196,7 @@ export class Controller {
         reply({ error: 'Method not found or instance invalid' });
         return;
       }
-      replyWith(() => method.apply(instance, params));
+      replyWith(() => this.invoke(instance, method, request.action, params));
       return;
     }
     reply({ error: 'Request type not recognized' });

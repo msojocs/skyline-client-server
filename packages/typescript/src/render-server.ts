@@ -2,6 +2,7 @@ import { useLogger } from "./common/log"
 import { registerDefaultClazz, useInstanceManage, useObjectManage } from "./render-process/object-manage"
 import { hookArgument, hookResult } from "./common/hook-argument"
 import { Controller } from "./render-process/controller"
+import { useCallback } from "./render-process/callback"
 import { ipcRenderer } from 'electron'
 import type { NativeRpcServer, RpcRequest } from './common/rpc'
 const log = useLogger('Server')
@@ -76,6 +77,7 @@ try {
     }
     const req = JSON.parse(message) as RpcRequest
     if (req.action === 'disconnected') {
+      useCallback().clearCallback()
       global.controller.setDialogCallback(null)
       log.error('disconnected')
       return

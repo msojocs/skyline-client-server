@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
 import type {} from '../packages/typescript/src/global';
 import { createCallbackManage } from '../packages/typescript/src/common/callback';
 import { createInstanceManage, createObjectManage } from '../packages/typescript/src/common/object-manage';
@@ -147,6 +148,95 @@ test.each(['disconnect', 'restart'])('main %s clears object, function and callba
   const stops = server.stop.mock.calls.length;
   rpc.stop();
   expect(server.stop).toHaveBeenCalledTimes(stops);
+});
+
+test.each(['disconnect', 'stop'])('main %s removes remote destroyed listeners and preserves local listeners', (reset) => {
+  const contents = new EventEmitter();
+  const local = vi.fn();
+  contents.once('destroyed', local);
+  const { rpc, call, request, server } = fixture({ getContents: () => contents });
+  const handle = call('getContents').result.returnValue;
+  request({
+    type: 'dynamic', action: 'once',
+    data: { instanceId: handle.instanceId, params: ['destroyed', { callbackId: 5 }] },
+  });
+  expect(contents.listenerCount('destroyed')).toBe(2);
+  if (reset === 'disconnect') request({ action: 'disconnected' });
+  else rpc.stop();
+
+  expect(contents.listeners('destroyed')).toEqual([local]);
+  server.sendMessageSync.mockImplementation(() => { throw new Error('Socket is not connected'); });
+  expect(() => contents.emit('destroyed')).not.toThrow();
+  expect(local).toHaveBeenCalledOnce();
+  expect(server.sendMessageSync).not.toHaveBeenCalled();
+  rpc.stop();
+});
+
+test.each(['on', 'once', 'addListener', 'prependListener', 'prependOnceListener'])('main disconnect removes listeners registered through static %s calls', (method) => {
+  const contents = new EventEmitter();
+  const local = vi.fn();
+  contents.on('destroyed', local);
+  const { rpc, call, request } = fixture({ contents });
+  call(`contents.${method}`, ['destroyed', { callbackId: 5 }]);
+  expect(contents.listenerCount('destroyed')).toBe(2);
+  request({ action: 'disconnected' });
+  expect(contents.listeners('destroyed')).toEqual([local]);
+  rpc.stop();
+});
+
+test.each([false, true])('old main callbacks stay inactive after reconnect (async: %s)', (asyncCallback) => {
+  const listen = vi.fn();
+  const { rpc, call, request, server } = fixture({ listen });
+  call('listen', [{ callbackId: 5, asyncCallback }]);
+  const oldCallback = listen.mock.calls[0][0];
+  request({ action: 'disconnected' });
+  server.sendMessageSync.mockClear();
+  server.sendMessageSingle.mockClear();
+
+  // A retired callback must not even inspect/serialize its arguments.
+  const argument = { get value() { throw new Error('stale argument inspected'); } };
+  expect(() => oldCallback(argument)).not.toThrow();
+  expect(server.sendMessageSync).not.toHaveBeenCalled();
+  expect(server.sendMessageSingle).not.toHaveBeenCalled();
+
+  call('listen', [{ callbackId: 5, asyncCallback }]);
+  const newCallback = listen.mock.calls[1][0];
+  server.sendMessageSingle.mockClear();
+  expect(() => oldCallback(argument)).not.toThrow();
+  newCallback('new connection');
+  const messages = asyncCallback ? server.sendMessageSingle : server.sendMessageSync;
+  expect(messages).toHaveBeenCalledOnce();
+  expect(JSON.parse(messages.mock.calls[0][0])).toMatchObject({
+    type: 'emitCallback', callbackId: 5, data: { args: ['new connection'], block: !asyncCallback },
+  });
+  rpc.stop();
+});
+
+test.each([false, true])('active callback errors remain visible (async: %s)', (asyncCallback) => {
+  const listen = vi.fn();
+  const { rpc, call, server } = fixture({ listen });
+  call('listen', [{ callbackId: 5, asyncCallback }]);
+  const send = asyncCallback ? server.sendMessageSingle : server.sendMessageSync;
+  send.mockImplementation(() => { throw new Error('unexpected transport failure'); });
+  expect(() => listen.mock.calls[0][0]()).toThrow('unexpected transport failure');
+  rpc.stop();
+});
+
+test.each(['addEventListener', 'setDialogCallback'])('renderer %s callbacks expire on disconnect and stay expired after ID reuse', (action) => {
+  const send = vi.fn();
+  vi.stubGlobal('send', send);
+  const oldParams: any[] = [{ callbackId: 5, asyncCallback: true }];
+  hookArgument(action, oldParams);
+  useCallback().clearCallback();
+  const newParams: any[] = [{ callbackId: 5, asyncCallback: true }];
+  hookArgument(action, newParams);
+
+  const argument = { get value() { throw new Error('stale argument inspected'); } };
+  expect(() => oldParams[0](argument)).not.toThrow();
+  expect(send).not.toHaveBeenCalled();
+  newParams[0]('new connection');
+  expect(send).toHaveBeenCalledOnce();
+  expect(JSON.parse(send.mock.calls[0][0]).data.args).toEqual(['new connection']);
 });
 
 test('main hooks decode nested handles and encode asynchronous callback arguments', () => {

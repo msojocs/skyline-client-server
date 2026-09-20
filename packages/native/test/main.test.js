@@ -30,18 +30,105 @@ async function fixture(t, anonymousWebRequest = false) {
   return port;
 }
 
+async function handshakeServer(t, onConnection) {
+  const sockets = new Set();
+  const listener = net.createServer(socket => {
+    sockets.add(socket);
+    socket.on('close', () => sockets.delete(socket));
+    onConnection?.(socket);
+  });
+  listener.listen(0, '127.0.0.1');
+  await once(listener, 'listening');
+  t.after(async () => {
+    for (const socket of sockets) socket.destroy();
+    await new Promise(resolve => listener.close(resolve));
+  });
+  return listener;
+}
+
+function sendHandshake(socket, value = 114514) {
+  const handshake = Buffer.alloc(4);
+  handshake.writeUInt32BE(value);
+  socket.write(handshake);
+}
+
+test('connect returns a Promise and keeps the event loop running during the handshake', { timeout: 10000 }, async t => {
+  const { mainController } = require(clientPath);
+  t.after(() => mainController.disconnect());
+  let accepted = 0;
+  let timerRan = false;
+  const listener = await handshakeServer(t, socket => {
+    accepted++;
+    setTimeout(() => {
+      timerRan = true;
+      sendHandshake(socket);
+    }, 25);
+  });
+  const port = listener.address().port;
+  const connecting = mainController.connect('127.0.0.1', port);
+  assert.ok(connecting instanceof Promise);
+  const concurrent = mainController.connect('127.0.0.1', port);
+  // Validation failures must not cancel an otherwise valid connection attempt.
+  await assert.rejects(mainController.connect('127.0.0.1', -1), /Port/);
+  assert.deepEqual(await Promise.all([connecting, concurrent]), [undefined, undefined]);
+  assert.equal(timerRan, true);
+  assert.equal(accepted, 1);
+  const connected = mainController.connect('127.0.0.1', port);
+  assert.ok(connected instanceof Promise);
+  assert.equal(await connected, undefined);
+  assert.equal(accepted, 1);
+});
+
+test('connect rejects invalid arguments and connection failures, and allows retry', { timeout: 10000 }, async t => {
+  const { mainController } = require(clientPath);
+  t.after(() => mainController.disconnect());
+  for (const port of [-1, 65536, 1.5, NaN, '3002']) {
+    const connecting = mainController.connect('127.0.0.1', port);
+    assert.ok(connecting instanceof Promise);
+    await assert.rejects(connecting, /Port|Number/);
+  }
+  await assert.rejects(mainController.connect(null, 3002));
+  const closedPort = await availablePort();
+  await assert.rejects(mainController.connect('127.0.0.1', closedPort));
+  assert.throws(() => mainController.electron.webContents.fromId(1), /Not connected/);
+  const listener = await handshakeServer(t, socket => sendHandshake(socket, 0));
+  await assert.rejects(mainController.connect('127.0.0.1', listener.address().port), /Invalid server handshake/);
+  const port = await fixture(t);
+  await mainController.connect('127.0.0.1', port);
+  assert.equal(mainController.electron.webContents.fromId(webContentsId).id, webContentsId);
+});
+
+test('disconnect during connect rejects the old attempt without closing a replacement connection', { timeout: 10000 }, async t => {
+  const { mainController } = require(clientPath);
+  t.after(() => mainController.disconnect());
+  const listener = await handshakeServer(t);
+  const accepted = once(listener, 'connection');
+  const connecting = mainController.connect('127.0.0.1', listener.address().port);
+  const rejected = assert.rejects(connecting, /stopped|closed/);
+  const [socket] = await accepted;
+  mainController.disconnect();
+
+  const port = await fixture(t);
+  await mainController.connect('127.0.0.1', port);
+  sendHandshake(socket);
+  await rejected;
+  assert.equal(mainController.electron.webContents.fromId(webContentsId).id, webContentsId);
+});
+
 test('main 层 client/server: webContents.fromId 返回可远程调用的代理', { timeout: 15000 }, async t => {
   const port = await fixture(t);
   const { mainController } = require(clientPath);
   t.after(() => mainController.disconnect());
 
   assert.deepEqual(Object.keys(mainController).sort(), ['connect', 'disconnect', 'electron']);
-  mainController.connect('127.0.0.1', port);
+  await mainController.connect('127.0.0.1', port);
 
   const webContents = mainController.electron.webContents.fromId(webContentsId);
   assert.equal(typeof webContents, 'object');
   assert.equal(webContents.constructor.name, 'WebContents');
   // 同一个真实对象复用同一个代理，返回的是同一个 JS 对象
+  assert.equal(mainController.electron.webContents.fromId(webContentsId), webContents);
+  await mainController.connect('127.0.0.1', port);
   assert.equal(mainController.electron.webContents.fromId(webContentsId), webContents);
   // 找不到时是 undefined，而不是抛错
   assert.equal(mainController.electron.webContents.fromId(999), undefined);
@@ -91,6 +178,18 @@ test('main 层 client/server: webContents.fromId 返回可远程调用的代理'
   assert.equal(extensions.getExtension('missing'), undefined);
   // 异步失败表现为 Promise reject，而不是同步抛出
   await assert.rejects(extensions.loadExtension(''), /fixture extension path required/);
+
+  // Check the path received by the RPC server, including already mapped URLs.
+  for (const [input, expected] of [
+    ['file:///home/user/extension', 'file:///Z:/home/user/extension'],
+    ['file:///tmp/extension%20目录', 'file:///Z:/tmp/extension%20目录'],
+    ['file:///Z:/home/user/extension', 'file:///Z:/home/user/extension'],
+    ['file:///C:/extensions/demo', 'file:///C:/extensions/demo'],
+    ['Z:/home/user/extension', 'Z:/home/user/extension'],
+  ]) {
+    assert.equal((await extensions.loadExtension(input)).path, expected);
+  }
+  assert.equal(await webContents.executeJavaScript('file:///tmp/extension'), 'file:///tmp/extension');
 
   // 请求拦截：事件名动态取（webRequest[eventName]），监听器是客户端函数——服务端按 callbackId
   // 还原成真实函数（fixture 里监听器不是函数会直接抛错），并且把 Electron 的 callback 代理回客户端。
@@ -143,7 +242,7 @@ test('WebContents.once forwards event arguments and fires each listener only onc
   const port = await fixture(t);
   const { mainController } = require(clientPath);
   t.after(() => mainController.disconnect());
-  mainController.connect('127.0.0.1', port);
+  await mainController.connect('127.0.0.1', port);
 
   const webContents = mainController.electron.webContents.fromId(webContentsId);
   const navigations = [];
@@ -169,7 +268,7 @@ test('anonymous Electron webRequest returns a callable object', { timeout: 15000
   const port = await fixture(t, true);
   const { mainController } = require(clientPath);
   t.after(() => mainController.disconnect());
-  mainController.connect('127.0.0.1', port);
+  await mainController.connect('127.0.0.1', port);
 
   const [target] = mainController.electron.webContents.getAllWebContents();
   const webRequest = target.session.webRequest;
@@ -211,7 +310,7 @@ test('未连接与断开后的调用会报错', { timeout: 10000 }, async t => {
   assert.throws(() => mainController.electron.webContents.fromId(1), /Not connected/);
 
   const port = await fixture(t);
-  mainController.connect('127.0.0.1', port);
+  await mainController.connect('127.0.0.1', port);
   const webContents = mainController.electron.webContents.fromId(webContentsId);
   assert.ok(webContents);
   mainController.disconnect();
@@ -222,7 +321,7 @@ test('未连接与断开后的调用会报错', { timeout: 10000 }, async t => {
 
   // The same server instance must be usable after a client reconnects: remote IDs
   // from the previous connection must not be reused from stale WeakMap entries.
-  mainController.connect('127.0.0.1', port);
+  await mainController.connect('127.0.0.1', port);
   const reconnected = mainController.electron.webContents.fromId(webContentsId);
   assert.equal(reconnected.id, webContentsId);
   mainController.disconnect();

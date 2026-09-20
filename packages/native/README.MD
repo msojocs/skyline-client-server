@@ -23,6 +23,21 @@ pnpm --filter nt-native test
 
 `compile:windows` 的目标是 `x86_64-pc-windows-gnu`，需要 Linux 上安装 `gcc-mingw-w64-x86-64`。Rust 的 `napi/dyn-symbols` 特性使模块直接从 Node/Electron 加载 N-API，不需要下载或链接 Electron 的 `node.lib`。
 
+## 连接 main 层服务端
+
+`mainController.connect(host = '127.0.0.1', port = 3002)` 返回 `Promise<void>`。
+TCP 连接和服务端握手在后台线程中执行，等待期间不会阻塞 JavaScript 事件循环。
+调用远端 Electron API 前需要等待连接完成：
+
+```js
+const { mainController } = require('./main-client.node')
+await mainController.connect('127.0.0.1', 3002)
+const webContents = mainController.electron.webContents.fromId(1)
+```
+
+参数错误、连接失败或握手失败都会 reject Promise。连接期间重复调用会等待同一次连接，
+已连接时重复调用会成功返回并保留现有代理；`disconnect()` 会使尚未完成的连接失效。
+
 ## webview 挂载状态与消息发送
 
 `controller.webview.parentElement` 是只读属性，返回远端父节点的对象代理；未挂载时，服务端的 `null`
@@ -82,6 +97,10 @@ const target = mainController.electron.webContents.fromId(0)
 const extension = await target.session.extensions.loadExtension('/path/to/extension')
 target.session.extensions.getAllExtensions()
 ```
+
+main client 会在转发 `loadExtension` 前将路径参数的 `/` 前缀改为 `Z:/`，
+例如 `/home/user/extension` → `Z:/home/user/extension`。
+已有盘符的 file URL 和普通文件路径保持原样。
 
 `loadExtension` 与 `executeJavaScript` 一样列在 `client.rs` 的 `ASYNC_METHODS` 里，返回 Promise：
 加载失败、连接断开或 300 秒超时都表现为 reject（同步分支的 RPC 超时只有 5 秒，插件加载可能更久）。

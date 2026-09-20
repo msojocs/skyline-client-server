@@ -324,8 +324,15 @@ fn instance(state: &State, ctx: &CallContext) -> Result<u64> {
 fn invoke(state: &Rc<State>, ctx: &CallContext, name: &str, id: u64) -> Result<JsUnknown> {
     if ASYNC_METHODS.contains(&name) {
         let request = (|| {
+            let params = arguments(state, ctx)?;
+            #[cfg(feature = "main-client")]
+            let params = if name == "loadExtension" {
+                crate::main_client::load_extension_params(params)
+            } else {
+                params
+            };
             let body = json!({"type": "dynamic", "action": name,
-                "data": {"instanceId": id, "params": arguments(state, ctx)?}})
+                "data": {"instanceId": id, "params": params}})
             .to_string();
             state.start_request(&body).map(|(_, pending)| pending)
         })();

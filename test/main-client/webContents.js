@@ -4,12 +4,19 @@ const { mainController } = require(p)
 
 console.info(mainController)
 
-mainController.connect('127.0.0.1', 3002)
+async function main() {
+  await mainController.connect('127.0.0.1', 3002)
 
-// Try fromId first
-console.info('\nTesting fromId...')
-const wc = mainController.electron.webContents.fromId(1)
-console.info('fromId(1).id:', wc.id)
-wc.once("destroyed", () => {
-    console.info('webContents destroyed')
+  // Try fromId first
+  console.info('\nTesting fromId...')
+  const wc = mainController.electron.webContents.fromId(1)
+  console.info('fromId(1).id:', wc.id)
+  wc.once("destroyed", () => {
+      console.info('webContents destroyed')
+  })
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
 })

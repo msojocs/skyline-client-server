@@ -79,6 +79,7 @@ export class Controller {
 
   // Arrow property: setMessageCallback receives the function unbound, so `this` must be captured here.
   private dispatch = (body: string, messageId: number) => {
+    console.info('[main-rpc] dispatch received', body)
     let replied = false;
     const reply = (payload: any) => {
       if (replied || messageId <= 0) return;

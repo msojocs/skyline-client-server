@@ -4,13 +4,6 @@ const { mainController } = require(p)
 
 console.info(mainController)
 
-mainController.connect('127.0.0.1', 3002)
-
-console.info('mainController:', mainController)
-console.info('webContents', mainController.electron.webContents)
-console.info('webContents fromId(0):', mainController.electron.webContents.fromId(0))
-console.info('webContents getAllWebContents():', mainController.electron.webContents.getAllWebContents())
-
 // 插件加载：属性链上的对象（session / extensions）都是远端代理，loadExtension 是异步方法。
 async function loadExtension(extensionPath) {
   const target = mainController.electron.webContents.fromId(0)
@@ -38,9 +31,23 @@ function interceptRequests() {
   }
 }
 
-if (process.argv[2]) {
-  loadExtension(process.argv[2]).catch((error) => console.error(error))
+async function main() {
+  await mainController.connect('127.0.0.1', 3002)
+
+  console.info('mainController:', mainController)
+  console.info('webContents', mainController.electron.webContents)
+  console.info('webContents fromId(0):', mainController.electron.webContents.fromId(0))
+  console.info('webContents getAllWebContents():', mainController.electron.webContents.getAllWebContents())
+
+  if (process.argv[2]) {
+    await loadExtension(process.argv[2])
+  }
+  if (process.argv[3] === 'webrequest') {
+    interceptRequests()
+  }
 }
-if (process.argv[3] === 'webrequest') {
-  interceptRequests()
-}
+
+main().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})

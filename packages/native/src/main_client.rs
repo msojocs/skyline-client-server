@@ -9,7 +9,7 @@
 //!
 //! ```js
 //! const { mainController } = require('main-client.node')
-//! mainController.connect('127.0.0.1', 3002)
+//! await mainController.connect('127.0.0.1', 3002)
 //! const webContents = mainController.electron.webContents.fromId(7)
 //! webContents.loadURL('https://example.com/')
 //! await webContents.session.extensions.loadExtension('/path/to/extension')
@@ -35,11 +35,97 @@
 //!   代理，因此 [`CLASSES`] 里的 `wire_name` 必须与服务端回的 `instanceType` 一致
 //!   （服务端取 `constructor.name`，见 `packages/electron/main-server.js`）。
 
-use crate::binding::{arguments, define_value, error, port, State};
+use crate::binding::{arguments, define_value, error, port, Reference, State};
 use crate::client::{define_class, report, Class};
-use napi::{JsObject, Result};
-use serde_json::json;
-use std::rc::Rc;
+use crate::transport::Endpoint;
+use napi::{Env, JsObject, Result, Task};
+use serde_json::{json, Value};
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
+
+pub(crate) fn load_extension_params(mut params: Value) -> Value {
+    if let Some(path) = params[0]
+        .as_str()
+        .and_then(|path| path.strip_prefix("/"))
+    {
+        println!("Original path: {}", path);
+        // Wine exposes the host filesystem under Z:. Keep existing drive letters.
+        let bytes = path.as_bytes();
+        let has_drive =
+            bytes.first().is_some_and(u8::is_ascii_alphabetic) && bytes.get(1..3) == Some(b":/");
+        if !has_drive {
+            params[0] = Value::String(format!("Z:/{path}"));
+            println!("Modified path: {}", params[0].as_str().unwrap());
+        }
+    }
+    params
+}
+
+type Connecting = Rc<RefCell<Option<(u64, Reference)>>>;
+
+struct ConnectTask {
+    state: Weak<State>,
+    connecting: Connecting,
+    epoch: u64,
+    connection: Result<Option<(Arc<Endpoint>, String, u16)>>,
+}
+
+// Only compute runs on a worker, where it accesses connection alone. State and
+// the cached Promise are accessed and dropped on their owning JS thread.
+unsafe impl Send for ConnectTask {}
+
+impl Task for ConnectTask {
+    type Output = ();
+    type JsValue = ();
+
+    fn compute(&mut self) -> Result<()> {
+        match &self.connection {
+            Ok(Some((endpoint, host, port))) => endpoint.connect(host, *port).map_err(error),
+            Ok(None) => Ok(()),
+            Err(err) => Err(err.clone()),
+        }
+    }
+
+    fn resolve(&mut self, _env: Env, _output: ()) -> Result<()> {
+        if self
+            .state
+            .upgrade()
+            .is_some_and(|state| state.epoch.get() == self.epoch)
+        {
+            return Ok(());
+        }
+        if let Ok(Some((endpoint, _, _))) = &self.connection {
+            endpoint.stop();
+        }
+        Err(error("Connection was closed before connect completed"))
+    }
+
+    fn reject(&mut self, _env: Env, err: napi::Error) -> Result<()> {
+        if let Ok(Some((endpoint, _, _))) = &self.connection {
+            endpoint.stop();
+            if let Some(state) = self.state.upgrade() {
+                if state.epoch.get() == self.epoch {
+                    state.close();
+                }
+            }
+        }
+        Err(err)
+    }
+
+    fn finally(&mut self, _env: Env) -> Result<()> {
+        if matches!(&self.connection, Ok(Some(_))) {
+            let mut connecting = self.connecting.borrow_mut();
+            if connecting
+                .as_ref()
+                .is_some_and(|(epoch, _)| *epoch == self.epoch)
+            {
+                connecting.take();
+            }
+        }
+        Ok(())
+    }
+}
 
 /// main 层可远程调用的类。`wire_name` 必须与服务端回传的 `instanceType` 一致
 /// （Electron 侧是 `constructor.name`，见 `main-server.js` 的 `instanceTypeOf`）。
@@ -174,32 +260,60 @@ pub fn init(state: &Rc<State>, exports: &mut JsObject) -> Result<()> {
 
     let controller = state.env.create_object()?;
     let weak = Rc::downgrade(state);
+    let connecting: Connecting = Rc::new(RefCell::new(None));
     let connect = state
         .env
         .create_function_from_closure("connect", move |ctx| {
             let state = weak
                 .upgrade()
                 .ok_or_else(|| error("Environment has closed"))?;
-            let host = if ctx.length > 0 {
-                ctx.get::<String>(0)?
-            } else {
-                "127.0.0.1".into()
-            };
-            // main 层的 RPC 服务端默认在 3002，避开 renderer 已占用的 3001。
-            let port = if ctx.length > 1 { port(&ctx, 1)? } else { 3002 };
-            if state
-                .endpoint
-                .borrow()
-                .as_ref()
-                .is_some_and(|endpoint| endpoint.connected())
-            {
-                return ctx.env.get_undefined();
+            let address = (|| {
+                let host = if ctx.length > 0 {
+                    ctx.get::<String>(0)?
+                } else {
+                    "127.0.0.1".into()
+                };
+                // main 层的 RPC 服务端默认在 3002，避开 renderer 已占用的 3001。
+                let port = if ctx.length > 1 { port(&ctx, 1)? } else { 3002 };
+                Ok((host, port))
+            })();
+            if address.is_ok() {
+                if let Some((epoch, promise)) = connecting.borrow().as_ref() {
+                    if *epoch == state.epoch.get() {
+                        return promise.get::<JsObject>();
+                    }
+                }
             }
-            state.close();
-            let endpoint = state.make_endpoint()?;
-            endpoint.connect(&host, port).map_err(error)?;
-            *state.endpoint.borrow_mut() = Some(endpoint);
-            ctx.env.get_undefined()
+            let connection = address.and_then(|(host, port)| {
+                if state
+                    .endpoint
+                    .borrow()
+                    .as_ref()
+                    .is_some_and(|endpoint| endpoint.connected())
+                {
+                    return Ok(None);
+                }
+                state.close();
+                let endpoint = state.make_endpoint()?;
+                // Register before queuing work so disconnect can cancel an in-flight connection.
+                *state.endpoint.borrow_mut() = Some(endpoint.clone());
+                Ok(Some((endpoint, host, port)))
+            });
+            let pending = matches!(&connection, Ok(Some(_)));
+            let epoch = state.epoch.get();
+            let promise = ctx
+                .env
+                .spawn(ConnectTask {
+                    state: Rc::downgrade(&state),
+                    connecting: connecting.clone(),
+                    epoch,
+                    connection,
+                })?
+                .promise_object();
+            if pending {
+                *connecting.borrow_mut() = Some((epoch, Reference::new(state.env, &promise)?));
+            }
+            Ok(promise)
         })?;
     define_value(
         state.env,

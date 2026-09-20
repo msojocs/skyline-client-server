@@ -1,5 +1,5 @@
 {
-    "shared-memory": "1.0.4",
+    "shared-memory": "1.1.0",
     "devtools": "在package.json里面",
     "electron": {
         "devtoolsVersion": "2.02.2608070",

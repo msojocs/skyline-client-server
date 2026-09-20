@@ -11,6 +11,5 @@
 1. /home/msojocs/github/skyline-client-server/（wine）
 2. /home/msojocs/github/wechat-web-devtools-linux/（linux）
 
-分析wine端关闭后，出现报错的原因
-1. 先启动wine层，再启动linux；等待linux层右侧渲染完成，关闭linux层，再关闭wine层。执行操作分析原因。
-2. 禁止使用临时数据目录启动，会导致需要登陆，流程不对。
+打通docker里面运行wine，linux层能渲染界面。
+1. 禁止使用临时数据目录启动，会导致需要登陆，流程不对。

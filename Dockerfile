@@ -93,6 +93,10 @@ RUN bash tools/download-electron-win.sh
 
 FROM ubuntu:22.04 AS source
 
+# Keep in sync with config/config.json; build-docker-image.sh passes the
+# configured value. The pre-1.1.0 Windows builds import node.dll, which does
+# not exist under Electron (or Wine), so sharedMemory.node failed to load.
+ARG SHARED_MEMORY_VERSION="1.1.0"
 WORKDIR /workspace
 COPY --from=electron-builder /build/cache/electron-win32-x64 electron
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
@@ -107,7 +111,7 @@ COPY packages/electron electron/resources/app
 COPY --from=skyline-addon-builder /build/node_modules/skyline-addon electron/resources/app/node_modules/skyline-addon
 RUN rm -rf electron/resources/app/cache electron/resources/app/node_modules/sharedMemory && \
     mkdir -p electron/resources/app/node_modules/sharedMemory && \
-    wget -c "https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node" -O electron/resources/app/node_modules/sharedMemory/sharedMemory.node && \
+    wget -c "https://github.com/msojocs/skyline-shared-memory/releases/download/v${SHARED_MEMORY_VERSION}/skyline-sharedMemory-win32-x86_64-v${SHARED_MEMORY_VERSION}.node" -O electron/resources/app/node_modules/sharedMemory/sharedMemory.node && \
     chmod -R a+X electron
 
 FROM runtime-base AS runtime

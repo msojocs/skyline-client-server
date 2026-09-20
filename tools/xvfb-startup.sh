@@ -52,6 +52,6 @@ cd /workspace
 set +e
 # Wine 11.0 needs a terminal for Node's stdout handles. A detached Docker log
 # pipe otherwise makes Electron fail with "open EBADF" before the app starts.
-script -q -e -f -c 'gosu docker wine electron.exe --remote-debugging-port=9222' /dev/null
+script -q -e -f -c 'gosu docker wine electron.exe --remote-debugging-port=9222 --disable-gpu' /dev/null
 WINE_EXIT=$?
 exit $WINE_EXIT

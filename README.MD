@@ -23,6 +23,8 @@ Electron 主进程会在 `9222` 端口开启远程调试；可通过 `REMOTE_DEB
 
 Docker 使用 Wine 11.0 stable，并直接复制仓库 `tools/wine-fonts/` 中配套的 `dwrite.dll`、`dwrite.so` 和字体资源。`SkylineFallback.ttf` 包含与 Linux 编辑器一致的 Noto 彩色 emoji。容器启动时会向当前 Wine prefix 注册字体，已有 prefix 也会更新到镜像中的字体路径；无需重新下载旧版 DirectWrite 修复 DLL。字体生成、运行库源码补丁和验证方式见 [字体资源说明](tools/wine-fonts/README.md)。
 
+Wine 里的 `Z:` 指向容器根目录，而 Linux 编辑器传给 Wine 的是宿主机绝对路径。因此必须把宿主机路径按原样挂进容器，否则 appservice 的 preload 脚本（`…/wechat-web-devtools-linux/resources/app/js/extensions/inject/preload/electron/index.js`）加载失败，右侧渲染是黑屏。挂载点要和宿主机路径完全一致，不能改路径。
+
 ```shell
 docker run -d \
   --network host \
@@ -32,6 +34,7 @@ docker run -d \
   -e HOST_GID=$(id -g) \
   --platform="linux/amd64" \
   --volume="/dev/shm:/dev/shm" \
+  --volume="$HOME:$HOME:ro" \
   --name skyline_server \
   ghcr.io/msojocs/skyline-client-server:master
 ```

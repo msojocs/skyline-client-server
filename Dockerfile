@@ -64,6 +64,9 @@ RUN pnpm --filter ./packages/typescript build
 FROM ubuntu:22.04 AS skyline-addon-builder
 
 ARG DEVTOOLS_VERSION
+# The current installer is published at this direct URL; its redirect endpoint
+# does not expose a Location header in the container environment.
+ARG DEVTOOLS_URL="https://devtools.wxqcloud.qq.com.cn/WechatWebDev/release/be1ec64cf6184b0fa64091919793f068/wechat_devtools_2.02.2608070_win32_x64.exe"
 WORKDIR /build
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
@@ -72,12 +75,10 @@ RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sourc
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 RUN mkdir -p cache node_modules/skyline-addon && \
-    wget -c "https://servicewechat.com/wxa-dev-logic/download_redirect?type=win32_x64&from=mpwiki&download_version=${DEVTOOLS_VERSION}&version_type=1" -O "cache/devtools-${DEVTOOLS_VERSION}.exe" && \
-    7z x "cache/devtools-${DEVTOOLS_VERSION}.exe" -aoa -onode_modules/skyline-addon code/package.nw/node_modules/skyline-addon && \
-    mv node_modules/skyline-addon/code/package.nw/node_modules/skyline-addon/* node_modules/skyline-addon/ && \
-    7z x "cache/devtools-${DEVTOOLS_VERSION}.exe" -aoa -odocumentstart code/package.nw/js/extensions/inject/documentstart/index.js && \
-    mv documentstart/code/package.nw/js/extensions/inject/documentstart/index.js documentstart/ && \
-    rm -rf node_modules/skyline-addon/code documentstart/code cache
+    wget -c "${DEVTOOLS_URL}" -O "cache/devtools-${DEVTOOLS_VERSION}.exe" && \
+    7z x "cache/devtools-${DEVTOOLS_VERSION}.exe" -aoa -onode_modules/skyline-addon resources/app.asar.unpacked/node_modules/skyline-addon && \
+    mv node_modules/skyline-addon/resources/app.asar.unpacked/node_modules/skyline-addon/* node_modules/skyline-addon/ && \
+    rm -rf node_modules/skyline-addon/resources cache
 
 FROM node:20-bookworm AS electron-builder
 
@@ -92,27 +93,27 @@ RUN bash tools/download-electron-win.sh
 
 FROM ubuntu:22.04 AS source
 
-ARG APP_ROOT="packages/electron"
 WORKDIR /workspace
 COPY --from=electron-builder /build/cache/electron-win32-x64 electron
 RUN sed -i 's/security.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list && \
     apt update && apt install -y wget && \
-    mkdir -p electron/app/node_modules/sharedMemory electron/resources && \
-    ln -s ../app electron/resources/app && \
-    wget -c "https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node" -O electron/app/node_modules/sharedMemory/sharedMemory.node && \
-    chmod -R a+X electron
+    rm -rf /var/lib/apt/lists/*
 # Vite emits the renderer server and the combined Electron main-process server
 # into the same package directory.
-COPY --from=server-builder /build/packages/electron/render-server.js electron/app/
-COPY --from=server-builder /build/packages/electron/main-server.js electron/app/
-COPY packages/electron electron/app
-COPY --from=skyline-addon-builder /build/node_modules/skyline-addon electron/app/node_modules/skyline-addon
+COPY --from=server-builder /build/packages/electron/render-server.js electron/resources/app/
+COPY --from=server-builder /build/packages/electron/main-server.js electron/resources/app/
+COPY packages/electron electron/resources/app
+COPY --from=skyline-addon-builder /build/node_modules/skyline-addon electron/resources/app/node_modules/skyline-addon
+RUN rm -rf electron/resources/app/cache electron/resources/app/node_modules/sharedMemory && \
+    mkdir -p electron/resources/app/node_modules/sharedMemory && \
+    wget -c "https://github.com/msojocs/skyline-shared-memory/releases/download/v1.0.4/skyline-sharedMemory-win32-x86_64-v1.0.4.node" -O electron/resources/app/node_modules/sharedMemory/sharedMemory.node && \
+    chmod -R a+X electron
 
 FROM runtime-base AS runtime
 WORKDIR /workspace
 COPY --from=source /workspace/electron /workspace
-COPY packages/electron/node_modules/skyline-server /workspace/app/node_modules/skyline-server
+COPY packages/electron/node_modules/skyline-server /workspace/resources/app/node_modules/skyline-server
 COPY tools/xvfb-startup.sh xvfb-startup.sh
 
 EXPOSE 9222

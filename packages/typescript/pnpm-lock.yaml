@@ -7,29 +7,7 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@trpc/client':
-        specifier: ^11.0.2
-        version: 11.0.2(@trpc/server@11.0.2(typescript@5.8.3))(typescript@5.8.3)
-      '@trpc/server':
-        specifier: ^11.0.2
-        version: 11.0.2(typescript@5.8.3)
-      '@ungap/url-search-params':
-        specifier: ^0.2.2
-        version: 0.2.2
-      abort-controller:
-        specifier: ^3.0.0
-        version: 3.0.0
-      event-source-polyfill:
-        specifier: ^1.0.31
-        version: 1.0.31
-      zod:
-        specifier: ^3.24.2
-        version: 3.24.2
     devDependencies:
-      '@types/event-source-polyfill':
-        specifier: ^1.0.5
-        version: 1.0.5
       '@types/node':
         specifier: ^20.8.7
         version: 20.12.7
@@ -350,32 +328,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@trpc/client@11.0.2':
-    resolution: {integrity: sha512-GlPEedbMTerkUfAJBsrwU6dg8N65lt3LBwrCoqR3MTZ64lRU/DQqyLjzpz5nRkEN0x4S2JmX0hASV9vc2KlSHA==}
-    peerDependencies:
-      '@trpc/server': 11.0.2
-      typescript: '>=5.7.2'
-
-  '@trpc/server@11.0.2':
-    resolution: {integrity: sha512-PIcm8UWFyE0AnIYjxsyc1zfVa6X10m9Opm1SJ2ou9Vu8dlXO6rMtmafLUXJsMeQk/3ecxObFtEiZIX8TvB3eCg==}
-    peerDependencies:
-      typescript: '>=5.7.2'
-
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
-  '@types/event-source-polyfill@1.0.5':
-    resolution: {integrity: sha512-iaiDuDI2aIFft7XkcwMzDWLqo7LVDixd2sR6B4wxJut9xcp/Ev9bO4EFg4rm6S9QxATLBj5OPxdeocgmhjwKaw==}
-
   '@types/node@20.12.7':
     resolution: {integrity: sha512-wq0cICSkRLVaf3UGLMGItu/PtdY7oaXaI/RVU+xliKVOtRna3PRY57ZDfztpDL0n11vfymMUnXv8QwYCO7L1wg==}
-
-  '@ungap/url-search-params@0.2.2':
-    resolution: {integrity: sha512-qQsguKXZVKdCixOHX9jqnX/K/1HekPDpGKyEcXHT+zR6EjGA7S4boSuelL4uuPv6YfhN0n8c4UxW+v/Z3gM2iw==}
-
-  abort-controller@3.0.0:
-    resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
-    engines: {node: '>=6.5'}
 
   acorn@8.11.3:
     resolution: {integrity: sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==}
@@ -392,13 +349,6 @@ packages:
     resolution: {integrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==}
     engines: {node: '>=18'}
     hasBin: true
-
-  event-source-polyfill@1.0.31:
-    resolution: {integrity: sha512-4IJSItgS/41IxN5UVAVuAyczwZF7ZIEsM1XAoUzIHA6A+xzusEZUutdXz2Nr+MQPLxfTiCvqE79/C8HT8fKFvA==}
-
-  event-target-shim@5.0.1:
-    resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
-    engines: {node: '>=6'}
 
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
@@ -502,9 +452,6 @@ packages:
         optional: true
       yaml:
         optional: true
-
-  zod@3.24.2:
-    resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
 
 snapshots:
 
@@ -692,28 +639,11 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.63.2':
     optional: true
 
-  '@trpc/client@11.0.2(@trpc/server@11.0.2(typescript@5.8.3))(typescript@5.8.3)':
-    dependencies:
-      '@trpc/server': 11.0.2(typescript@5.8.3)
-      typescript: 5.8.3
-
-  '@trpc/server@11.0.2(typescript@5.8.3)':
-    dependencies:
-      typescript: 5.8.3
-
   '@types/estree@1.0.9': {}
-
-  '@types/event-source-polyfill@1.0.5': {}
 
   '@types/node@20.12.7':
     dependencies:
       undici-types: 5.26.5
-
-  '@ungap/url-search-params@0.2.2': {}
-
-  abort-controller@3.0.0:
-    dependencies:
-      event-target-shim: 5.0.1
 
   acorn@8.11.3:
     optional: true
@@ -752,10 +682,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.28.2
       '@esbuild/win32-ia32': 0.28.2
       '@esbuild/win32-x64': 0.28.2
-
-  event-source-polyfill@1.0.31: {}
-
-  event-target-shim@5.0.1: {}
 
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
@@ -848,5 +774,3 @@ snapshots:
       '@types/node': 20.12.7
       fsevents: 2.3.3
       terser: 5.30.3
-
-  zod@3.24.2: {}

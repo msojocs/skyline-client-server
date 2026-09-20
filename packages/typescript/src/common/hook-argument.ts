@@ -136,15 +136,16 @@ const hookArgumentItem = (action: string, arg: any, context: HookContext): any =
 export const hookArgument = (action: string, args: any[], context = rendererContext): any[] => {
     args = hookArgumentItem(action, args, context)
     if (!context.renderer) return args
-    if (action === 'createWindow') {
-        const sharedMemory = require('sharedMemory/sharedMemory.node')
-        args[6] = sharedMemory.getMemory(args[6])
-    }
-    else if (action === 'notifyHttpRequestComplete') {
-        const sharedMemory = require('sharedMemory/sharedMemory.node')
-        args[4] = new Uint8Array(sharedMemory.getMemory(args[4]) as ArrayBuffer)
-    }
-    else if (action === 'notifyResourceLoad') {
+    // if (action === 'createWindow') {
+    //     const sharedMemory = require('sharedMemory/sharedMemory.node')
+    //     args[6] = sharedMemory.getMemory(args[6])
+    // }
+    // else if (action === 'notifyHttpRequestComplete') {
+    //     const sharedMemory = require('sharedMemory/sharedMemory.node')
+    //     args[4] = new Uint8Array(sharedMemory.getMemory(args[4]) as ArrayBuffer)
+    // }
+    // else 
+    if (action === 'notifyResourceLoad') {
         args[1] = new Uint8Array(args[1])
     }
     else if (action === 'registerEventHandler') {
